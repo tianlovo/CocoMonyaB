@@ -159,6 +159,17 @@ public class ChannelService {
      * @return channel视图对象列表
      */
     public List<ChannelVO> page(Long current, Long size, ChannelQueryDTO query) {
+        // 验证分页参数
+        if (current == null || current < 1) {
+            throw new BusinessException(ResponseCode.BAD_REQUEST, "页码必须大于等于1");
+        }
+        if (size == null || size < 1) {
+            throw new BusinessException(ResponseCode.BAD_REQUEST, "每页大小必须大于等于1");
+        }
+        if (size > 100) {
+            throw new BusinessException(ResponseCode.BAD_REQUEST, "每页大小不能超过100");
+        }
+        
         // 构建Pageable（页码从0开始，需要减1）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
 

@@ -528,4 +528,76 @@ class ChannelServicePropertyTest {
         }
         return sb.toString();
     }
+    
+    /**
+     * Test pagination parameter validation
+     * Validates that invalid pagination parameters throw appropriate exceptions
+     */
+    @Test
+    @Tag("Feature: mongodb-channel-management, Pagination Parameter Validation")
+    void testPaginationParameterValidation() {
+        // Test Case 1: current < 1 should throw exception
+        BusinessException currentZeroException = assertThrows(BusinessException.class,
+            () -> channelService.page(0L, 10L, null),
+            "Page index 0 should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), currentZeroException.getCode(),
+            "Should throw BAD_REQUEST for current=0");
+        assertTrue(currentZeroException.getMessage().contains("页码必须大于等于1"),
+            "Exception message should indicate page index must be >= 1");
+        
+        // Test Case 2: current < 0 should throw exception
+        BusinessException currentNegativeException = assertThrows(BusinessException.class,
+            () -> channelService.page(-1L, 10L, null),
+            "Negative page index should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), currentNegativeException.getCode(),
+            "Should throw BAD_REQUEST for negative current");
+        
+        // Test Case 3: size < 1 should throw exception
+        BusinessException sizeZeroException = assertThrows(BusinessException.class,
+            () -> channelService.page(1L, 0L, null),
+            "Page size 0 should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), sizeZeroException.getCode(),
+            "Should throw BAD_REQUEST for size=0");
+        assertTrue(sizeZeroException.getMessage().contains("每页大小必须大于等于1"),
+            "Exception message should indicate page size must be >= 1");
+        
+        // Test Case 4: size > 100 should throw exception
+        BusinessException sizeTooLargeException = assertThrows(BusinessException.class,
+            () -> channelService.page(1L, 101L, null),
+            "Page size > 100 should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), sizeTooLargeException.getCode(),
+            "Should throw BAD_REQUEST for size > 100");
+        assertTrue(sizeTooLargeException.getMessage().contains("每页大小不能超过100"),
+            "Exception message should indicate page size cannot exceed 100");
+        
+        // Test Case 5: null current should throw exception
+        BusinessException currentNullException = assertThrows(BusinessException.class,
+            () -> channelService.page(null, 10L, null),
+            "Null current should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), currentNullException.getCode(),
+            "Should throw BAD_REQUEST for null current");
+        
+        // Test Case 6: null size should throw exception
+        BusinessException sizeNullException = assertThrows(BusinessException.class,
+            () -> channelService.page(1L, null, null),
+            "Null size should throw BusinessException");
+        
+        assertEquals(ResponseCode.BAD_REQUEST.getCode(), sizeNullException.getCode(),
+            "Should throw BAD_REQUEST for null size");
+        
+        // Test Case 7: Valid parameters should not throw exception
+        assertDoesNotThrow(() -> channelService.page(1L, 10L, null),
+            "Valid pagination parameters should not throw exception");
+        
+        assertDoesNotThrow(() -> channelService.page(1L, 1L, null),
+            "Minimum valid parameters (current=1, size=1) should not throw exception");
+        
+        assertDoesNotThrow(() -> channelService.page(1L, 100L, null),
+            "Maximum valid size (100) should not throw exception");
+    }
 }
