@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: "CocoMonyaB"
+server:
+  port: 10721
