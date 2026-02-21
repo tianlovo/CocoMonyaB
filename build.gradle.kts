@@ -49,6 +49,11 @@ dependencies {
     
     // Property-based testing
     testImplementation("net.jqwik:jqwik:1.9.2")
+    
+    // Testcontainers for integration tests
+    testImplementation("org.testcontainers:testcontainers:1.20.4")
+    testImplementation("org.testcontainers:mongodb:1.20.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.4")
 
     // TDLight 依赖
     implementation(platform("it.tdlight:tdlight-java-bom:3.4.0+td.1.8.26"))
