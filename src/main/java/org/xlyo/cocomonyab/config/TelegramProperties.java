@@ -23,4 +23,9 @@ public class TelegramProperties {
      * 下载目录
      */
     private String downloadDirectory;
+    
+    /**
+     * 登录超时时间（分钟），默认 2 分钟
+     */
+    private int loginTimeoutMinutes = 2;
 }

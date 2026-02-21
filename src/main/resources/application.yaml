@@ -30,6 +30,8 @@ telegram:
   database-directory: "data/session/td/data"
   # 文件下载目录
   download-directory: "data/session/td/downloads"
+  # 登录超时时间（分钟），默认 2 分钟
+  login-timeout-minutes: 2
 
 # 环境变量配置（从 .env 文件读取）
 env:
