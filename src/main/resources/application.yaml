@@ -1,6 +1,25 @@
 spring:
   application:
     name: "CocoMonyaB"
+  
+  # MongoDB 配置
+  data:
+    mongodb:
+      # 运行模式：embedded（嵌入式）或 remote（远程）
+      mode: embedded
+      # 嵌入式 MongoDB 配置
+      embedded:
+        # MongoDB 版本号
+        version: 7.0.12
+        # MongoDB 监听端口
+        port: 27017
+        # MongoDB 绑定 IP 地址
+        bind-ip: 127.0.0.1
+        storage:
+          # 数据存储目录
+          directory: data/db/mongo
+      # 远程 MongoDB 连接 URI（仅在 remote 模式下使用）
+      # uri: mongodb://localhost:27017/cocomonya
 
 server:
   port: 10721

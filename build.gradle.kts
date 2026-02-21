@@ -33,7 +33,6 @@ dependencies {
 
     // 数据库
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
-    implementation("de.svenkubiak:embedded-mongodb:9.0.1")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
