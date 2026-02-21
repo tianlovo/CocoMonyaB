@@ -35,7 +35,8 @@ dependencies {
     annotationProcessor("org.projectlombok:lombok")
 
     // 环境配置
-    implementation("me.paulschwarz:spring-dotenv:5.1.0")
+    implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))
+    implementation("me.paulschwarz:springboot4-dotenv:5.1.0")
 
     // 测试依赖
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")

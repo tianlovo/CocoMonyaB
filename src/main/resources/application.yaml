@@ -10,4 +10,28 @@ logging:
   config: classpath:logback-spring.xml
   level:
     root: INFO
-    it.tdlight.TDLight: WARN
+    "[it.tdlight.TDLight]": WARN
+
+# Spring Dotenv 配置
+springdotenv:
+  directory: "data/config"
+  filename: ".env"
+  ignore-if-missing: false
+
+# 应用配置
+app:
+  config-directory: "data/config"
+
+# Telegram 配置
+telegram:
+  device-model: "Coco Monya"
+  database-directory: "data/session/td/data"
+  download-directory: "data/session/td/downloads"
+
+# 环境变量配置（从 .env 文件读取）
+env:
+  api-id: ${API_ID}
+  api-hash: ${API_HASH}
+  tg-phone: ${TG_PHONE}
+  tg-2fa: ${TG_2FA:}
+

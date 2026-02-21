@@ -43,4 +43,6 @@ out/
 docs/refers
 
 # Data and logs
-data/
+.env
+data/config/.env
+data/logs
