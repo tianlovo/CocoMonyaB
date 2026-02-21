@@ -50,3 +50,4 @@ data/session/
 data/bin/
 data/tmp/
 data/db/
+/.jqwik-database

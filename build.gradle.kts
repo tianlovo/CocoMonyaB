@@ -46,6 +46,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    
+    // Property-based testing
+    testImplementation("net.jqwik:jqwik:1.9.2")
 
     // TDLight 依赖
     implementation(platform("it.tdlight:tdlight-java-bom:3.4.0+td.1.8.26"))
