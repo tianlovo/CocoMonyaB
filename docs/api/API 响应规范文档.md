@@ -360,3 +360,7 @@ public class TelegramException extends BusinessException {
 ### 9.3 自定义响应结构
 
 如需特殊的响应结构，可以继承 `ApiResponse` 类进行扩展。
+
+## 10. 相关文档
+
+- [频道管理 API 文档](./api.md) - 查看频道管理相关的 API 接口文档
