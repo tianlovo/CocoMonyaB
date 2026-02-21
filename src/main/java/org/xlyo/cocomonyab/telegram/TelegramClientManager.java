@@ -146,7 +146,6 @@ public class TelegramClientManager {
         log.info("开始 Telegram 自动登录流程...");
         
         // 打印配置信息（脱敏）
-        log.info("API ID: {}", envProperties.getApiId());
         log.info("API Hash: {}***", envProperties.getApiHash().substring(0, 8));
         log.info("手机号: {}", maskPhone(envProperties.getTgPhone()));
         log.info("设备型号: {}", telegramProperties.getDeviceModel());
