@@ -24,14 +24,21 @@ app:
 
 # Telegram 配置
 telegram:
+  # 设备型号标识
   device-model: "Coco Monya"
+  # TDLib 数据库存储目录
   database-directory: "data/session/td/data"
+  # 文件下载目录
   download-directory: "data/session/td/downloads"
 
 # 环境变量配置（从 .env 文件读取）
 env:
+  # Telegram API ID（纯数字）
   api-id: ${API_ID}
+  # Telegram API Hash（32位十六进制）
   api-hash: ${API_HASH}
+  # 登录手机号（+国家代码+号码）
   tg-phone: ${TG_PHONE}
+  # 两步验证密码（可选，如果未启用 2FA 则为空）
   tg-2fa: ${TG_2FA:}
 

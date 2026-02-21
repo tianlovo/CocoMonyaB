@@ -4,6 +4,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +12,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Component
+@Order(1) // 优先执行配置验证
 public class TgConfigValidationListener implements ApplicationListener<@NonNull ContextRefreshedEvent> {
 
     // API_ID 格式：纯数字
