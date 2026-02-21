@@ -46,3 +46,4 @@ docs/refers
 .env
 data/config/.env
 data/logs
+data/session/

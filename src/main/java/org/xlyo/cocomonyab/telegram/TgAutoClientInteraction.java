@@ -66,8 +66,9 @@ public class TgAutoClientInteraction implements ClientInteraction {
                         log.info("  备用类型: {}", nextType);
                     }
                     log.info("=".repeat(60));
-                    
+
                     // 从控制台读取验证码
+                    log.info("提示: 验证码将发送到你的其他已登录 Telegram 设备");
                     System.out.print("请输入验证码: ");
                     try (var scanner = new java.util.Scanner(System.in)) {
                         yield scanner.nextLine().trim();
