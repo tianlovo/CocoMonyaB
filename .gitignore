@@ -41,3 +41,6 @@ out/
 
 # Docs
 docs/refers
+
+# Data and logs
+data/

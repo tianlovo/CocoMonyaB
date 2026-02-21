@@ -1,5 +1,13 @@
 spring:
   application:
     name: "CocoMonyaB"
+
 server:
   port: 10721
+
+# 日志配置
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    root: INFO
+    it.tdlight.TDLight: WARN
