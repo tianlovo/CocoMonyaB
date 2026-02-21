@@ -8,7 +8,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDateTime;
 
 /**
- * Channel entity representing a Telegram channel monitoring configuration.
+ * 代表 Telegram channel 监控配置的channel实体
  */
 @Document(collection = "telegram_channels")
 @Data

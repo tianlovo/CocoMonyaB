@@ -8,8 +8,8 @@ import org.xlyo.cocomonyab.domain.entity.Channel;
 import java.time.LocalDateTime;
 
 /**
- * MongoDB event listener for Channel entity lifecycle events.
- * Handles automatic timestamp management for createTime and updateTime.
+ * MongoDB 频道实体生命周期事件监听器。
+ * 自动管理 createTime 和 updateTime 时间戳。
  */
 @Component
 public class ChannelEntityListener extends AbstractMongoEventListener<Channel> {
@@ -19,12 +19,12 @@ public class ChannelEntityListener extends AbstractMongoEventListener<Channel> {
         Channel channel = event.getSource();
         LocalDateTime now = LocalDateTime.now();
         
-        // Set createTime only if it's null (new entity)
+        // 仅在 createTime 为 null 时设置（new entity）
         if (channel.getCreateTime() == null) {
             channel.setCreateTime(now);
         }
         
-        // Always update updateTime
+        // 总是更新 updateTime
         channel.setUpdateTime(now);
     }
 }

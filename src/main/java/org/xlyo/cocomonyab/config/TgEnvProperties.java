@@ -15,7 +15,7 @@ public class TgEnvProperties {
     private String apiId;
     
     /**
-     * Telegram API Hash
+     * Telegram API HASH
      */
     private String apiHash;
     
