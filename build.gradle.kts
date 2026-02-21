@@ -28,7 +28,12 @@ repositories {
 dependencies {
     // Spring Boot 相关
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
+    // 数据库
+    implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+    implementation("de.svenkubiak:embedded-mongodb:9.0.1")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
@@ -39,6 +44,7 @@ dependencies {
     implementation("me.paulschwarz:springboot4-dotenv:5.1.0")
 
     // 测试依赖
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
