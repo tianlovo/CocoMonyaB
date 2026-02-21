@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.mongo;
 
 import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
 import org.springframework.data.mongodb.core.mapping.event.BeforeConvertEvent;

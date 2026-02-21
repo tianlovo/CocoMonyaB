@@ -2,6 +2,9 @@ package org.xlyo.cocomonyab.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xlyo.cocomonyab.config.mongo.MongoDBConfiguration;
+import org.xlyo.cocomonyab.config.mongo.MongoDBProperties;
+import org.xlyo.cocomonyab.config.mongo.MongoMode;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,20 +39,20 @@ class MongoDBConfigurationValidationTest {
      */
     @Test
     void testInvalidModeThrowsException() {
-        // Given: 无效的mode配置
-        properties.setMode("invalid_mode");
+        // Given: 无效的mode字符串
+        String invalidMode = "invalid_mode";
         
-        // When & Then: 应该抛出IllegalStateException
-        IllegalStateException exception = assertThrows(
-                IllegalStateException.class,
-                () -> configuration.validateConfiguration(),
-                "无效的mode应该抛出IllegalStateException"
+        // When & Then: 应该抛出IllegalArgumentException
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> MongoMode.fromValue(invalidMode),
+                "无效的mode应该抛出IllegalArgumentException"
         );
         
         // 验证异常消息
-        assertTrue(exception.getMessage().contains("MongoDB配置无效"),
-                "异常消息应该包含'MongoDB配置无效'");
-        assertTrue(exception.getMessage().contains("mode必须是embedded或remote"),
+        assertTrue(exception.getMessage().contains("无效的 MongoDB mode"),
+                "异常消息应该包含'无效的 MongoDB mode'");
+        assertTrue(exception.getMessage().contains("embedded 或 remote"),
                 "异常消息应该说明mode的有效值");
     }
     
@@ -60,7 +63,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testRemoteModeWithoutUriThrowsException() {
         // Given: remote模式但没有URI
-        properties.setMode("remote");
+        properties.setMode(MongoMode.REMOTE);
         properties.setUri(null);
         
         // When & Then: 应该抛出IllegalStateException
@@ -84,7 +87,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testRemoteModeWithEmptyUriThrowsException() {
         // Given: remote模式但URI为空字符串
-        properties.setMode("remote");
+        properties.setMode(MongoMode.REMOTE);
         properties.setUri("");
         
         // When & Then: 应该抛出IllegalStateException
@@ -106,7 +109,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testRemoteModeWithBlankUriThrowsException() {
         // Given: remote模式但URI为空白字符串
-        properties.setMode("remote");
+        properties.setMode(MongoMode.REMOTE);
         properties.setUri("   ");
         
         // When & Then: 应该抛出IllegalStateException
@@ -128,7 +131,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testEmbeddedModeConfigurationIsValid() {
         // Given: 有效的embedded模式配置
-        properties.setMode("embedded");
+        properties.setMode(MongoMode.EMBEDDED);
         properties.getEmbedded().getStorage().setDirectory("data/db/mongo-test");
         
         // When & Then: 不应该抛出异常
@@ -145,7 +148,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testRemoteModeConfigurationIsValid() {
         // Given: 有效的remote模式配置
-        properties.setMode("remote");
+        properties.setMode(MongoMode.REMOTE);
         properties.setUri("mongodb://localhost:27017/test");
         
         // When & Then: 不应该抛出异常
@@ -162,34 +165,20 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testModeCaseInsensitive() {
         // Test EMBEDDED (uppercase)
-        properties.setMode("EMBEDDED");
-        assertDoesNotThrow(
-                () -> configuration.validateConfiguration(),
-                "EMBEDDED (大写) 应该被接受"
-        );
+        MongoMode embeddedUpper = MongoMode.fromValue("EMBEDDED");
+        assertEquals(MongoMode.EMBEDDED, embeddedUpper, "EMBEDDED (大写) 应该被转换为枚举");
         
         // Test Embedded (mixed case)
-        properties.setMode("Embedded");
-        assertDoesNotThrow(
-                () -> configuration.validateConfiguration(),
-                "Embedded (混合大小写) 应该被接受"
-        );
+        MongoMode embeddedMixed = MongoMode.fromValue("Embedded");
+        assertEquals(MongoMode.EMBEDDED, embeddedMixed, "Embedded (混合大小写) 应该被转换为枚举");
         
         // Test REMOTE (uppercase)
-        properties.setMode("REMOTE");
-        properties.setUri("mongodb://localhost:27017/test");
-        assertDoesNotThrow(
-                () -> configuration.validateConfiguration(),
-                "REMOTE (大写) 应该被接受"
-        );
+        MongoMode remoteUpper = MongoMode.fromValue("REMOTE");
+        assertEquals(MongoMode.REMOTE, remoteUpper, "REMOTE (大写) 应该被转换为枚举");
         
         // Test Remote (mixed case)
-        properties.setMode("Remote");
-        properties.setUri("mongodb://localhost:27017/test");
-        assertDoesNotThrow(
-                () -> configuration.validateConfiguration(),
-                "Remote (混合大小写) 应该被接受"
-        );
+        MongoMode remoteMixed = MongoMode.fromValue("Remote");
+        assertEquals(MongoMode.REMOTE, remoteMixed, "Remote (混合大小写) 应该被转换为枚举");
     }
     
     /**
@@ -199,7 +188,7 @@ class MongoDBConfigurationValidationTest {
     @Test
     void testEmbeddedModeUsesDefaultStorageDirectory() {
         // Given: embedded模式，未设置存储目录
-        properties.setMode("embedded");
+        properties.setMode(MongoMode.EMBEDDED);
         
         // When: 验证配置
         assertDoesNotThrow(() -> configuration.validateConfiguration());

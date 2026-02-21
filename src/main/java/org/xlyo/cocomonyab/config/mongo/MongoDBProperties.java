@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.mongo;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -10,9 +10,9 @@ import org.springframework.context.annotation.Configuration;
 public class MongoDBProperties {
     
     /**
-     * MongoDB 运行模式：embedded（嵌入式）或 remote（远程）
+     * MongoDB 运行模式：EMBEDDED（嵌入式）或 REMOTE（远程）
      */
-    private String mode = "embedded";
+    private MongoMode mode = MongoMode.EMBEDDED;
     
     /**
      * 远程 MongoDB 连接 URI（仅在 remote 模式下使用）

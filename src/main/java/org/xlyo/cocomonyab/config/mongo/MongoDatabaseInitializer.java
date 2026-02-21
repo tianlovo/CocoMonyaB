@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.mongo;
 
 import com.mongodb.client.MongoDatabase;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.mongo;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.Socket;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.*;
 import java.util.zip.ZipEntry;
@@ -165,7 +166,7 @@ public class EmbeddedMongoConfiguration {
      * 下载文件并显示进度条
      */
     private void downloadFileWithProgress(String urlString, Path targetFile) throws IOException {
-        URL url = new URL(urlString);
+        URL url = URI.create(urlString).toURL();
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
         connection.setConnectTimeout(30000);

@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.IndexInfo;
 import org.springframework.test.context.TestPropertySource;
+import org.xlyo.cocomonyab.config.mongo.MongoDatabaseInitializer;
 
 import java.util.List;
 

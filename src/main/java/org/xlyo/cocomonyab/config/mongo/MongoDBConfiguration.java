@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.mongo;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -16,17 +16,10 @@ public class MongoDBConfiguration {
     
     @PostConstruct
     public void validateConfiguration() {
-        String mode = properties.getMode();
-        
-        // 验证 mode 必须是 "embedded" 或 "remote"
-        if (!"embedded".equalsIgnoreCase(mode) && !"remote".equalsIgnoreCase(mode)) {
-            throw new IllegalStateException(
-                String.format("MongoDB配置无效: mode必须是embedded或remote，当前值为: %s", mode)
-            );
-        }
+        MongoMode mode = properties.getMode();
         
         // 如果是 remote 模式，验证 URI 必须配置
-        if ("remote".equalsIgnoreCase(mode)) {
+        if (mode.isRemote()) {
             if (properties.getUri() == null || properties.getUri().trim().isEmpty()) {
                 throw new IllegalStateException(
                     "MongoDB配置无效: remote模式下必须配置spring.data.mongodb.uri"

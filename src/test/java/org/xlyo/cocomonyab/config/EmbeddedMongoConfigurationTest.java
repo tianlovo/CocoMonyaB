@@ -4,6 +4,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.xlyo.cocomonyab.config.mongo.EmbeddedMongoConfiguration;
+import org.xlyo.cocomonyab.config.mongo.MongoDBProperties;
+import org.xlyo.cocomonyab.config.mongo.MongoMode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,7 +30,7 @@ class EmbeddedMongoConfigurationTest {
     @BeforeEach
     void setUp() {
         properties = new MongoDBProperties();
-        properties.setMode("embedded");
+        properties.setMode(MongoMode.EMBEDDED);
     }
     
     @AfterEach
