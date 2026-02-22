@@ -14,6 +14,12 @@
   - [1.3 常见错误场景](#13-常见错误场景)
   - [1.4 使用示例](#14-使用示例)
   - [1.5 注意事项](#15-注意事项)
+- [2. Telegram 频道查询 API](#2-telegram-频道查询-api)
+  - [2.1 概述](#21-概述)
+  - [2.2 数据结构](#22-数据结构)
+  - [2.3 API 端点](#23-api-端点)
+  - [2.4 使用示例](#24-使用示例)
+  - [2.5 注意事项](#25-注意事项)
 
 ---
 
@@ -523,6 +529,188 @@ curl -X GET "http://localhost:8080/api/channel/page?channelUsername=news"
 
 ---
 
+## 2. Telegram 频道查询 API
+
+### 2.1 概述
+
+Telegram 频道查询 API 提供了查询当前已登录 Telegram 账号的频道列表功能。该 API 直接从 TDLib 获取实时数据，返回账号已加入或管理的所有频道信息。
+
+### 2.2 数据结构
+
+#### 2.2.1 TgChannelVO（TG频道响应对象）
+
+返回给客户端的 Telegram 频道数据。
+
+```json
+{
+  "chatId": 1234567890,
+  "title": "科技新闻频道",
+  "username": "tech_news",
+  "type": "channel",
+  "isChannel": true,
+  "memberCount": 5000,
+  "description": null
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| chatId | Long | 聊天ID（频道ID） |
+| title | String | 频道标题 |
+| username | String | 频道用户名（不含@符号） |
+| type | String | 频道类型（固定为"channel"） |
+| isChannel | Boolean | 是否为频道（true=频道，false=超级群组） |
+| memberCount | Integer | 成员数量 |
+| description | String | 频道描述（当前版本为null） |
+
+### 2.3 API 端点
+
+#### 2.3.1 分页查询已登录账号的频道列表
+
+**接口地址：** `GET /api/channel/tg/logged-in`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码 |
+| size | Long | 否 | 10 | 每页大小 |
+
+**请求示例：**
+
+```
+GET /api/channel/tg/logged-in?current=1&size=10
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "chatId": 1234567890,
+        "title": "科技新闻频道",
+        "username": "tech_news",
+        "type": "channel",
+        "isChannel": true,
+        "memberCount": 5000,
+        "description": null
+      },
+      {
+        "chatId": 9876543210,
+        "title": "体育更新频道",
+        "username": "sports_updates",
+        "type": "channel",
+        "isChannel": true,
+        "memberCount": 3000,
+        "description": null
+      }
+    ],
+    "current": 1,
+    "size": 10,
+    "total": 2,
+    "pages": 1
+  }
+}
+```
+
+**空列表响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 10,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+**错误响应示例：**
+
+Telegram客户端未就绪：
+```json
+{
+  "code": -60001,
+  "msg": "Telegram客户端未就绪",
+  "data": null
+}
+```
+
+参数校验失败：
+```json
+{
+  "code": -40000,
+  "msg": "页码必须大于等于1",
+  "data": null
+}
+```
+
+获取频道列表失败：
+```json
+{
+  "code": -60001,
+  "msg": "获取Telegram频道列表失败: Connection timeout",
+  "data": null
+}
+```
+
+### 2.4 使用示例
+
+#### 2.4.1 查询第一页频道
+
+```bash
+# 查询前10个频道
+curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=10"
+```
+
+#### 2.4.2 查询更多频道
+
+```bash
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=2&size=20"
+```
+
+#### 2.4.3 获取所有频道
+
+```bash
+# 设置较大的size值获取所有频道（最大100）
+curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=100"
+```
+
+### 2.5 注意事项
+
+1. **实时数据**：该接口直接从 TDLib 获取实时数据，不依赖数据库
+2. **登录状态**：必须确保 Telegram 客户端已成功登录，否则会返回错误
+3. **性能考虑**：首次调用时会加载聊天列表，可能需要几秒钟时间
+4. **分页限制**：每页最大支持 100 条记录
+5. **频道筛选**：只返回频道（channel），不包括超级群组（supergroup）
+6. **用户名可能为空**：某些频道可能没有设置用户名，此时 username 字段为 null
+7. **描述字段**：当前版本的 description 字段始终为 null，获取描述需要额外的 API 调用
+8. **超时设置**：API 调用设置了 30 秒超时，如果网络较慢可能会超时
+
+### 2.6 与频道管理 API 的区别
+
+| 特性 | 频道管理 API | Telegram 频道查询 API |
+|------|-------------|---------------------|
+| 数据来源 | MongoDB 数据库 | TDLib 实时数据 |
+| 数据内容 | 监控配置信息 | Telegram 账号的频道列表 |
+| 是否需要登录 | 否 | 是（需要 TG 客户端登录） |
+| 支持 CRUD | 是 | 否（只读） |
+| 用途 | 管理监控配置 | 查看账号已加入的频道 |
+
+---
+
 ## 相关文档
 
 - [API 响应规范文档](./API%20响应规范文档.md) - 了解统一的 API 响应格式和错误处理机制
+- [TelegramClientManager 使用指南](../TelegramClientManager使用指南.md) - 了解 Telegram 客户端管理器的使用方法

@@ -35,8 +35,6 @@ logging:
   level:
     root: INFO
     "[it.tdlight.TDLight]": WARN
-    org.springframework.messaging: DEBUG
-    org.springframework.websocket: DEBUG
 
 # Spring Dotenv 配置
 springdotenv:

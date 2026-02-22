@@ -9,7 +9,9 @@ import org.xlyo.cocomonyab.domain.dto.ChannelCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.ChannelQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.ChannelUpdateDTO;
 import org.xlyo.cocomonyab.domain.vo.ChannelVO;
+import org.xlyo.cocomonyab.domain.vo.TgChannelVO;
 import org.xlyo.cocomonyab.service.ChannelService;
+import org.xlyo.cocomonyab.service.TgChannelService;
 
 import java.util.List;
 
@@ -23,6 +25,7 @@ import java.util.List;
 public class ChannelController {
 
     private final ChannelService channelService;
+    private final TgChannelService tgChannelService;
 
     /**
      * 创建新channel
@@ -107,6 +110,23 @@ public class ChannelController {
             @Valid ChannelQueryDTO query) {
         List<ChannelVO> records = channelService.page(current, size, query);
         Long total = channelService.count(query);
+        return PageResponse.success(records, current, size, total);
+    }
+
+    /**
+     * 分页查询已登录TG账号的频道列表
+     * GET /api/channel/tg/logged-in
+     *
+     * @param current 当前页码（默认1）
+     * @param size 每页大小（默认10）
+     * @return 分页响应包含TG频道视图对象列表和分页元数据
+     */
+    @GetMapping("/tg/logged-in")
+    public PageResponse<TgChannelVO> getLoggedInTgChannels(
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size) {
+        List<TgChannelVO> records = tgChannelService.getLoggedInChannels(current, size);
+        Long total = tgChannelService.countLoggedInChannels();
         return PageResponse.success(records, current, size, total);
     }
 }

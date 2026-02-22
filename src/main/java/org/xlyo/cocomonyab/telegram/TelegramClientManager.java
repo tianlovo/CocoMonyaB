@@ -189,9 +189,9 @@ public class TelegramClientManager {
             log.info("构建 Telegram 客户端...");
             SimpleTelegramClientBuilder clientBuilder = clientFactory.builder(settings);
             
-            // 6. 注册认证状态监听器
+            // 6. 注册监听器
             clientBuilder.addUpdateHandler(TdApi.UpdateAuthorizationState.class, this::onAuthStateUpdate);
-            
+
             // 7. 设置自定义客户端交互（处理验证码和密码输入）
             TgAutoClientInteraction clientInteraction = new TgAutoClientInteraction(envProperties);
             clientBuilder.setClientInteraction(clientInteraction);
