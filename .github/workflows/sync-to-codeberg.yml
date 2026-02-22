@@ -29,7 +29,7 @@ jobs:
 
       - name: Add Codeberg remote
         run: |
-          git remote add codeberg https://${{ secrets.CODEBERG_TOKEN }}@codeberg.org/tianluo/CocoMonyaB.git || git remote set-url codeberg https://${{ secrets.CODEBERG_TOKEN }}@codeberg.org/tianluo/CocoMonyaB.git
+          git remote add codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git || git remote set-url codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git
 
       - name: Push to Codeberg
         run: |
