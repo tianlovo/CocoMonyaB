@@ -4,6 +4,7 @@ import it.tdlight.jni.TdApi;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.ChannelMessage;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -30,6 +32,15 @@ public class ChannelMonitorService {
     
     // 缓存监控中的频道ID（提高性能）
     private final Set<Long> monitoringChannels = Collections.synchronizedSet(new HashSet<>());
+    
+    // 媒体组缓冲区：key = chatId:mediaAlbumId, value = 消息列表
+    private final Map<String, List<TdApi.Message>> mediaGroupBuffer = new ConcurrentHashMap<>();
+    
+    // 媒体组最后更新时间：key = chatId:mediaAlbumId, value = 时间戳
+    private final Map<String, Long> mediaGroupTimestamps = new ConcurrentHashMap<>();
+    
+    // 媒体组等待超时时间（毫秒）
+    private static final long MEDIA_GROUP_TIMEOUT = 2000; // 2秒
     
     /**
      * 初始化：从数据库加载启用监控的频道
@@ -68,24 +79,135 @@ public class ChannelMonitorService {
      */
     public void handleNewMessage(TdApi.Message message) {
         try {
-            // 1. 检查消息是否已存在（去重）
-            if (messageRepository.existsByChatIdAndMessageId(message.chatId, message.id)) {
-                log.debug("消息已存在，跳过: chatId={}, messageId={}", message.chatId, message.id);
-                return;
+            // 检查是否为媒体组消息
+            if (message.mediaAlbumId != 0) {
+                handleMediaGroupMessage(message);
+            } else {
+                // 普通消息，直接处理
+                processSingleMessage(message);
             }
-            
-            // 2. 解析消息内容
-            ChannelMessage channelMessage = parseMessage(message);
-            
-            // 3. 保存到数据库
-            ChannelMessage saved = messageRepository.save(channelMessage);
-            
-            // 4. 输出到控制台
-            printMessageToConsole(saved, message);
             
         } catch (Exception e) {
             log.error("处理频道消息失败: chatId={}, messageId={}", message.chatId, message.id, e);
         }
+    }
+    
+    /**
+     * 处理媒体组消息
+     */
+    private void handleMediaGroupMessage(TdApi.Message message) {
+        String groupKey = message.chatId + ":" + message.mediaAlbumId;
+        
+        // 添加到缓冲区
+        mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(message);
+        
+        // 更新时间戳
+        mediaGroupTimestamps.put(groupKey, System.currentTimeMillis());
+        
+        log.debug("收到媒体组消息: chatId={}, mediaAlbumId={}, messageId={}, 当前组内消息数: {}", 
+            message.chatId, message.mediaAlbumId, message.id, 
+            mediaGroupBuffer.get(groupKey).size());
+    }
+    
+    /**
+     * 定时处理超时的媒体组
+     * 每秒检查一次
+     */
+    @Scheduled(fixedDelay = 1000)
+    public void processTimedOutMediaGroups() {
+        long now = System.currentTimeMillis();
+        List<String> timedOutGroups = new ArrayList<>();
+        
+        // 找出超时的媒体组
+        mediaGroupTimestamps.forEach((groupKey, timestamp) -> {
+            if (now - timestamp >= MEDIA_GROUP_TIMEOUT) {
+                timedOutGroups.add(groupKey);
+            }
+        });
+        
+        // 处理超时的媒体组
+        for (String groupKey : timedOutGroups) {
+            List<TdApi.Message> messages = mediaGroupBuffer.remove(groupKey);
+            mediaGroupTimestamps.remove(groupKey);
+            
+            if (messages != null && !messages.isEmpty()) {
+                processMediaGroup(messages);
+            }
+        }
+    }
+    
+    /**
+     * 处理完整的媒体组
+     */
+    private void processMediaGroup(List<TdApi.Message> messages) {
+        if (messages.isEmpty()) {
+            return;
+        }
+        
+        // 按消息ID排序
+        messages.sort(Comparator.comparingLong(m -> m.id));
+        
+        TdApi.Message firstMessage = messages.get(0);
+        long mediaAlbumId = firstMessage.mediaAlbumId;
+        long chatId = firstMessage.chatId;
+        
+        log.info("处理媒体组: chatId={}, mediaAlbumId={}, 消息数量={}", 
+            chatId, mediaAlbumId, messages.size());
+        
+        // 检查媒体组是否已存在
+        long existingCount = messageRepository.countByChatIdAndMediaAlbumId(chatId, mediaAlbumId);
+        if (existingCount > 0) {
+            log.debug("媒体组已存在，跳过: chatId={}, mediaAlbumId={}", chatId, mediaAlbumId);
+            return;
+        }
+        
+        // 收集所有消息ID
+        List<Long> messageIds = messages.stream()
+            .map(m -> m.id)
+            .collect(Collectors.toList());
+        
+        // 解析并保存每条消息
+        List<ChannelMessage> savedMessages = new ArrayList<>();
+        for (TdApi.Message message : messages) {
+            ChannelMessage channelMessage = parseMessage(message);
+            
+            // 设置媒体组信息
+            channelMessage.setMediaAlbumId(mediaAlbumId);
+            channelMessage.setIsMediaGroup(true);
+            channelMessage.setMediaGroupItemCount(messages.size());
+            channelMessage.setMediaGroupMessageIds(messageIds);
+            
+            // 保存到数据库
+            ChannelMessage saved = messageRepository.save(channelMessage);
+            savedMessages.add(saved);
+        }
+        
+        // 输出媒体组信息到控制台
+        printMediaGroupToConsole(savedMessages, messages);
+    }
+    
+    /**
+     * 处理单条消息（非媒体组）
+     */
+    private void processSingleMessage(TdApi.Message message) {
+        // 1. 检查消息是否已存在（去重）
+        if (messageRepository.existsByChatIdAndMessageId(message.chatId, message.id)) {
+            log.debug("消息已存在，跳过: chatId={}, messageId={}", message.chatId, message.id);
+            return;
+        }
+        
+        // 2. 解析消息内容
+        ChannelMessage channelMessage = parseMessage(message);
+        
+        // 设置非媒体组标识
+        channelMessage.setMediaAlbumId(0L);
+        channelMessage.setIsMediaGroup(false);
+        
+        // 3. 保存到数据库
+        ChannelMessage saved = messageRepository.save(channelMessage);
+        
+        // 4. 输出到控制台
+        printMessageToConsole(saved, message);
     }
     
     /**
@@ -275,6 +397,72 @@ public class ChannelMonitorService {
         }
         
         return info;
+    }
+    
+    /**
+     * 输出媒体组到控制台
+     */
+    private void printMediaGroupToConsole(List<ChannelMessage> savedMessages, List<TdApi.Message> originalMessages) {
+        if (savedMessages.isEmpty()) {
+            return;
+        }
+        
+        ChannelMessage first = savedMessages.get(0);
+        
+        log.info("━".repeat(80));
+        log.info("📨 收到媒体组消息");
+        log.info("━".repeat(80));
+        log.info("频道: {} (@{})", first.getChannelTitle(), first.getChannelUsername());
+        log.info("媒体组ID: {}", first.getMediaAlbumId());
+        log.info("频道ID: {}", first.getChatId());
+        log.info("消息数量: {} 条", savedMessages.size());
+        
+        // 格式化时间
+        LocalDateTime messageTime = LocalDateTime.ofInstant(
+            Instant.ofEpochSecond(first.getDate()), 
+            ZoneId.systemDefault()
+        );
+        log.info("时间: {}", messageTime);
+        
+        // 输出每条消息的信息
+        log.info("━".repeat(80));
+        log.info("📎 媒体组内容:");
+        
+        for (int i = 0; i < savedMessages.size(); i++) {
+            ChannelMessage msg = savedMessages.get(i);
+            log.info("  [{}] 消息ID: {}, 类型: {}", i + 1, msg.getMessageId(), msg.getContentType());
+            
+            // 输出文本内容
+            if (msg.getTextContent() != null && !msg.getTextContent().isEmpty()) {
+                String text = msg.getTextContent();
+                if (text.length() > 50) {
+                    text = text.substring(0, 50) + "...";
+                }
+                log.info("      说明: {}", text);
+            }
+            
+            // 输出媒体文件信息
+            if (msg.getMediaFiles() != null && !msg.getMediaFiles().isEmpty()) {
+                msg.getMediaFiles().forEach(file -> {
+                    log.info("      - 文件类型: {}, 大小: {} bytes", 
+                        file.getFileType(), 
+                        file.getFileSize());
+                });
+            }
+        }
+        
+        // 输出互动信息（使用第一条消息的数据）
+        if (first.getViews() != null || first.getForwards() != null) {
+            log.info("━".repeat(80));
+            log.info("📊 互动: 浏览 {} 次, 转发 {} 次", 
+                first.getViews() != null ? first.getViews() : 0,
+                first.getForwards() != null ? first.getForwards() : 0);
+        }
+        
+        log.info("━".repeat(80));
+        log.info("💾 数据库ID列表:");
+        savedMessages.forEach(msg -> log.info("   - {}", msg.getId()));
+        log.info("━".repeat(80));
     }
     
     /**

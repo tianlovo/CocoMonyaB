@@ -28,6 +28,10 @@ import java.util.List;
     @CompoundIndex(
         name = "status_date_idx", 
         def = "{'status': 1, 'createTime': -1}"
+    ),
+    @CompoundIndex(
+        name = "media_album_idx", 
+        def = "{'chatId': 1, 'mediaAlbumId': 1, 'date': 1}"
     )
 })
 @Data
@@ -54,6 +58,13 @@ public class ChannelMessage {
     
     // Telegraph/WebPage 相关字段
     private WebPageInfo webPage;
+    
+    // 媒体组相关字段
+    @Indexed
+    private Long mediaAlbumId;           // 媒体组ID，0表示不属于任何组
+    private Boolean isMediaGroup;        // 是否为媒体组消息
+    private Integer mediaGroupItemCount; // 媒体组中的项目数量
+    private List<Long> mediaGroupMessageIds; // 媒体组中所有消息的ID列表
     
     private Integer views;
     private Integer forwards;
