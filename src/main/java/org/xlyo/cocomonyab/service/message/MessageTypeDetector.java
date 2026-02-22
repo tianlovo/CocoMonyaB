@@ -47,7 +47,8 @@ public class MessageTypeDetector {
      * 检测文本消息类型（可能是Telegraph）
      */
     private MessageType detectTextType(TdApi.MessageText text) {
-        if (text.webPage != null && text.webPage.instantViewVersion > 0) {
+        // 只要包含 webPage 就认为是 Telegraph 消息
+        if (text.webPage != null) {
             return MessageType.TELEGRAPH;
         }
         return MessageType.TEXT;
