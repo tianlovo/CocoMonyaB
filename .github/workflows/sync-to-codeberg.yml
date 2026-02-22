@@ -1,0 +1,37 @@
+name: Sync to Codeberg
+
+on:
+  push:
+    branches:
+      - '**'  # 推送到所有分支时触发
+    tags:
+      - '**'  # 推送标签时也触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取所有历史记录
+          fetch-tags: true  # 获取所有标签
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ vars.CODEBERG_USERNAME }}"
+          git config --global user.email "${{ vars.CODEBERG_EMAIL }}"
+
+      - name: Fetch all branches and tags
+        run: |
+          git fetch origin --tags
+          git fetch origin
+
+      - name: Add Codeberg remote
+        run: |
+          git remote add codeberg https://${{ secrets.CODEBERG_TOKEN }}@codeberg.org/tianluo/CocoMonyaB.git || git remote set-url codeberg https://${{ secrets.CODEBERG_TOKEN }}@codeberg.org/tianluo/CocoMonyaB.git
+
+      - name: Push to Codeberg
+        run: |
+          # 强制同步所有分支、标签和引用到Codeberg（镜像推送）
+          git push --mirror codeberg
