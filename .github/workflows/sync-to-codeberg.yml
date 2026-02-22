@@ -22,78 +22,15 @@ jobs:
           git config --global user.name "${{ vars.CODEBERG_USERNAME }}"
           git config --global user.email "${{ vars.CODEBERG_EMAIL }}"
 
-      - name: Fetch all branches and tags
-        run: |
-          git fetch origin --tags
-          git fetch origin
-      
-      - name: Ensure local main branch exists
-        run: |
-          # 确保本地有main分支
-          if ! git show-ref --verify --quiet refs/heads/main; then
-            echo "Creating local main branch from origin/main..."
-            git checkout -b main origin/main || echo "Failed to checkout main branch, continuing..."
-          else
-            echo "Local main branch already exists"
-            git checkout main
-          fi
-
       - name: Add Codeberg remote
         run: |
           git remote add codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git || git remote set-url codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git
 
-      - name: Ensure main branch exists on Codeberg
+      - name: Ensure main is first push for empty repo
         run: |
-          # 首先尝试推送main分支到Codeberg
-          echo "Ensuring main branch exists on Codeberg..."
-          git push codeberg main:main || echo "Failed to push main branch, continuing..."
-
-      - name: Install jq for JSON parsing
-        run: |
-          # 安装jq用于解析JSON响应
-          sudo apt-get update && sudo apt-get install -y jq
-
-      - name: Check and set default branch
-        run: |
-          # 获取Codeberg仓库的默认分支
-          echo "Fetching repository info from Codeberg..."
-          set +e
-          REPO_INFO=$(curl -s -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
-            "https://codeberg.org/api/v1/repos/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}")
-          
-          if [ $? -ne 0 ] || [ -z "$REPO_INFO" ]; then
-            echo "Failed to fetch repository info from Codeberg API"
-            echo "Continuing without setting default branch..."
-            exit 0
-          fi
-          
-          DEFAULT_BRANCH=$(echo "$REPO_INFO" | jq -r '.default_branch')
-          
-          if [ $? -ne 0 ] || [ -z "$DEFAULT_BRANCH" ] || [ "$DEFAULT_BRANCH" = "null" ]; then
-            echo "Failed to parse default branch from API response"
-            echo "Continuing without setting default branch..."
-            exit 0
-          fi
-          
-          echo "Current default branch on Codeberg: $DEFAULT_BRANCH"
-          
-          # 如果默认分支不是main，则设置为main
-          if [ "$DEFAULT_BRANCH" != "main" ]; then
-            echo "Setting default branch to 'main'..."
-            curl -X PATCH -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
-              -H "Content-Type: application/json" \
-              -d '{"default_branch": "main"}' \
-              "https://codeberg.org/api/v1/repos/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}"
-            
-            if [ $? -eq 0 ]; then
-              echo "Default branch updated to 'main'"
-            else
-              echo "Failed to update default branch, continuing..."
-            fi
-          else
-            echo "Default branch is already 'main'"
-          fi
-          set -e
+          # 对于空仓库，先推送main分支作为第一个推送
+          echo "Ensuring main branch is pushed first for empty Codeberg repository..."
+          git push codeberg main:main || echo "Push failed (repo may not be empty), continuing..."
 
       - name: Push to Codeberg
         run: |
