@@ -31,11 +31,14 @@ class MessageStorageServiceTest {
     @Mock
     private ObjectMapper objectMapper;
     
+    @Mock
+    private org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter duplicateMessageFilter;
+    
     private MessageStorageService messageStorageService;
     
     @BeforeEach
     void setUp() {
-        messageStorageService = new MessageStorageService(rawMessageRepository, objectMapper);
+        messageStorageService = new MessageStorageService(rawMessageRepository, objectMapper, duplicateMessageFilter);
     }
     
     @Test

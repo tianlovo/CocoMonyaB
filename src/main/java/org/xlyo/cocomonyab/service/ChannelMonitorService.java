@@ -11,6 +11,7 @@ import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageStorageService;
 import org.xlyo.cocomonyab.service.message.MessageParser;
 import org.xlyo.cocomonyab.plugin.PluginManager;
+import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 
@@ -30,6 +31,7 @@ public class ChannelMonitorService {
     private final MessageStorageService messageStorageService;
     private final MessageParser messageParser;
     private final PluginManager pluginManager;
+    private final FilterChainManager filterChainManager;
     
     // 缓存监控中的频道ID（提高性能）
     private final Set<Long> monitoringChannels = Collections.synchronizedSet(new HashSet<>());
@@ -80,6 +82,12 @@ public class ChannelMonitorService {
      */
     public void handleNewMessage(TdApi.Message message) {
         try {
+            // 先执行过滤器链
+            if (!filterChainManager.executeChain(message)) {
+                log.debug("Message filtered out: chatId={}, messageId={}", message.chatId, message.id);
+                return; // 消息被过滤，不保存也不处理
+            }
+            
             // 检查是否为媒体组消息
             if (message.mediaAlbumId != 0) {
                 handleMediaGroupMessage(message);

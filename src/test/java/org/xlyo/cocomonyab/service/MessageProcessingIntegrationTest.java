@@ -43,6 +43,9 @@ class MessageProcessingIntegrationTest {
     @Mock
     private PluginManager pluginManager;
     
+    @Mock
+    private org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager;
+    
     private ChannelMonitorService channelMonitorService;
     
     @BeforeEach
@@ -51,8 +54,12 @@ class MessageProcessingIntegrationTest {
             channelRepository,
             messageStorageService,
             messageParser,
-            pluginManager
+            pluginManager,
+            filterChainManager
         );
+        
+        // 模拟过滤器链默认接受所有消息
+        when(filterChainManager.executeChain(any())).thenReturn(true);
         
         // 启动监控
         channelMonitorService.startMonitoring(-1001234567890L);

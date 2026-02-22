@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.domain.entity.RawMessage;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class MessageStorageService {
     
     private final RawMessageRepository rawMessageRepository;
     private final ObjectMapper objectMapper;
+    private final DuplicateMessageFilter duplicateMessageFilter;
     
     /**
      * 保存消息
@@ -30,10 +32,12 @@ public class MessageStorageService {
      */
     public boolean saveMessage(TdApi.Message message) {
         try {
-            // 去重检查
+            // 去重检查（这里是双重检查，防止过滤器被禁用的情况）
             if (isDuplicate(message)) {
                 log.debug("Message already exists: chatId={}, messageId={}, mediaAlbumId={}", 
                     message.chatId, message.id, message.mediaAlbumId);
+                // 即使重复，也要从过滤器缓存中移除
+                duplicateMessageFilter.markProcessed(message);
                 return false;
             }
             
@@ -53,6 +57,9 @@ public class MessageStorageService {
             // 保存到数据库
             rawMessageRepository.save(rawMessage);
             
+            // 保存成功后，从过滤器缓存中移除（标记为已处理）
+            duplicateMessageFilter.markProcessed(message);
+            
             log.debug("Saved raw message: chatId={}, messageId={}, mediaAlbumId={}", 
                 message.chatId, message.id, message.mediaAlbumId);
             
@@ -60,6 +67,10 @@ public class MessageStorageService {
         } catch (Exception e) {
             log.error("Failed to save message: chatId={}, messageId={}, error={}", 
                 message.chatId, message.id, e.getMessage(), e);
+            
+            // 保存失败，从过滤器缓存中移除（允许重试）
+            duplicateMessageFilter.markFailed(message);
+            
             return false;
         }
     }
