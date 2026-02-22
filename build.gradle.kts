@@ -47,6 +47,9 @@ dependencies {
     
     // Guava for Striped Lock
     implementation("com.google.guava:guava:33.0.0-jre")
+    
+    // Caffeine for Caching
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // 环境配置
     implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))

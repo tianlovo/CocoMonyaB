@@ -1,5 +1,8 @@
 package org.xlyo.cocomonyab.filter.impl;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import it.tdlight.jni.TdApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,8 +12,7 @@ import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 重复消息过滤器
@@ -23,10 +25,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * 检查逻辑：
  * - 单条消息：使用 chatId + messageId
  * - 媒体组消息：使用 chatId + mediaAlbumId
+ * <p>
+ * 缓存策略：
+ * - 使用 Caffeine 缓存，10秒自动过期
+ * - 最大缓存大小 10000
+ * - 启用缓存统计
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class DuplicateMessageFilter extends AbstractMessageFilter {
     
     private static final int PRIORITY = 95; // 高优先级，尽早过滤重复消息
@@ -39,8 +45,37 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
      * Key格式：
      * - 单条消息: "chatId:messageId"
      * - 媒体组: "chatId:album:mediaAlbumId"
+     * <p>
+     * 使用 Caffeine 缓存：
+     * - 10秒自动过期
+     * - 最大缓存大小 10000
+     * - 启用统计
      */
-    private final Set<String> processingMessages = ConcurrentHashMap.newKeySet();
+    private final Cache<String, Boolean> processingCache;
+    
+    /**
+     * 失败消息的短暂缓存（5秒 TTL）
+     * 用于防止失败消息立即重试
+     */
+    private final Cache<String, Boolean> failedCache;
+    
+    public DuplicateMessageFilter(RawMessageRepository rawMessageRepository) {
+        this.rawMessageRepository = rawMessageRepository;
+        
+        // 配置主缓存：10秒过期，最大10000条
+        this.processingCache = Caffeine.newBuilder()
+            .expireAfterWrite(10, TimeUnit.SECONDS)
+            .maximumSize(10000)
+            .recordStats()
+            .build();
+        
+        // 配置失败缓存：5秒过期
+        this.failedCache = Caffeine.newBuilder()
+            .expireAfterWrite(5, TimeUnit.SECONDS)
+            .maximumSize(1000)
+            .recordStats()
+            .build();
+    }
     
     @Override
     public String getName() {
@@ -70,9 +105,10 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         String cacheKey = buildCacheKey(message);
         
         // 第一层检查：内存缓存（防止并发重复）
-        if (!processingMessages.add(cacheKey)) {
+        Boolean inCache = processingCache.getIfPresent(cacheKey);
+        if (Boolean.TRUE.equals(inCache)) {
             context.setRejectReason(String.format(
-                "消息正在处理中: %s", cacheKey
+                "消息正在处理中或已处理: %s", cacheKey
             ));
             log.debug("过滤正在处理的消息: {}", cacheKey);
             return FilterResult.REJECT;
@@ -85,8 +121,8 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         );
         
         if (existsInDb) {
-            // 数据库中已存在，从缓存中移除并拒绝
-            processingMessages.remove(cacheKey);
+            // 数据库中已存在，添加到缓存并拒绝（保留缓存而不是移除）
+            processingCache.put(cacheKey, Boolean.TRUE);
             context.setRejectReason(String.format(
                 "数据库中存在重复消息: chatId=%d, messageId=%d", 
                 message.chatId, message.id
@@ -96,7 +132,8 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
             return FilterResult.REJECT;
         }
         
-        // 消息不重复，标记为正在处理并接受
+        // 消息不重复，添加到缓存并接受
+        processingCache.put(cacheKey, Boolean.TRUE);
         context.setAttribute("cacheKey", cacheKey);
         return FilterResult.ACCEPT;
     }
@@ -109,14 +146,27 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
         String messageCacheKey = buildCacheKey(message);
         
-        // 检查数据库中是否已存在该媒体组
+        // 第一层检查：内存缓存（防止并发重复）
+        Boolean inCache = processingCache.getIfPresent(albumCacheKey);
+        if (Boolean.TRUE.equals(inCache)) {
+            context.setRejectReason(String.format(
+                "媒体组正在处理中或已处理: chatId=%d, mediaAlbumId=%d", 
+                message.chatId, message.mediaAlbumId
+            ));
+            log.debug("过滤正在处理的媒体组: chatId={}, mediaAlbumId={}", 
+                message.chatId, message.mediaAlbumId);
+            return FilterResult.REJECT;
+        }
+        
+        // 第二层检查：数据库查询（持久化去重）
         boolean albumExistsInDb = rawMessageRepository.existsByChatIdAndMediaAlbumId(
             message.chatId, 
             message.mediaAlbumId
         );
         
         if (albumExistsInDb) {
-            // 整个媒体组已存在，拒绝
+            // 整个媒体组已存在，添加到缓存并拒绝（保留缓存而不是移除）
+            processingCache.put(albumCacheKey, Boolean.TRUE);
             context.setRejectReason(String.format(
                 "数据库中存在重复媒体组: chatId=%d, mediaAlbumId=%d", 
                 message.chatId, message.mediaAlbumId
@@ -127,11 +177,11 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         }
         
         // 媒体组不存在于数据库，允许通过
-        // 将媒体组标记为正在处理（只标记一次）
-        processingMessages.add(albumCacheKey);
+        // 将媒体组标记为正在处理
+        processingCache.put(albumCacheKey, Boolean.TRUE);
         
-        // 同时标记单条消息（用于后续清理）
-        processingMessages.add(messageCacheKey);
+        // 同时标记单条消息
+        processingCache.put(messageCacheKey, Boolean.TRUE);
         
         context.setAttribute("cacheKey", messageCacheKey);
         context.setAttribute("albumCacheKey", albumCacheKey);
@@ -147,52 +197,78 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     }
     
     /**
-     * 消息处理完成后，从缓存中移除
-     * 此方法应该在消息成功保存到数据库后调用
+     * 消息处理完成后的回调
+     * 注意：使用 Caffeine 缓存后，不需要手动移除，缓存会自动过期
+     * 此方法保留用于向后兼容
      */
+    @Deprecated
     public void markProcessed(TdApi.Message message) {
-        String cacheKey = buildCacheKey(message);
-        processingMessages.remove(cacheKey);
-        
-        // 如果是媒体组消息，也移除媒体组缓存键
-        if (message.mediaAlbumId != 0) {
-            String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
-            processingMessages.remove(albumCacheKey);
-        }
-        
-        log.trace("消息处理完成，从缓存移除: {}", cacheKey);
+        // 使用 Caffeine 缓存后，缓存会自动过期，不需要手动移除
+        // 保留此方法用于向后兼容
+        log.trace("消息处理完成（缓存将自动过期）: chatId={}, messageId={}", 
+            message.chatId, message.id);
     }
     
     /**
-     * 消息处理失败后，从缓存中移除
-     * 此方法应该在消息保存失败时调用，允许重试
+     * 标记消息处理失败
+     * 保留在短暂缓存中（5秒），防止立即重试
+     * 
+     * @param message 处理失败的消息
      */
     public void markFailed(TdApi.Message message) {
         String cacheKey = buildCacheKey(message);
-        processingMessages.remove(cacheKey);
         
-        // 如果是媒体组消息，也移除媒体组缓存键
+        // 添加到失败缓存（5秒 TTL）
+        failedCache.put(cacheKey, Boolean.TRUE);
+        
+        // 如果是媒体组消息，也标记媒体组
         if (message.mediaAlbumId != 0) {
             String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
-            processingMessages.remove(albumCacheKey);
+            failedCache.put(albumCacheKey, Boolean.TRUE);
         }
         
-        log.debug("消息处理失败，从缓存移除: {}", cacheKey);
+        log.debug("消息处理失败，短暂缓存（5秒）: {}", cacheKey);
+    }
+    
+    /**
+     * 获取缓存统计信息
+     * 
+     * @return 缓存统计
+     */
+    public CacheStats getCacheStats() {
+        return processingCache.stats();
+    }
+    
+    /**
+     * 获取失败缓存统计信息
+     * 
+     * @return 失败缓存统计
+     */
+    public CacheStats getFailedCacheStats() {
+        return failedCache.stats();
     }
     
     /**
      * 获取当前正在处理的消息数量（用于监控）
      */
-    public int getProcessingCount() {
-        return processingMessages.size();
+    public long getProcessingCount() {
+        return processingCache.estimatedSize();
+    }
+    
+    /**
+     * 获取失败缓存中的消息数量（用于监控）
+     */
+    public long getFailedCount() {
+        return failedCache.estimatedSize();
     }
     
     /**
      * 清空处理缓存（用于测试或异常恢复）
      */
     public void clearCache() {
-        int size = processingMessages.size();
-        processingMessages.clear();
-        log.info("清空处理缓存，移除 {} 条记录", size);
+        long size = processingCache.estimatedSize();
+        processingCache.invalidateAll();
+        failedCache.invalidateAll();
+        log.info("清空处理缓存，移除约 {} 条记录", size);
     }
 }
