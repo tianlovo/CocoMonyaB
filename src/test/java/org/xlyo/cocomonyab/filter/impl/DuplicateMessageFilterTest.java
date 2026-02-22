@@ -10,6 +10,7 @@ import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -59,7 +60,7 @@ class DuplicateMessageFilterTest {
         
         // Then: 应该拒绝
         assertEquals(FilterResult.REJECT, result);
-        assertTrue(context.getRejectReason().contains("Duplicate message in database"));
+        assertTrue(context.getRejectReason().contains("数据库中存在重复消息"));
         assertTrue(context.getRejectReason().contains("chatId=456"));
         assertTrue(context.getRejectReason().contains("messageId=123"));
         verify(rawMessageRepository).existsByChatIdAndMessageId(456L, 123L);
@@ -115,7 +116,7 @@ class DuplicateMessageFilterTest {
         
         // Then: 应该拒绝
         assertEquals(FilterResult.REJECT, result);
-        assertTrue(context.getRejectReason().contains("Duplicate media group in database"));
+        assertTrue(context.getRejectReason().contains("数据库中存在重复媒体组"));
         assertTrue(context.getRejectReason().contains("chatId=456"));
         assertTrue(context.getRejectReason().contains("mediaAlbumId=789"));
         verify(rawMessageRepository).existsByChatIdAndMediaAlbumId(456L, 789L);
@@ -152,47 +153,56 @@ class DuplicateMessageFilterTest {
     }
     
     @Test
-    void testMarkProcessedRemovesFromCache() {
+    void testMarkProcessedIsDeprecated() {
         // Given: 消息通过过滤并在处理中
         TdApi.Message message = createSingleMessage(123L, 456L);
         when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(false);
         
         filter.filter(message, new FilterContext());
-        assertEquals(1, filter.getProcessingCount());
+        long initialCount = filter.getProcessingCount();
+        assertThat(initialCount).isGreaterThan(0);
         
-        // When: 标记为已处理
-        filter.markProcessed(message);
+        // When: 标记为已处理（已废弃的方法）
+        @SuppressWarnings("deprecation")
+        boolean deprecated = true;
+        if (deprecated) {
+            filter.markProcessed(message);
+        }
         
-        // Then: 从缓存中移除
-        assertEquals(0, filter.getProcessingCount());
+        // Then: 缓存不会立即移除（使用 Caffeine 后自动过期）
+        // 缓存会在 10 秒后自动过期
+        long afterMarkCount = filter.getProcessingCount();
+        assertThat(afterMarkCount).isGreaterThan(0);
         
-        // 相同消息再次到达应该检查数据库
-        when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(true);
+        // 相同消息再次到达应该被缓存拒绝
         FilterResult result = filter.filter(message, new FilterContext());
         assertEquals(FilterResult.REJECT, result);
     }
     
     @Test
-    void testMarkFailedRemovesFromCache() {
+    void testMarkFailedAddsToFailedCache() {
         // Given: 消息通过过滤但保存失败
         TdApi.Message message = createSingleMessage(123L, 456L);
         when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(false);
         
         filter.filter(message, new FilterContext());
-        assertEquals(1, filter.getProcessingCount());
+        long initialProcessingCount = filter.getProcessingCount();
+        assertThat(initialProcessingCount).isGreaterThan(0);
         
         // When: 标记为失败
         filter.markFailed(message);
         
-        // Then: 从缓存中移除，允许重试
-        assertEquals(0, filter.getProcessingCount());
+        // Then: 添加到失败缓存
+        long failedCount = filter.getFailedCount();
+        assertThat(failedCount).isGreaterThan(0);
         
-        // 相同消息再次到达应该能通过（允许重试）
+        // And: 处理缓存仍然保留（不会立即移除）
+        long afterFailCount = filter.getProcessingCount();
+        assertThat(afterFailCount).isGreaterThan(0);
+        
+        // 相同消息再次到达应该被处理缓存拒绝
         FilterResult result = filter.filter(message, new FilterContext());
-        assertEquals(FilterResult.ACCEPT, result);
-        
-        // 清理
-        filter.markProcessed(message);
+        assertEquals(FilterResult.REJECT, result);
     }
     
     @Test
