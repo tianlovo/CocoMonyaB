@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -15,6 +16,7 @@ import org.xlyo.cocomonyab.websocket.auth.WsTokenChannelInterceptor;
 public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer {
     private final WsTokenChannelInterceptor tokenChannelInterceptor;
     private final WebsocketProperties websocketProperties;
+    private final TaskScheduler wsHeartbeatTaskScheduler;
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -30,7 +32,12 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
         // 配置应用目的地前缀（客户端发送消息的路径前缀）
         registry.setApplicationDestinationPrefixes(websocketProperties.getAppDstPrefix());
         // 配置简单代理，将消息转发给订阅了特定前缀的客户端
-        registry.enableSimpleBroker(websocketProperties.getBrokerPrefix());
+        registry.enableSimpleBroker(websocketProperties.getBrokerPrefix())
+                .setHeartbeatValue(new long[]{
+                        websocketProperties.getHeartbeat().getOutgoing(),
+                        websocketProperties.getHeartbeat().getIncoming()
+                })
+                .setTaskScheduler(wsHeartbeatTaskScheduler);
         // 配置用户目的地前缀，用于点对点消息
         registry.setUserDestinationPrefix(websocketProperties.getUserDstPrefix());
     }

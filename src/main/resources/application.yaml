@@ -35,6 +35,8 @@ logging:
   level:
     root: INFO
     "[it.tdlight.TDLight]": WARN
+    org.springframework.messaging: DEBUG
+    org.springframework.websocket: DEBUG
 
 # Spring Dotenv 配置
 springdotenv:
@@ -75,3 +77,6 @@ websocket:
   app-dst-prefix: /app
   broker-prefix: /topic
   user-dst-prefix: /user
+  heartbeat:
+    incoming: 10000
+    outgoing: 10000

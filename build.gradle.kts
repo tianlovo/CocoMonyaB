@@ -1,8 +1,7 @@
 plugins {
-    id("com.google.protobuf") version "0.9.6"
+    java
     id("org.springframework.boot") version "4.0.3"
     id("io.spring.dependency-management") version "1.1.7"
-    java
 }
 
 group = "org.xlyo"
@@ -64,10 +63,6 @@ dependencies {
     implementation(platform("it.tdlight:tdlight-java-bom:3.4.0+td.1.8.26"))
     implementation("it.tdlight:tdlight-java")
     runtimeOnly(group = "it.tdlight", name = "tdlight-natives", classifier = "windows_amd64")
-
-    // Protobuf
-    implementation("com.google.protobuf:protobuf-java:${property("protobufVersion")}")
-    implementation("com.google.protobuf:protobuf-java-util:${property("protobufVersion")}")
 }
 
 tasks.withType<Test> {
@@ -84,32 +79,4 @@ tasks.compileJava {
 
 tasks.compileTestJava {
     options.encoding = "UTF-8"
-}
-
-protobuf {
-    protoc {
-        // 指定 protoc 编译器版本，与依赖版本一致
-        artifact = "com.google.protobuf:protoc:${property("protobufVersion")}"
-    }
-    generateProtoTasks {
-        ofSourceSet("main").forEach { task ->
-            task.builtins {
-                // 如果已存在则获取，否则创建
-                maybeCreate("java").apply {
-                    // 设置选项，例如：
-                    // option("optimize_for = SPEED")
-                }
-            }
-        }
-    }
-    // 生成的 Java 文件存放目录（默认在 `build/generated/source/proto/main`）
-}
-
-// 使 IntelliJ 能识别生成的源文件
-sourceSets {
-    main {
-        java {
-            srcDirs("build/generated/source/proto/main/java")
-        }
-    }
 }

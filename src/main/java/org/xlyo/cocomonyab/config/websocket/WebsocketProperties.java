@@ -33,4 +33,12 @@ public class WebsocketProperties {
      * 用户目的地前缀，用于点对点消息
      */
     private String userDstPrefix = "/user";
+
+    private Heartbeat heartbeat = new Heartbeat();
+
+    @Data
+    public static class Heartbeat {
+        private long outgoing = 10000; // 默认10秒
+        private long incoming = 10000;
+    }
 }
