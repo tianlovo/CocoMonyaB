@@ -26,7 +26,7 @@ public class FilterChainManager {
      */
     public void registerFilter(MessageFilter filter) {
         if (filterMap.containsKey(filter.getName())) {
-            log.warn("Filter {} already registered, skipping", filter.getName());
+            log.warn("过滤器 {} 已注册，跳过", filter.getName());
             return;
         }
         
@@ -37,10 +37,10 @@ public class FilterChainManager {
             // 按优先级排序（优先级高的先执行）
             filters.sort(Comparator.comparingInt(MessageFilter::getPriority).reversed());
             
-            log.info("Registered filter: {} with priority {}", 
+            log.info("已注册过滤器: {} (优先级: {})", 
                 filter.getName(), filter.getPriority());
         } catch (Exception e) {
-            log.error("Failed to register filter: {}", filter.getName(), e);
+            log.error("注册过滤器失败: {}", filter.getName(), e);
         }
     }
     
@@ -51,7 +51,7 @@ public class FilterChainManager {
         MessageFilter filter = filterMap.remove(filterName);
         if (filter != null) {
             filters.remove(filter);
-            log.info("Unregistered filter: {}", filterName);
+            log.info("已注销过滤器: {}", filterName);
         }
     }
     
@@ -63,7 +63,7 @@ public class FilterChainManager {
      */
     public boolean executeChain(TdApi.Message message) {
         if (filters.isEmpty()) {
-            log.debug("No filters registered, accepting message by default");
+            log.debug("未注册过滤器，默认接受消息");
             return true;
         }
         
@@ -78,20 +78,20 @@ public class FilterChainManager {
                 long executionTime = System.currentTimeMillis() - startTime;
                 recordExecutionTime(filter.getName(), executionTime);
                 
-                log.debug("Filter {} executed in {}ms, result: {}", 
+                log.debug("过滤器 {} 执行耗时 {}ms，结果: {}", 
                     filter.getName(), executionTime, result);
                 
                 if (result == FilterResult.REJECT) {
                     recordRejection(filter.getName());
                     String reason = context.getRejectReason() != null 
                         ? context.getRejectReason() 
-                        : "No reason provided";
-                    log.info("Message rejected by filter {}: chatId={}, messageId={}, reason: {}", 
+                        : "未提供原因";
+                    log.info("消息被过滤器 {} 拒绝: chatId={}, messageId={}, 原因: {}", 
                         filter.getName(), message.chatId, message.id, reason);
                     return false;
                 }
             } catch (Exception e) {
-                log.error("Error executing filter {}: {}", 
+                log.error("执行过滤器 {} 时出错: {}", 
                     filter.getName(), e.getMessage(), e);
                 // 继续执行下一个过滤器
             }
@@ -150,7 +150,7 @@ public class FilterChainManager {
         MessageFilter filter = filterMap.get(name);
         if (filter instanceof AbstractMessageFilter) {
             ((AbstractMessageFilter) filter).setEnabled(true);
-            log.info("Enabled filter: {}", name);
+            log.info("已启用过滤器: {}", name);
         }
     }
     
@@ -161,7 +161,7 @@ public class FilterChainManager {
         MessageFilter filter = filterMap.get(name);
         if (filter instanceof AbstractMessageFilter) {
             ((AbstractMessageFilter) filter).setEnabled(false);
-            log.info("Disabled filter: {}", name);
+            log.info("已禁用过滤器: {}", name);
         }
     }
     
@@ -170,7 +170,7 @@ public class FilterChainManager {
      */
     @PreDestroy
     public void shutdown() {
-        log.info("Shutting down filter chain manager, {} filters registered", filters.size());
+        log.info("正在关闭过滤器链管理器，已注册 {} 个过滤器", filters.size());
         filters.clear();
         filterMap.clear();
     }

@@ -24,14 +24,14 @@ public abstract class AbstractMessageFilter implements MessageFilter {
     @Override
     public FilterResult filter(TdApi.Message message, FilterContext context) {
         if (!isEnabled()) {
-            log.debug("Filter {} is disabled, accepting message", getName());
+            log.debug("过滤器 {} 已禁用，接受消息", getName());
             return FilterResult.ACCEPT;
         }
         
         try {
             return doFilter(message, context);
         } catch (Exception e) {
-            log.error("Error in filter {}: {}", getName(), e.getMessage(), e);
+            log.error("过滤器 {} 执行出错: {}", getName(), e.getMessage(), e);
             // 出错时默认接受消息（fail-open策略）
             return FilterResult.ACCEPT;
         }

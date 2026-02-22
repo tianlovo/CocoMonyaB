@@ -60,7 +60,7 @@ public class ChannelMonitorService {
         try {
             // 先执行过滤器链
             if (!filterChainManager.executeChain(message)) {
-                log.debug("Message filtered out: chatId={}, messageId={}", message.chatId, message.id);
+                log.debug("消息被过滤: chatId={}, messageId={}", message.chatId, message.id);
                 return; // 消息被过滤，不保存也不处理
             }
             

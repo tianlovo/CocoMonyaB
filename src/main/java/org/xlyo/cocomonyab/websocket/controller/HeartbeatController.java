@@ -21,7 +21,7 @@ public class HeartbeatController {
             SimpMessageHeaderAccessor headerAccessor) {
 
         String sessionId = headerAccessor.getSessionId();
-        log.info("[Heartbeat] User: {}, Session: {}, ClientTime: {}",
+        log.info("[心跳] 用户: {}, 会话: {}, 客户端时间: {}",
                 principal.getName(), sessionId, request.getClientTimestamp());
 
         HeartbeatVO response = new HeartbeatVO();

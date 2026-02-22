@@ -86,7 +86,7 @@ public class WsTokenChannelInterceptor implements ChannelInterceptor {
             } else {
                 // 认证失败：记录警告并抛出异常
                 log.warn("Token 验证失败，sessionId: {}, token前缀: {}", sessionId, tokenPrefix);
-                throw new IllegalArgumentException("Invalid or missing authentication token.");
+                throw new IllegalArgumentException("无效或缺失的认证 token");
             }
         }
 

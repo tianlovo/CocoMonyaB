@@ -26,7 +26,7 @@ public class PluginManager {
      */
     public void registerPlugin(MessagePlugin plugin) {
         if (pluginMap.containsKey(plugin.getName())) {
-            log.warn("Plugin {} already registered, skipping", plugin.getName());
+            log.warn("插件 {} 已注册，跳过", plugin.getName());
             return;
         }
         
@@ -38,10 +38,10 @@ public class PluginManager {
             // 按优先级排序（从高到低）
             plugins.sort(Comparator.comparingInt(MessagePlugin::getPriority).reversed());
             
-            log.info("Registered plugin: {} with priority {}", 
+            log.info("已注册插件: {} (优先级: {})", 
                 plugin.getName(), plugin.getPriority());
         } catch (Exception e) {
-            log.error("Failed to register plugin: {}", plugin.getName(), e);
+            log.error("注册插件失败: {}", plugin.getName(), e);
         }
     }
     
@@ -54,9 +54,9 @@ public class PluginManager {
             plugins.remove(plugin);
             try {
                 plugin.destroy();
-                log.info("Unregistered plugin: {}", pluginName);
+                log.info("已注销插件: {}", pluginName);
             } catch (Exception e) {
-                log.error("Error destroying plugin: {}", pluginName, e);
+                log.error("销毁插件时出错: {}", pluginName, e);
             }
         }
     }
@@ -66,7 +66,7 @@ public class PluginManager {
      */
     public void process(BaseMessageEntity entity, TdApi.Message originalMessage) {
         if (plugins.isEmpty()) {
-            log.warn("No plugins registered, message will not be processed");
+            log.warn("未注册插件，消息将不会被处理");
             return;
         }
         
@@ -81,15 +81,15 @@ public class PluginManager {
                 long executionTime = System.currentTimeMillis() - startTime;
                 recordExecutionTime(plugin.getName(), executionTime);
                 
-                log.debug("Plugin {} executed in {}ms, result: {}", 
+                log.debug("插件 {} 执行耗时 {}ms，结果: {}", 
                     plugin.getName(), executionTime, result);
                 
                 if (result == PluginResult.STOP) {
-                    log.debug("Plugin {} stopped the chain", plugin.getName());
+                    log.debug("插件 {} 停止了处理链", plugin.getName());
                     break;
                 }
             } catch (Exception e) {
-                log.error("Error executing plugin {}: {}", 
+                log.error("执行插件 {} 时出错: {}", 
                     plugin.getName(), e.getMessage(), e);
                 // 继续执行下一个插件
             }
@@ -131,7 +131,7 @@ public class PluginManager {
         MessagePlugin plugin = pluginMap.get(name);
         if (plugin instanceof AbstractMessagePlugin) {
             ((AbstractMessagePlugin) plugin).setEnabled(true);
-            log.info("Enabled plugin: {}", name);
+            log.info("已启用插件: {}", name);
         }
     }
     
@@ -142,7 +142,7 @@ public class PluginManager {
         MessagePlugin plugin = pluginMap.get(name);
         if (plugin instanceof AbstractMessagePlugin) {
             ((AbstractMessagePlugin) plugin).setEnabled(false);
-            log.info("Disabled plugin: {}", name);
+            log.info("已禁用插件: {}", name);
         }
     }
     
@@ -151,12 +151,12 @@ public class PluginManager {
      */
     @PreDestroy
     public void shutdown() {
-        log.info("Shutting down plugin manager, destroying {} plugins", plugins.size());
+        log.info("正在关闭插件管理器，销毁 {} 个插件", plugins.size());
         for (MessagePlugin plugin : plugins) {
             try {
                 plugin.destroy();
             } catch (Exception e) {
-                log.error("Error destroying plugin: {}", plugin.getName(), e);
+                log.error("销毁插件时出错: {}", plugin.getName(), e);
             }
         }
         plugins.clear();

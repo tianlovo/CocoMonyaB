@@ -34,7 +34,7 @@ public class MessageStorageService {
         try {
             // 去重检查（这里是双重检查，防止过滤器被禁用的情况）
             if (isDuplicate(message)) {
-                log.debug("Message already exists: chatId={}, messageId={}, mediaAlbumId={}", 
+                log.debug("消息已存在: chatId={}, messageId={}, mediaAlbumId={}", 
                     message.chatId, message.id, message.mediaAlbumId);
                 // 即使重复，也要从过滤器缓存中移除
                 duplicateMessageFilter.markProcessed(message);
@@ -60,12 +60,12 @@ public class MessageStorageService {
             // 保存成功后，从过滤器缓存中移除（标记为已处理）
             duplicateMessageFilter.markProcessed(message);
             
-            log.debug("Saved raw message: chatId={}, messageId={}, mediaAlbumId={}", 
+            log.debug("已保存原始消息: chatId={}, messageId={}, mediaAlbumId={}", 
                 message.chatId, message.id, message.mediaAlbumId);
             
             return true;
         } catch (Exception e) {
-            log.error("Failed to save message: chatId={}, messageId={}, error={}", 
+            log.error("保存消息失败: chatId={}, messageId={}, error={}", 
                 message.chatId, message.id, e.getMessage(), e);
             
             // 保存失败，从过滤器缓存中移除（允许重试）
@@ -114,14 +114,14 @@ public class MessageStorageService {
                     try {
                         return deserializeFromJson(raw.getRawJson());
                     } catch (Exception e) {
-                        log.error("Failed to deserialize message: chatId={}, messageId={}", 
+                        log.error("反序列化消息失败: chatId={}, messageId={}", 
                             chatId, messageId, e);
                         return null;
                     }
                 })
                 .orElse(null);
         } catch (Exception e) {
-            log.error("Failed to get raw message: chatId={}, messageId={}", 
+            log.error("获取原始消息失败: chatId={}, messageId={}", 
                 chatId, messageId, e);
             return null;
         }
