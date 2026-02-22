@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.config.TelegramProperties;
 import org.xlyo.cocomonyab.config.TgEnvProperties;
+import org.xlyo.cocomonyab.telegram.handler.TgUpdateNewMessageHandler;
 
 import java.nio.file.Paths;
 import java.util.Locale;
@@ -36,6 +37,7 @@ public class TelegramClientManager {
 
     private final TgEnvProperties envProperties;
     private final TelegramProperties telegramProperties;
+    private final TgUpdateNewMessageHandler updateNewMessageHandler;
 
     private SimpleTelegramClient client;
     
@@ -191,6 +193,7 @@ public class TelegramClientManager {
             
             // 6. 注册监听器
             clientBuilder.addUpdateHandler(TdApi.UpdateAuthorizationState.class, this::onAuthStateUpdate);
+            clientBuilder.addUpdateHandler(TdApi.UpdateNewMessage.class, updateNewMessageHandler::onNewMessageUpdate);
 
             // 7. 设置自定义客户端交互（处理验证码和密码输入）
             TgAutoClientInteraction clientInteraction = new TgAutoClientInteraction(envProperties);
