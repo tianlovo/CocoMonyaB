@@ -1,7 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
 import it.tdlight.jni.TdApi;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -12,6 +11,7 @@ import org.xlyo.cocomonyab.service.message.MessageStorageService;
 import org.xlyo.cocomonyab.service.message.MessageParser;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
+import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 
@@ -20,7 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 频道监控服务
- * 负责管理监控频道列表、处理新消息、媒体组缓冲
+ * 负责处理新消息、媒体组缓冲
+ * <p>
+ * 注意：频道监控检查已移至 ChannelMonitoringFilter
  */
 @Service
 @RequiredArgsConstructor
@@ -32,9 +34,7 @@ public class ChannelMonitorService {
     private final MessageParser messageParser;
     private final PluginManager pluginManager;
     private final FilterChainManager filterChainManager;
-    
-    // 缓存监控中的频道ID（提高性能）
-    private final Set<Long> monitoringChannels = Collections.synchronizedSet(new HashSet<>());
+    private final ChannelMonitoringFilter channelMonitoringFilter;
     
     // 媒体组缓冲区：key = chatId:mediaAlbumId, value = 消息列表
     private final Map<String, List<TdApi.Message>> mediaGroupBuffer = new ConcurrentHashMap<>();
@@ -46,35 +46,11 @@ public class ChannelMonitorService {
     private static final long MEDIA_GROUP_TIMEOUT = 2000; // 2秒
     
     /**
-     * 初始化：从数据库加载启用监控的频道
-     */
-    @PostConstruct
-    public void initialize() {
-        try {
-            List<Channel> channels = channelRepository.findByMonitoringStatus(true);
-            
-            channels.forEach(channel -> {
-                monitoringChannels.add(channel.getChannelId());
-                log.info("✓ 已加载监控频道: {} (@{}) [ID: {}]", 
-                    channel.getChannelTitle(), 
-                    channel.getChannelUsername(),
-                    channel.getChannelId());
-            });
-            
-            log.info("=".repeat(60));
-            log.info("频道监控服务已启动，共监控 {} 个频道", monitoringChannels.size());
-            log.info("=".repeat(60));
-            
-        } catch (Exception e) {
-            log.error("加载监控频道列表失败", e);
-        }
-    }
-    
-    /**
      * 检查频道是否在监控列表中
+     * 委托给 ChannelMonitoringFilter
      */
     public boolean isMonitoring(long chatId) {
-        return monitoringChannels.contains(chatId);
+        return channelMonitoringFilter.isMonitoring(chatId);
     }
     
     /**
@@ -251,32 +227,33 @@ public class ChannelMonitorService {
     
     /**
      * 启动监控
+     * 委托给 ChannelMonitoringFilter
      */
     public void startMonitoring(long chatId) {
-        monitoringChannels.add(chatId);
-        log.info("✓ 已启动频道监控: chatId={}", chatId);
+        channelMonitoringFilter.startMonitoring(chatId);
     }
     
     /**
      * 停止监控
+     * 委托给 ChannelMonitoringFilter
      */
     public void stopMonitoring(long chatId) {
-        monitoringChannels.remove(chatId);
-        log.info("✓ 已停止频道监控: chatId={}", chatId);
+        channelMonitoringFilter.stopMonitoring(chatId);
     }
     
     /**
      * 重新加载监控列表
+     * 委托给 ChannelMonitoringFilter
      */
     public void reloadMonitoringChannels() {
-        monitoringChannels.clear();
-        initialize();
+        channelMonitoringFilter.reloadMonitoringChannels();
     }
     
     /**
      * 获取监控频道数量
+     * 委托给 ChannelMonitoringFilter
      */
     public int getMonitoringChannelCount() {
-        return monitoringChannels.size();
+        return channelMonitoringFilter.getMonitoringChannelCount();
     }
 }
