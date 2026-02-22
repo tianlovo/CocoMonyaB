@@ -14,8 +14,7 @@ public class ChannelCreateDTO {
     @NotNull(message = "频道ID不能为空")
     private Long channelId;
     
-    @NotBlank(message = "频道用户名不能为空")
-    @Size(min = 1, max = 100, message = "频道用户名长度必须在1-100之间")
+    @Size(max = 100, message = "频道用户名长度不能超过100")
     private String channelUsername;
     
     @NotBlank(message = "频道标题不能为空")

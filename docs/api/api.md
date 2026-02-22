@@ -49,7 +49,7 @@
 | 字段 | 类型 | 必填 | 校验规则 | 说明 |
 |------|------|------|----------|------|
 | channelId | Long | 是 | 不能为空 | Telegram 频道 ID |
-| channelUsername | String | 是 | 不能为空，长度 1-100 | 频道用户名 |
+| channelUsername | String | 否 | 长度不超过100 | 频道用户名（可为空） |
 | channelTitle | String | 是 | 不能为空，长度 1-200 | 频道标题 |
 | monitoringStatus | Boolean | 否 | - | 监控状态，默认为 true |
 
@@ -69,7 +69,7 @@
 
 | 字段 | 类型 | 必填 | 校验规则 | 说明 |
 |------|------|------|----------|------|
-| channelUsername | String | 否 | 长度 1-100 | 频道用户名 |
+| channelUsername | String | 否 | 长度不超过100 | 频道用户名 |
 | channelTitle | String | 否 | 长度 1-200 | 频道标题 |
 | monitoringStatus | Boolean | 否 | - | 监控状态 |
 
