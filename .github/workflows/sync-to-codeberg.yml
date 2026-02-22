@@ -31,6 +31,27 @@ jobs:
         run: |
           git remote add codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git || git remote set-url codeberg https://${{ vars.CODEBERG_USERNAME }}:${{ secrets.CODEBERG_TOKEN }}@codeberg.org/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}.git
 
+      - name: Check and set default branch
+        run: |
+          # 获取Codeberg仓库的默认分支
+          DEFAULT_BRANCH=$(curl -s -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+            "https://codeberg.org/api/v1/repos/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}" \
+            | jq -r '.default_branch')
+          
+          echo "Current default branch on Codeberg: $DEFAULT_BRANCH"
+          
+          # 如果默认分支不是main，则设置为main
+          if [ "$DEFAULT_BRANCH" != "main" ]; then
+            echo "Setting default branch to 'main'..."
+            curl -X PATCH -H "Authorization: token ${{ secrets.CODEBERG_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{"default_branch": "main"}' \
+              "https://codeberg.org/api/v1/repos/${{ vars.CODEBERG_REPO_OWNER }}/${{ vars.CODEBERG_REPO_NAME }}"
+            echo "Default branch updated to 'main'"
+          else
+            echo "Default branch is already 'main'"
+          fi
+
       - name: Push to Codeberg
         run: |
           # 强制同步所有分支、标签和引用到Codeberg（镜像推送）
