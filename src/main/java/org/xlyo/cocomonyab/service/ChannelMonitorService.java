@@ -163,6 +163,11 @@ public class ChannelMonitorService {
         log.debug("处理媒体组: chatId={}, mediaAlbumId={}, 消息数量={}", 
             chatId, mediaAlbumId, messages.size());
         
+        // 获取频道信息
+        Channel channel = channelRepository.findByChannelId(chatId).orElse(null);
+        String channelUsername = channel != null ? channel.getChannelUsername() : null;
+        String channelTitle = channel != null ? channel.getChannelTitle() : null;
+        
         // 1. 保存和解析每条消息（复用单消息处理逻辑）
         List<BaseMessageEntity> parsedMessages = new ArrayList<>();
         for (TdApi.Message message : messages) {
@@ -171,7 +176,7 @@ public class ChannelMonitorService {
             
             // 解析消息
             try {
-                BaseMessageEntity entity = messageParser.parse(message);
+                BaseMessageEntity entity = messageParser.parse(message, channelUsername, channelTitle);
                 parsedMessages.add(entity);
             } catch (Exception e) {
                 log.error("解析媒体组消息失败: chatId={}, messageId={}", 
@@ -224,12 +229,17 @@ public class ChannelMonitorService {
      * 处理单条消息（非媒体组）
      */
     private void processSingleMessage(TdApi.Message message) {
+        // 获取频道信息
+        Channel channel = channelRepository.findByChannelId(message.chatId).orElse(null);
+        String channelUsername = channel != null ? channel.getChannelUsername() : null;
+        String channelTitle = channel != null ? channel.getChannelTitle() : null;
+        
         // 1. 保存原始消息到数据库
         messageStorageService.saveMessage(message);
         
         // 2. 解析消息为实体类
         try {
-            BaseMessageEntity entity = messageParser.parse(message);
+            BaseMessageEntity entity = messageParser.parse(message, channelUsername, channelTitle);
             
             // 3. 使用插件管理器处理（包括控制台打印）
             pluginManager.process(entity, message);

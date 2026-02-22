@@ -26,9 +26,16 @@ public class MessageParser {
      * 解析消息
      */
     public BaseMessageEntity parse(TdApi.Message message) {
+        return parse(message, null, null);
+    }
+    
+    /**
+     * 解析消息（带频道信息）
+     */
+    public BaseMessageEntity parse(TdApi.Message message, String channelUsername, String channelTitle) {
         MessageType type = typeDetector.detectType(message);
         
-        return switch (type) {
+        BaseMessageEntity entity = switch (type) {
             case TEXT -> parseTextMessage(message);
             case TELEGRAPH -> parseTelegraphMessage(message);
             case PHOTO -> parsePhotoMessage(message);
@@ -43,6 +50,16 @@ public class MessageParser {
             case MEDIA_GROUP -> throw new IllegalStateException("Media group should be handled separately");
             default -> parseOtherMessage(message);
         };
+        
+        // 设置频道信息
+        if (channelUsername != null) {
+            entity.setChannelUsername(channelUsername);
+        }
+        if (channelTitle != null) {
+            entity.setChannelTitle(channelTitle);
+        }
+        
+        return entity;
     }
     
     /**
