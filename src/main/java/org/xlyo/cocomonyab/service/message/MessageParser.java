@@ -34,7 +34,24 @@ public class MessageParser {
      */
     public BaseMessageEntity parse(TdApi.Message message, String channelUsername, String channelTitle) {
         MessageType type = typeDetector.detectType(message);
-        
+        return parseWithType(message, type, channelUsername, channelTitle);
+    }
+    
+    /**
+     * 解析媒体组中的单条消息
+     * 忽略 mediaAlbumId，按实际内容类型解析
+     */
+    public BaseMessageEntity parseMediaGroupItem(TdApi.Message message, String channelUsername, String channelTitle) {
+        // 直接从内容检测类型，忽略 mediaAlbumId
+        MessageType type = typeDetector.detectFromContent(message.content);
+        return parseWithType(message, type, channelUsername, channelTitle);
+    }
+    
+    /**
+     * 使用指定类型解析消息
+     */
+    private BaseMessageEntity parseWithType(TdApi.Message message, MessageType type, 
+                                            String channelUsername, String channelTitle) {
         BaseMessageEntity entity = switch (type) {
             case TEXT -> parseTextMessage(message);
             case TELEGRAPH -> parseTelegraphMessage(message);

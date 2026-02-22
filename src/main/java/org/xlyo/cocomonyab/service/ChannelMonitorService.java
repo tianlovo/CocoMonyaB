@@ -174,9 +174,9 @@ public class ChannelMonitorService {
             // 保存原始消息
             messageStorageService.saveMessage(message);
             
-            // 解析消息
+            // 解析消息（使用 parseMediaGroupItem 忽略 mediaAlbumId）
             try {
-                BaseMessageEntity entity = messageParser.parse(message, channelUsername, channelTitle);
+                BaseMessageEntity entity = messageParser.parseMediaGroupItem(message, channelUsername, channelTitle);
                 parsedMessages.add(entity);
             } catch (Exception e) {
                 log.error("解析媒体组消息失败: chatId={}, messageId={}", 

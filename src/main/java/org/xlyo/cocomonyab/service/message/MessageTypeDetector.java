@@ -27,7 +27,7 @@ public class MessageTypeDetector {
     /**
      * 从消息内容检测类型
      */
-    private MessageType detectFromContent(TdApi.MessageContent content) {
+    public MessageType detectFromContent(TdApi.MessageContent content) {
         return switch (content) {
             case TdApi.MessageText text -> detectTextType(text);
             case TdApi.MessagePhoto photo -> MessageType.PHOTO;

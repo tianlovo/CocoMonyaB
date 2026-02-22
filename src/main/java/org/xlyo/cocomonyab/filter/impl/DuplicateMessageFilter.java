@@ -54,11 +54,23 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     
     @Override
     protected FilterResult doFilter(TdApi.Message message, FilterContext context) {
+        // 媒体组消息的特殊处理
+        if (message.mediaAlbumId != 0) {
+            return filterMediaGroupMessage(message, context);
+        }
+        
+        // 单条消息的处理
+        return filterSingleMessage(message, context);
+    }
+    
+    /**
+     * 过滤单条消息
+     */
+    private FilterResult filterSingleMessage(TdApi.Message message, FilterContext context) {
         String cacheKey = buildCacheKey(message);
         
         // 第一层检查：内存缓存（防止并发重复）
         if (!processingMessages.add(cacheKey)) {
-            // add() 返回 false 表示已存在，说明正在处理中
             context.setRejectReason(String.format(
                 "消息正在处理中: %s", cacheKey
             ));
@@ -67,34 +79,62 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         }
         
         // 第二层检查：数据库查询（持久化去重）
-        boolean existsInDb = checkDatabase(message);
+        boolean existsInDb = rawMessageRepository.existsByChatIdAndMessageId(
+            message.chatId, 
+            message.id
+        );
         
         if (existsInDb) {
             // 数据库中已存在，从缓存中移除并拒绝
             processingMessages.remove(cacheKey);
-            
-            if (message.mediaAlbumId != 0) {
-                context.setRejectReason(String.format(
-                    "数据库中存在重复媒体组: chatId=%d, mediaAlbumId=%d", 
-                    message.chatId, message.mediaAlbumId
-                ));
-                log.debug("过滤数据库中的重复媒体组: chatId={}, mediaAlbumId={}", 
-                    message.chatId, message.mediaAlbumId);
-            } else {
-                context.setRejectReason(String.format(
-                    "数据库中存在重复消息: chatId=%d, messageId=%d", 
-                    message.chatId, message.id
-                ));
-                log.debug("过滤数据库中的重复消息: chatId={}, messageId={}", 
-                    message.chatId, message.id);
-            }
-            
+            context.setRejectReason(String.format(
+                "数据库中存在重复消息: chatId=%d, messageId=%d", 
+                message.chatId, message.id
+            ));
+            log.debug("过滤数据库中的重复消息: chatId={}, messageId={}", 
+                message.chatId, message.id);
             return FilterResult.REJECT;
         }
         
         // 消息不重复，标记为正在处理并接受
-        // 注意：消息处理完成后需要从缓存中移除，这由 MessageStorageService 负责
         context.setAttribute("cacheKey", cacheKey);
+        return FilterResult.ACCEPT;
+    }
+    
+    /**
+     * 过滤媒体组消息
+     * 媒体组的每条消息都需要通过，但要防止整个媒体组被重复处理
+     */
+    private FilterResult filterMediaGroupMessage(TdApi.Message message, FilterContext context) {
+        String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
+        String messageCacheKey = buildCacheKey(message);
+        
+        // 检查数据库中是否已存在该媒体组
+        boolean albumExistsInDb = rawMessageRepository.existsByChatIdAndMediaAlbumId(
+            message.chatId, 
+            message.mediaAlbumId
+        );
+        
+        if (albumExistsInDb) {
+            // 整个媒体组已存在，拒绝
+            context.setRejectReason(String.format(
+                "数据库中存在重复媒体组: chatId=%d, mediaAlbumId=%d", 
+                message.chatId, message.mediaAlbumId
+            ));
+            log.debug("过滤数据库中的重复媒体组: chatId={}, mediaAlbumId={}", 
+                message.chatId, message.mediaAlbumId);
+            return FilterResult.REJECT;
+        }
+        
+        // 媒体组不存在于数据库，允许通过
+        // 将媒体组标记为正在处理（只标记一次）
+        processingMessages.add(albumCacheKey);
+        
+        // 同时标记单条消息（用于后续清理）
+        processingMessages.add(messageCacheKey);
+        
+        context.setAttribute("cacheKey", messageCacheKey);
+        context.setAttribute("albumCacheKey", albumCacheKey);
         return FilterResult.ACCEPT;
     }
     
@@ -102,32 +142,8 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
      * 构建缓存键
      */
     private String buildCacheKey(TdApi.Message message) {
-        if (message.mediaAlbumId != 0) {
-            // 媒体组消息：chatId:album:mediaAlbumId
-            return message.chatId + ":album:" + message.mediaAlbumId;
-        } else {
-            // 单条消息：chatId:messageId
-            return message.chatId + ":" + message.id;
-        }
-    }
-    
-    /**
-     * 检查数据库中是否存在
-     */
-    private boolean checkDatabase(TdApi.Message message) {
-        if (message.mediaAlbumId != 0) {
-            // 媒体组消息：使用 chatId + mediaAlbumId 检查
-            return rawMessageRepository.existsByChatIdAndMediaAlbumId(
-                message.chatId, 
-                message.mediaAlbumId
-            );
-        } else {
-            // 单条消息：使用 chatId + messageId 检查
-            return rawMessageRepository.existsByChatIdAndMessageId(
-                message.chatId, 
-                message.id
-            );
-        }
+        // 单条消息：chatId:messageId
+        return message.chatId + ":" + message.id;
     }
     
     /**
@@ -137,6 +153,13 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     public void markProcessed(TdApi.Message message) {
         String cacheKey = buildCacheKey(message);
         processingMessages.remove(cacheKey);
+        
+        // 如果是媒体组消息，也移除媒体组缓存键
+        if (message.mediaAlbumId != 0) {
+            String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
+            processingMessages.remove(albumCacheKey);
+        }
+        
         log.trace("消息处理完成，从缓存移除: {}", cacheKey);
     }
     
@@ -147,6 +170,13 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     public void markFailed(TdApi.Message message) {
         String cacheKey = buildCacheKey(message);
         processingMessages.remove(cacheKey);
+        
+        // 如果是媒体组消息，也移除媒体组缓存键
+        if (message.mediaAlbumId != 0) {
+            String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
+            processingMessages.remove(albumCacheKey);
+        }
+        
         log.debug("消息处理失败，从缓存移除: {}", cacheKey);
     }
     
