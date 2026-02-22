@@ -21,6 +21,11 @@ spring:
       # 远程 MongoDB 连接 URI（仅在 remote 模式下使用）
       # uri: mongodb://localhost:27017/cocomonya
 
+  security: # 关闭默认的HTTP Basic认证，因为我们只做WebSocket token认证
+    user:
+      name: none
+      password: none
+
 server:
   port: 10721
 
@@ -63,3 +68,10 @@ env:
   # 两步验证密码（可选，如果未启用 2FA 则为空）
   tg-2fa: ${TG_2FA:}
 
+# Websocket配置
+websocket:
+  trusted-token: ${WS_TRUSTED_TOKEN}
+  connect-prefix: /ws
+  app-dst-prefix: /app
+  broker-prefix: /topic
+  user-dst-prefix: /user
