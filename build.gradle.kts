@@ -37,6 +37,9 @@ dependencies {
 
     // 数据库
     implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+    
+    // JSON 处理
+    implementation("com.fasterxml.jackson.core:jackson-databind")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")

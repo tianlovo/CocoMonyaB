@@ -5,6 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.service.ChannelMonitorService;
+import org.xlyo.cocomonyab.service.message.MessageStorageService;
+import org.xlyo.cocomonyab.service.message.MessageParser;
+import org.xlyo.cocomonyab.plugin.PluginManager;
 
 /**
  * Telegram 新消息更新处理器
@@ -16,6 +19,9 @@ import org.xlyo.cocomonyab.service.ChannelMonitorService;
 public class TgUpdateNewMessageHandler {
     
     private final ChannelMonitorService channelMonitorService;
+    private final MessageStorageService messageStorageService;
+    private final MessageParser messageParser;
+    private final PluginManager pluginManager;
     
     /**
      * 处理新消息更新
@@ -34,7 +40,8 @@ public class TgUpdateNewMessageHandler {
             return;
         }
         
-        // 处理消息
+        // 处理消息（使用新的插件系统）
+        // 注意：媒体组消息仍然由ChannelMonitorService处理（缓冲机制）
         channelMonitorService.handleNewMessage(message);
     }
 }

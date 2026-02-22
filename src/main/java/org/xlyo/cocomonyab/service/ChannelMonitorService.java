@@ -7,20 +7,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.domain.entity.Channel;
-import org.xlyo.cocomonyab.domain.entity.ChannelMessage;
-import org.xlyo.cocomonyab.repository.ChannelMessageRepository;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
+import org.xlyo.cocomonyab.service.message.MessageStorageService;
+import org.xlyo.cocomonyab.service.message.MessageParser;
+import org.xlyo.cocomonyab.plugin.PluginManager;
+import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * 频道监控服务
- * 负责管理监控频道列表、处理新消息、消息持久化
+ * 负责管理监控频道列表、处理新消息、媒体组缓冲
  */
 @Service
 @RequiredArgsConstructor
@@ -28,7 +27,9 @@ import java.util.stream.Collectors;
 public class ChannelMonitorService {
     
     private final ChannelRepository channelRepository;
-    private final ChannelMessageRepository messageRepository;
+    private final MessageStorageService messageStorageService;
+    private final MessageParser messageParser;
+    private final PluginManager pluginManager;
     
     // 缓存监控中的频道ID（提高性能）
     private final Set<Long> monitoringChannels = Collections.synchronizedSet(new HashSet<>());
@@ -147,410 +148,87 @@ public class ChannelMonitorService {
         // 按消息ID排序
         messages.sort(Comparator.comparingLong(m -> m.id));
         
-        TdApi.Message firstMessage = messages.get(0);
+        TdApi.Message firstMessage = messages.getFirst();
         long mediaAlbumId = firstMessage.mediaAlbumId;
         long chatId = firstMessage.chatId;
         
-        log.info("处理媒体组: chatId={}, mediaAlbumId={}, 消息数量={}", 
+        log.debug("处理媒体组: chatId={}, mediaAlbumId={}, 消息数量={}", 
             chatId, mediaAlbumId, messages.size());
         
-        // 检查媒体组是否已存在
-        long existingCount = messageRepository.countByChatIdAndMediaAlbumId(chatId, mediaAlbumId);
-        if (existingCount > 0) {
-            log.debug("媒体组已存在，跳过: chatId={}, mediaAlbumId={}", chatId, mediaAlbumId);
-            return;
+        // 1. 保存和解析每条消息（复用单消息处理逻辑）
+        List<BaseMessageEntity> parsedMessages = new ArrayList<>();
+        for (TdApi.Message message : messages) {
+            // 保存原始消息
+            messageStorageService.saveMessage(message);
+            
+            // 解析消息
+            try {
+                BaseMessageEntity entity = messageParser.parse(message);
+                parsedMessages.add(entity);
+            } catch (Exception e) {
+                log.error("解析媒体组消息失败: chatId={}, messageId={}", 
+                    message.chatId, message.id, e);
+            }
         }
+        
+        // 2. 创建媒体组实体并处理
+        if (!parsedMessages.isEmpty()) {
+            MediaGroupMessageEntity mediaGroupEntity = createMediaGroupEntity(parsedMessages, mediaAlbumId);
+            
+            // 3. 使用插件管理器处理（包括控制台打印）
+            pluginManager.process(mediaGroupEntity, firstMessage);
+        }
+    }
+    
+    /**
+     * 创建媒体组实体
+     */
+    private MediaGroupMessageEntity createMediaGroupEntity(List<BaseMessageEntity> parsedMessages, long mediaAlbumId) {
+        MediaGroupMessageEntity mediaGroupEntity = new MediaGroupMessageEntity();
+        
+        // 从第一条消息复制基础字段
+        BaseMessageEntity first = parsedMessages.get(0);
+        mediaGroupEntity.setMessageId(first.getMessageId());
+        mediaGroupEntity.setChatId(first.getChatId());
+        mediaGroupEntity.setChannelUsername(first.getChannelUsername());
+        mediaGroupEntity.setChannelTitle(first.getChannelTitle());
+        mediaGroupEntity.setDate(first.getDate());
+        mediaGroupEntity.setEditDate(first.getEditDate());
+        mediaGroupEntity.setViews(first.getViews());
+        mediaGroupEntity.setForwards(first.getForwards());
+        mediaGroupEntity.setMediaAlbumId(mediaAlbumId);
+        mediaGroupEntity.setIsMediaGroup(true);
+        mediaGroupEntity.setMediaGroupItemCount(parsedMessages.size());
         
         // 收集所有消息ID
-        List<Long> messageIds = messages.stream()
-            .map(m -> m.id)
-            .collect(Collectors.toList());
+        List<Long> messageIds = parsedMessages.stream()
+            .map(BaseMessageEntity::getMessageId)
+            .toList();
+        mediaGroupEntity.setMediaGroupMessageIds(messageIds);
         
-        // 解析并保存每条消息
-        List<ChannelMessage> savedMessages = new ArrayList<>();
-        for (TdApi.Message message : messages) {
-            ChannelMessage channelMessage = parseMessage(message);
-            
-            // 设置媒体组信息
-            channelMessage.setMediaAlbumId(mediaAlbumId);
-            channelMessage.setIsMediaGroup(true);
-            channelMessage.setMediaGroupItemCount(messages.size());
-            channelMessage.setMediaGroupMessageIds(messageIds);
-            
-            // 保存到数据库
-            ChannelMessage saved = messageRepository.save(channelMessage);
-            savedMessages.add(saved);
-        }
+        // 设置媒体组项目
+        mediaGroupEntity.setItems(parsedMessages);
         
-        // 输出媒体组信息到控制台
-        printMediaGroupToConsole(savedMessages, messages);
+        return mediaGroupEntity;
     }
     
     /**
      * 处理单条消息（非媒体组）
      */
     private void processSingleMessage(TdApi.Message message) {
-        // 1. 检查消息是否已存在（去重）
-        if (messageRepository.existsByChatIdAndMessageId(message.chatId, message.id)) {
-            log.debug("消息已存在，跳过: chatId={}, messageId={}", message.chatId, message.id);
-            return;
+        // 1. 保存原始消息到数据库
+        messageStorageService.saveMessage(message);
+        
+        // 2. 解析消息为实体类
+        try {
+            BaseMessageEntity entity = messageParser.parse(message);
+            
+            // 3. 使用插件管理器处理（包括控制台打印）
+            pluginManager.process(entity, message);
+            
+        } catch (Exception e) {
+            log.error("解析消息失败: chatId={}, messageId={}", message.chatId, message.id, e);
         }
-        
-        // 2. 解析消息内容
-        ChannelMessage channelMessage = parseMessage(message);
-        
-        // 设置非媒体组标识
-        channelMessage.setMediaAlbumId(0L);
-        channelMessage.setIsMediaGroup(false);
-        
-        // 3. 保存到数据库
-        ChannelMessage saved = messageRepository.save(channelMessage);
-        
-        // 4. 输出到控制台
-        printMessageToConsole(saved, message);
-    }
-    
-    /**
-     * 解析消息
-     */
-    private ChannelMessage parseMessage(TdApi.Message message) {
-        ChannelMessage channelMessage = new ChannelMessage();
-        channelMessage.setMessageId(message.id);
-        channelMessage.setChatId(message.chatId);
-        channelMessage.setDate(message.date);
-        channelMessage.setEditDate(message.editDate);
-        channelMessage.setStatus(ChannelMessage.MessageStatus.PENDING);
-        channelMessage.setCreateTime(LocalDateTime.now());
-        channelMessage.setUpdateTime(LocalDateTime.now());
-        
-        // 从缓存获取频道信息
-        Optional<Channel> channelOpt = channelRepository.findByChannelId(message.chatId);
-        channelOpt.ifPresent(channel -> {
-            channelMessage.setChannelTitle(channel.getChannelTitle());
-            channelMessage.setChannelUsername(channel.getChannelUsername());
-        });
-        
-        // 解析消息内容
-        parseMessageContent(message.content, channelMessage);
-        
-        // 解析互动信息
-        if (message.interactionInfo != null) {
-            channelMessage.setViews(message.interactionInfo.viewCount);
-            channelMessage.setForwards(message.interactionInfo.forwardCount);
-        }
-        
-        return channelMessage;
-    }
-    
-    /**
-     * 解析消息内容
-     */
-    private void parseMessageContent(TdApi.MessageContent content, ChannelMessage message) {
-        switch (content) {
-            case TdApi.MessageText text -> {
-                message.setContentType("text");
-                message.setTextContent(text.text.text);
-                
-                // 检查是否包含 WebPage（Telegraph 文章）
-                if (text.webPage != null) {
-                    message.setWebPage(parseWebPage(text.webPage));
-                    
-                    // 如果有即时预览，标记为 telegraph 类型
-                    if (text.webPage.instantViewVersion > 0) {
-                        message.setContentType("telegraph");
-                    }
-                }
-            }
-            
-            case TdApi.MessagePhoto photo -> {
-                message.setContentType("photo");
-                message.setTextContent(photo.caption.text);
-                message.setMediaFiles(parsePhotoSizes(photo.photo));
-            }
-            
-            case TdApi.MessageVideo video -> {
-                message.setContentType("video");
-                message.setTextContent(video.caption.text);
-                ChannelMessage.MediaFile file = parseFile(video.video.video);
-                file.setFileType("video");
-                file.setMimeType(video.video.mimeType);
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageDocument document -> {
-                message.setContentType("document");
-                message.setTextContent(document.caption.text);
-                ChannelMessage.MediaFile file = parseFile(document.document.document);
-                file.setFileType("document");
-                file.setMimeType(document.document.mimeType);
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageAudio audio -> {
-                message.setContentType("audio");
-                message.setTextContent(audio.caption.text);
-                ChannelMessage.MediaFile file = parseFile(audio.audio.audio);
-                file.setFileType("audio");
-                file.setMimeType(audio.audio.mimeType);
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageVoiceNote voice -> {
-                message.setContentType("voice");
-                ChannelMessage.MediaFile file = parseFile(voice.voiceNote.voice);
-                file.setFileType("voice");
-                file.setMimeType(voice.voiceNote.mimeType);
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageVideoNote videoNote -> {
-                message.setContentType("video_note");
-                ChannelMessage.MediaFile file = parseFile(videoNote.videoNote.video);
-                file.setFileType("video_note");
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageAnimation animation -> {
-                message.setContentType("animation");
-                message.setTextContent(animation.caption.text);
-                ChannelMessage.MediaFile file = parseFile(animation.animation.animation);
-                file.setFileType("animation");
-                file.setMimeType(animation.animation.mimeType);
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessageSticker sticker -> {
-                message.setContentType("sticker");
-                ChannelMessage.MediaFile file = parseFile(sticker.sticker.sticker);
-                file.setFileType("sticker");
-                message.setMediaFiles(List.of(file));
-            }
-            
-            case TdApi.MessagePoll poll -> {
-                message.setContentType("poll");
-                // Poll question 是 String 类型
-                message.setTextContent(poll.poll.question);
-            }
-            
-            default -> {
-                message.setContentType("other");
-                message.setTextContent(content.getClass().getSimpleName());
-            }
-        }
-    }
-    
-    /**
-     * 解析图片尺寸
-     */
-    private List<ChannelMessage.MediaFile> parsePhotoSizes(TdApi.Photo photo) {
-        return Arrays.stream(photo.sizes)
-            .map(size -> {
-                ChannelMessage.MediaFile file = new ChannelMessage.MediaFile();
-                file.setFileId(String.valueOf(size.photo.id));
-                file.setFileType("photo");
-                file.setFileSize((long) size.photo.size);
-                file.setDownloaded(size.photo.local.isDownloadingCompleted);
-                file.setLocalPath(size.photo.local.path);
-                return file;
-            })
-            .collect(Collectors.toList());
-    }
-    
-    /**
-     * 解析文件信息
-     */
-    private ChannelMessage.MediaFile parseFile(TdApi.File file) {
-        ChannelMessage.MediaFile mediaFile = new ChannelMessage.MediaFile();
-        mediaFile.setFileId(String.valueOf(file.id));
-        mediaFile.setFileSize((long) file.size);
-        mediaFile.setDownloaded(file.local.isDownloadingCompleted);
-        mediaFile.setLocalPath(file.local.path);
-        return mediaFile;
-    }
-    
-    /**
-     * 解析 WebPage 信息（Telegraph 文章）
-     */
-    private ChannelMessage.WebPageInfo parseWebPage(TdApi.WebPage webPage) {
-        ChannelMessage.WebPageInfo info = new ChannelMessage.WebPageInfo();
-        
-        info.setUrl(webPage.url);
-        info.setDisplayUrl(webPage.displayUrl);
-        info.setType(webPage.type);
-        info.setSiteName(webPage.siteName);
-        info.setTitle(webPage.title);
-        
-        // 描述可能是 FormattedText 对象
-        if (webPage.description != null && webPage.description.text != null) {
-            info.setDescription(webPage.description.text);
-        }
-        
-        info.setAuthor(webPage.author);
-        info.setDuration(webPage.duration);
-        
-        // 检查是否有即时预览（Telegraph）
-        if (webPage.instantViewVersion > 0) {
-            info.setHasInstantView(true);
-            info.setInstantViewVersion(String.valueOf(webPage.instantViewVersion));
-        } else {
-            info.setHasInstantView(false);
-        }
-        
-        return info;
-    }
-    
-    /**
-     * 输出媒体组到控制台
-     */
-    private void printMediaGroupToConsole(List<ChannelMessage> savedMessages, List<TdApi.Message> originalMessages) {
-        if (savedMessages.isEmpty()) {
-            return;
-        }
-        
-        ChannelMessage first = savedMessages.get(0);
-        
-        log.info("━".repeat(80));
-        log.info("📨 收到媒体组消息");
-        log.info("━".repeat(80));
-        log.info("频道: {} (@{})", first.getChannelTitle(), first.getChannelUsername());
-        log.info("媒体组ID: {}", first.getMediaAlbumId());
-        log.info("频道ID: {}", first.getChatId());
-        log.info("消息数量: {} 条", savedMessages.size());
-        
-        // 格式化时间
-        LocalDateTime messageTime = LocalDateTime.ofInstant(
-            Instant.ofEpochSecond(first.getDate()), 
-            ZoneId.systemDefault()
-        );
-        log.info("时间: {}", messageTime);
-        
-        // 输出每条消息的信息
-        log.info("━".repeat(80));
-        log.info("📎 媒体组内容:");
-        
-        for (int i = 0; i < savedMessages.size(); i++) {
-            ChannelMessage msg = savedMessages.get(i);
-            log.info("  [{}] 消息ID: {}, 类型: {}", i + 1, msg.getMessageId(), msg.getContentType());
-            
-            // 输出文本内容
-            if (msg.getTextContent() != null && !msg.getTextContent().isEmpty()) {
-                String text = msg.getTextContent();
-                if (text.length() > 50) {
-                    text = text.substring(0, 50) + "...";
-                }
-                log.info("      说明: {}", text);
-            }
-            
-            // 输出媒体文件信息
-            if (msg.getMediaFiles() != null && !msg.getMediaFiles().isEmpty()) {
-                msg.getMediaFiles().forEach(file -> {
-                    log.info("      - 文件类型: {}, 大小: {} bytes", 
-                        file.getFileType(), 
-                        file.getFileSize());
-                });
-            }
-        }
-        
-        // 输出互动信息（使用第一条消息的数据）
-        if (first.getViews() != null || first.getForwards() != null) {
-            log.info("━".repeat(80));
-            log.info("📊 互动: 浏览 {} 次, 转发 {} 次", 
-                first.getViews() != null ? first.getViews() : 0,
-                first.getForwards() != null ? first.getForwards() : 0);
-        }
-        
-        log.info("━".repeat(80));
-        log.info("💾 数据库ID列表:");
-        savedMessages.forEach(msg -> log.info("   - {}", msg.getId()));
-        log.info("━".repeat(80));
-    }
-    
-    /**
-     * 输出消息到控制台
-     */
-    private void printMessageToConsole(ChannelMessage saved, TdApi.Message original) {
-        log.info("━".repeat(80));
-        log.info("📨 收到新消息");
-        log.info("━".repeat(80));
-        log.info("频道: {} (@{})", saved.getChannelTitle(), saved.getChannelUsername());
-        log.info("消息ID: {}", saved.getMessageId());
-        log.info("频道ID: {}", saved.getChatId());
-        log.info("类型: {}", saved.getContentType());
-        
-        // 格式化时间
-        LocalDateTime messageTime = LocalDateTime.ofInstant(
-            Instant.ofEpochSecond(saved.getDate()), 
-            ZoneId.systemDefault()
-        );
-        log.info("时间: {}", messageTime);
-        
-        // 输出文本内容
-        if (saved.getTextContent() != null && !saved.getTextContent().isEmpty()) {
-            log.info("内容: {}", saved.getTextContent());
-        }
-        
-        // 输出 Telegraph/WebPage 信息
-        if (saved.getWebPage() != null) {
-            ChannelMessage.WebPageInfo webPage = saved.getWebPage();
-            log.info("━".repeat(80));
-            log.info("🌐 WebPage 信息:");
-            
-            if (Boolean.TRUE.equals(webPage.getHasInstantView())) {
-                log.info("  📰 Telegraph 文章");
-            }
-            
-            if (webPage.getTitle() != null && !webPage.getTitle().isEmpty()) {
-                log.info("  标题: {}", webPage.getTitle());
-            }
-            
-            if (webPage.getSiteName() != null && !webPage.getSiteName().isEmpty()) {
-                log.info("  网站: {}", webPage.getSiteName());
-            }
-            
-            if (webPage.getAuthor() != null && !webPage.getAuthor().isEmpty()) {
-                log.info("  作者: {}", webPage.getAuthor());
-            }
-            
-            if (webPage.getDescription() != null && !webPage.getDescription().isEmpty()) {
-                String desc = webPage.getDescription();
-                if (desc.length() > 100) {
-                    desc = desc.substring(0, 100) + "...";
-                }
-                log.info("  描述: {}", desc);
-            }
-            
-            if (webPage.getUrl() != null && !webPage.getUrl().isEmpty()) {
-                log.info("  链接: {}", webPage.getUrl());
-            }
-            
-            if (Boolean.TRUE.equals(webPage.getHasInstantView())) {
-                log.info("  即时预览: 可用 (版本: {})", webPage.getInstantViewVersion());
-            }
-        }
-        
-        // 输出媒体文件信息
-        if (saved.getMediaFiles() != null && !saved.getMediaFiles().isEmpty()) {
-            log.info("━".repeat(80));
-            log.info("📎 媒体文件: {} 个", saved.getMediaFiles().size());
-            saved.getMediaFiles().forEach(file -> {
-                log.info("  - 类型: {}, 大小: {} bytes, 文件ID: {}", 
-                    file.getFileType(), 
-                    file.getFileSize(), 
-                    file.getFileId());
-            });
-        }
-        
-        // 输出互动信息
-        if (saved.getViews() != null || saved.getForwards() != null) {
-            log.info("━".repeat(80));
-            log.info("📊 互动: 浏览 {} 次, 转发 {} 次", 
-                saved.getViews() != null ? saved.getViews() : 0,
-                saved.getForwards() != null ? saved.getForwards() : 0);
-        }
-        
-        log.info("━".repeat(80));
-        log.info("💾 数据库ID: {}", saved.getId());
-        log.info("━".repeat(80));
     }
     
     /**
