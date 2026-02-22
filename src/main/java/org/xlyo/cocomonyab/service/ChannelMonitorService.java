@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import com.google.common.util.concurrent.Striped;
 import it.tdlight.jni.TdApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
 
 /**
  * 频道监控服务
@@ -27,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ChannelMonitorService {
+public class ChannelMonitorService implements MediaGroupProcessor {
     
     private final ChannelRepository channelRepository;
     private final MessageStorageService messageStorageService;
@@ -42,8 +44,28 @@ public class ChannelMonitorService {
     // 媒体组最后更新时间：key = chatId:mediaAlbumId, value = 时间戳
     private final Map<String, Long> mediaGroupTimestamps = new ConcurrentHashMap<>();
     
+    // 媒体组状态机：key = chatId:mediaAlbumId, value = 状态
+    private final Map<String, MediaGroupState> mediaGroupStates = new ConcurrentHashMap<>();
+    
+    // 分段锁（128 个锁条带）用于减少锁竞争
+    private final Striped<Lock> groupLocks = Striped.lock(128);
+    
     // 媒体组等待超时时间（毫秒）
     private static final long MEDIA_GROUP_TIMEOUT = 2000; // 2秒
+    
+    // 锁条带数量
+    private static final int LOCK_STRIPES = 128;
+    
+    /**
+     * 获取媒体组的锁
+     * 使用分段锁机制，基于 groupKey 计算锁索引
+     * 
+     * @param groupKey 媒体组键（chatId:mediaAlbumId）
+     * @return 该媒体组对应的锁实例
+     */
+    private Lock getGroupLock(String groupKey) {
+        return groupLocks.get(groupKey);
+    }
     
     /**
      * 检查频道是否在监控列表中
@@ -78,26 +100,73 @@ public class ChannelMonitorService {
     }
     
     /**
-     * 处理媒体组消息
+     * 处理媒体组消息（实现 MediaGroupProcessor 接口）
+     * 使用状态机和分段锁保证并发安全
+     * 
+     * @param message 新到达的媒体组消息
+     * @return true 如果消息被接受，false 如果被拒绝
      */
-    private void handleMediaGroupMessage(TdApi.Message message) {
+    @Override
+    public boolean handleMediaGroupMessage(TdApi.Message message) {
         String groupKey = message.chatId + ":" + message.mediaAlbumId;
+        Lock lock = getGroupLock(groupKey);
         
-        // 添加到缓冲区
-        mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(message);
-        
-        // 更新时间戳
-        mediaGroupTimestamps.put(groupKey, System.currentTimeMillis());
-        
-        log.debug("收到媒体组消息: chatId={}, mediaAlbumId={}, messageId={}, 当前组内消息数: {}", 
-            message.chatId, message.mediaAlbumId, message.id, 
-            mediaGroupBuffer.get(groupKey).size());
+        lock.lock();
+        try {
+            // 检查当前状态
+            MediaGroupState state = mediaGroupStates.get(groupKey);
+            
+            // 如果正在处理或已完成，拒绝新消息
+            if (state == MediaGroupState.PROCESSING || state == MediaGroupState.COMPLETED) {
+                log.warn("媒体组 {} 状态为 {}，拒绝新消息: messageId={}", 
+                    groupKey, state, message.id);
+                return false;
+            }
+            
+            // 设置为收集状态（如果是新媒体组）
+            mediaGroupStates.putIfAbsent(groupKey, MediaGroupState.COLLECTING);
+            
+            // 添加消息到缓冲区
+            mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(message);
+            
+            // 更新时间戳
+            mediaGroupTimestamps.put(groupKey, System.currentTimeMillis());
+            
+            log.debug("消息已添加到媒体组 {}: messageId={}, 当前数量={}, 状态={}", 
+                groupKey, message.id, mediaGroupBuffer.get(groupKey).size(), 
+                mediaGroupStates.get(groupKey));
+            
+            return true;
+            
+        } finally {
+            lock.unlock();
+        }
     }
     
     /**
-     * 定时处理超时的媒体组
-     * 每秒检查一次
+     * 处理媒体组消息（内部方法，保持向后兼容）
+     * 委托给 handleMediaGroupMessage(TdApi.Message)
      */
+    private void handleMediaGroupMessage_legacy(TdApi.Message message) {
+        handleMediaGroupMessage(message);
+    }
+    
+    /**
+     * 获取媒体组当前状态（实现 MediaGroupProcessor 接口）
+     * 
+     * @param groupKey 媒体组键（chatId:mediaAlbumId）
+     * @return 媒体组状态，如果不存在返回 null
+     */
+    @Override
+    public MediaGroupState getMediaGroupState(String groupKey) {
+        return mediaGroupStates.get(groupKey);
+    }
+    
+    /**
+     * 定时处理超时的媒体组（实现 MediaGroupProcessor 接口）
+     * 每秒检查一次，使用状态机和分段锁保证并发安全
+     */
+    @Override
     @Scheduled(fixedDelay = 1000)
     public void processTimedOutMediaGroups() {
         long now = System.currentTimeMillis();
@@ -106,25 +175,80 @@ public class ChannelMonitorService {
         // 找出超时的媒体组
         mediaGroupTimestamps.forEach((groupKey, timestamp) -> {
             if (now - timestamp >= MEDIA_GROUP_TIMEOUT) {
-                timedOutGroups.add(groupKey);
+                Lock lock = getGroupLock(groupKey);
+                
+                lock.lock();
+                try {
+                    MediaGroupState state = mediaGroupStates.get(groupKey);
+                    
+                    // 只处理 COLLECTING 状态的媒体组
+                    if (state == MediaGroupState.COLLECTING) {
+                        // 转换状态为 PROCESSING
+                        mediaGroupStates.put(groupKey, MediaGroupState.PROCESSING);
+                        timedOutGroups.add(groupKey);
+                        
+                        log.debug("媒体组 {} 超时，状态转换: COLLECTING -> PROCESSING", groupKey);
+                    }
+                } finally {
+                    lock.unlock();
+                }
             }
         });
         
         // 处理超时的媒体组
         for (String groupKey : timedOutGroups) {
-            List<TdApi.Message> messages = mediaGroupBuffer.remove(groupKey);
-            mediaGroupTimestamps.remove(groupKey);
-            
-            if (messages != null && !messages.isEmpty()) {
-                processMediaGroup(messages);
-            }
+            processMediaGroup(groupKey);
         }
     }
     
     /**
-     * 处理完整的媒体组
+     * 处理单个媒体组
+     * 在锁保护下移除缓冲区数据并处理
+     * 
+     * @param groupKey 媒体组键（chatId:mediaAlbumId）
      */
-    private void processMediaGroup(List<TdApi.Message> messages) {
+    private void processMediaGroup(String groupKey) {
+        Lock lock = getGroupLock(groupKey);
+        
+        lock.lock();
+        try {
+            // 移除缓冲区数据
+            List<TdApi.Message> messages = mediaGroupBuffer.remove(groupKey);
+            mediaGroupTimestamps.remove(groupKey);
+            
+            if (messages == null || messages.isEmpty()) {
+                log.warn("媒体组 {} 缓冲区为空", groupKey);
+                mediaGroupStates.remove(groupKey);
+                return;
+            }
+            
+            try {
+                // 处理媒体组逻辑
+                doProcessMediaGroup(messages);
+                
+                // 处理成功，转换状态为 COMPLETED
+                mediaGroupStates.put(groupKey, MediaGroupState.COMPLETED);
+                
+                log.info("媒体组 {} 处理成功，状态转换: PROCESSING -> COMPLETED", groupKey);
+                
+            } catch (Exception e) {
+                log.error("媒体组 {} 处理失败，状态重置为 COLLECTING", groupKey, e);
+                
+                // 处理失败，重置状态允许重试
+                mediaGroupStates.remove(groupKey);
+            }
+            
+        } finally {
+            lock.unlock();
+        }
+    }
+    
+    /**
+     * 执行媒体组处理的实际逻辑
+     * 
+     * @param messages 媒体组的所有消息
+     */
+    private void doProcessMediaGroup(List<TdApi.Message> messages) {
         if (messages.isEmpty()) {
             return;
         }

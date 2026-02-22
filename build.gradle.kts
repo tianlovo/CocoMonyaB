@@ -44,6 +44,9 @@ dependencies {
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+    
+    // Guava for Striped Lock
+    implementation("com.google.guava:guava:33.0.0-jre")
 
     // 环境配置
     implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))

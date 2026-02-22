@@ -266,6 +266,7 @@ class ChannelMonitoringFilterDynamicUpdateTest {
         message.date = (int) (System.currentTimeMillis() / 1000);
         message.content = new TdApi.MessageText(
             new TdApi.FormattedText("测试消息", new TdApi.TextEntity[0]),
+            null,
             null
         );
         return message;

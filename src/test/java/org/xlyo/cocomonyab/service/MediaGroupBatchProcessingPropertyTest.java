@@ -46,17 +46,20 @@ class MediaGroupBatchProcessingPropertyTest {
         MessageParser messageParser = mock(MessageParser.class);
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
+        org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
-            filterChainManager
+            filterChainManager,
+            channelMonitoringFilter
         );
         
         // 模拟过滤器链默认接受所有消息
         when(filterChainManager.executeChain(any())).thenReturn(true);
+        when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         
         // 启动监控
         service.startMonitoring(chatId);
@@ -145,16 +148,19 @@ class MediaGroupBatchProcessingPropertyTest {
         MessageParser messageParser = mock(MessageParser.class);
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
+        org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
-            filterChainManager
+            filterChainManager,
+            channelMonitoringFilter
         );
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
+        when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         service.startMonitoring(chatId);
         
         // 创建乱序的消息
@@ -215,16 +221,19 @@ class MediaGroupBatchProcessingPropertyTest {
         MessageParser messageParser = mock(MessageParser.class);
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
+        org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
-            filterChainManager
+            filterChainManager,
+            channelMonitoringFilter
         );
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
+        when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         service.startMonitoring(chatId);
         
         // 创建第一个媒体组
