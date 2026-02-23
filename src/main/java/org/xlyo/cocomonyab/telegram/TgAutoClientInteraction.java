@@ -82,7 +82,7 @@ public class TgAutoClientInteraction implements ClientInteraction {
                     
                     if (password == null || password.isEmpty()) {
                         log.error("✗ 错误: 账号启用了两步验证，但未在 .env 文件中配置 TG_2FA");
-                        log.error("请在 data/config/.env 文件中添加:");
+                        log.error("请在配置目录的 .env 文件中添加:");
                         log.error("TG_2FA=your_password");
                         System.exit(1);
                         yield "";

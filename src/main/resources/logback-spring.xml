@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <!-- 定义日志文件存储路径 -->
-    <property name="LOG_PATH" value="data/logs"/>
+    <!-- 定义日志文件存储路径（由DataDirectoryManager通过系统属性设置） -->
+    <property name="LOG_PATH" value="${LOG_PATH:-data/logs}"/>
     <!-- 定义日志文件名模式 -->
     <property name="LOG_FILE_NAME" value="application"/>
     <!-- 定义日志文件保留天数 -->

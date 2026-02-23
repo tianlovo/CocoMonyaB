@@ -8,6 +8,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.xlyo.cocomonyab.config.data.DataDirectoryManager;
 import org.xlyo.cocomonyab.config.properties.TelegramProperties;
 import org.xlyo.cocomonyab.config.properties.TgEnvProperties;
 import org.xlyo.cocomonyab.telegram.handler.TgUpdateNewMessageHandler;
@@ -38,6 +39,7 @@ public class TelegramClientManager {
     private final TgEnvProperties envProperties;
     private final TelegramProperties telegramProperties;
     private final TgUpdateNewMessageHandler updateNewMessageHandler;
+    private final DataDirectoryManager dataDirectoryManager;
 
     private SimpleTelegramClient client;
     
@@ -70,12 +72,12 @@ public class TelegramClientManager {
         String apiId = envProperties.getApiId();
         if (apiId == null || apiId.isBlank()) {
             log.error("❌ 配置验证失败: API_ID 未设置");
-            log.error("请在 data/config/.env 文件中添加: API_ID=your_api_id");
+            log.error("请在配置目录的 .env 文件中添加: API_ID=your_api_id");
             log.error("示例: API_ID=12345678");
             hasError = true;
         } else if ("your_api_id".equals(apiId)) {
             log.error("❌ 配置验证失败: API_ID 仍为示例值");
-            log.error("请将 data/config/.env 文件中的 API_ID 修改为真实值");
+            log.error("请将配置目录的 .env 文件中的 API_ID 修改为真实值");
             log.error("获取地址: https://my.telegram.org/apps");
             hasError = true;
         } else if (!API_ID_PATTERN.matcher(apiId).matches()) {
@@ -89,12 +91,12 @@ public class TelegramClientManager {
         String apiHash = envProperties.getApiHash();
         if (apiHash == null || apiHash.isBlank()) {
             log.error("❌ 配置验证失败: API_HASH 未设置");
-            log.error("请在 data/config/.env 文件中添加: API_HASH=your_api_hash");
+            log.error("请在配置目录的 .env 文件中添加: API_HASH=your_api_hash");
             log.error("示例: API_HASH=0123456789abcdef0123456789abcdef");
             hasError = true;
         } else if ("your_api_hash".equals(apiHash)) {
             log.error("❌ 配置验证失败: API_HASH 仍为示例值");
-            log.error("请将 data/config/.env 文件中的 API_HASH 修改为真实值");
+            log.error("请将配置目录的 .env 文件中的 API_HASH 修改为真实值");
             log.error("获取地址: https://my.telegram.org/apps");
             hasError = true;
         } else if (!API_HASH_PATTERN.matcher(apiHash).matches()) {
@@ -109,11 +111,11 @@ public class TelegramClientManager {
         if (tgPhone == null || tgPhone.isBlank()) {
             log.error("❌ 配置验证失败: TG_PHONE 未设置");
             log.error("⚠️  本项目只能使用手机号登录，不支持二维码或其他方式登录");
-            log.error("请在 data/config/.env 文件中添加: TG_PHONE=+8613800138000");
+            log.error("请在配置目录的 .env 文件中添加: TG_PHONE=+8613800138000");
             hasError = true;
         } else if ("+8613800138000".equals(tgPhone) || "your_phone_number".equals(tgPhone)) {
             log.error("❌ 配置验证失败: TG_PHONE 仍为示例值");
-            log.error("请将 data/config/.env 文件中的 TG_PHONE 修改为真实手机号");
+            log.error("请将配置目录的 .env 文件中的 TG_PHONE 修改为真实手机号");
             log.error("格式: +[国家代码][手机号]，例如: +8613800138000");
             hasError = true;
         } else if (!PHONE_PATTERN.matcher(tgPhone).matches()) {
@@ -133,8 +135,8 @@ public class TelegramClientManager {
 
         if (hasError) {
             log.error("\n❌ Telegram 配置校验失败，应用即将退出");
-            log.error("请检查 data/config/.env 文件中的配置");
-            log.error("如果文件不存在，请复制 data/config/.env.example 并重命名为 .env");
+            log.error("请检查配置目录的 .env 文件中的配置");
+            log.error("如果文件不存在，请复制 .env.example 并重命名为 .env");
             System.exit(1);
         }
 
@@ -151,8 +153,13 @@ public class TelegramClientManager {
         log.info("API Hash: {}***", envProperties.getApiHash().substring(0, 8));
         log.info("手机号: {}", maskPhone(envProperties.getTgPhone()));
         log.info("设备型号: {}", telegramProperties.getDeviceModel());
-        log.info("数据库目录: {}", telegramProperties.getDatabaseDirectory());
-        log.info("下载目录: {}", telegramProperties.getDownloadDirectory());
+        
+        // 使用 DataDirectoryManager 获取目录
+        String databaseDir = dataDirectoryManager.getTelegramSessionPath().resolve("data").toString();
+        String downloadDir = dataDirectoryManager.getTelegramSessionPath().resolve("downloads").toString();
+        
+        log.info("数据库目录: {}", databaseDir);
+        log.info("下载目录: {}", downloadDir);
         
         try {
             // 1. 初始化 TDLight 原生库
@@ -172,13 +179,6 @@ public class TelegramClientManager {
             log.info("配置 TDLib 设置...");
             TDLibSettings settings = TDLibSettings.create(apiToken);
             
-            // 数据库路径：实现自动登录的关键（session 持久化）
-            var databasePath = Paths.get(telegramProperties.getDatabaseDirectory()).toAbsolutePath();
-            var downloadPath = Paths.get(telegramProperties.getDownloadDirectory()).toAbsolutePath();
-            
-            settings.setDatabaseDirectoryPath(databasePath);
-            settings.setDownloadedFilesDirectoryPath(downloadPath);
-            
             settings.setUseTestDatacenter(false);
             settings.setFileDatabaseEnabled(true);
             settings.setChatInfoDatabaseEnabled(true);
@@ -186,6 +186,13 @@ public class TelegramClientManager {
             
             settings.setSystemLanguageCode(Locale.getDefault().getLanguage());
             settings.setDeviceModel(telegramProperties.getDeviceModel());
+            
+            // 数据库路径：实现自动登录的关键（session 持久化）
+            var databasePath = Paths.get(databaseDir).toAbsolutePath();
+            var downloadPath = Paths.get(downloadDir).toAbsolutePath();
+            
+            settings.setDatabaseDirectoryPath(databasePath);
+            settings.setDownloadedFilesDirectoryPath(downloadPath);
             
             // 5. 准备构建器
             log.info("构建 Telegram 客户端...");

@@ -15,9 +15,6 @@ spring:
         port: 27017
         # MongoDB 绑定 IP 地址
         bind-ip: 127.0.0.1
-        storage:
-          # 数据存储目录
-          directory: data/db/mongo
       # 远程 MongoDB 连接 URI（仅在 remote 模式下使用）
       # uri: mongodb://localhost:27017/cocomonya
 
@@ -38,22 +35,32 @@ logging:
 
 # Spring Dotenv 配置
 springdotenv:
+  # .env 文件目录（相对于工作目录）
   directory: "data/config"
   filename: ".env"
   ignore-if-missing: false
 
 # 应用配置
 app:
-  config-directory: "data/config"
+  # Data目录配置
+  # 注意：data 根目录和 config 目录路径固定，不可配置
+  # - data 根目录：固定为应用同级的 "data" 目录
+  # - config 目录：固定为 "data/config"
+  data:
+    # 各子目录相对路径（可选，默认值如下）
+     database-directory: "db"
+     mongo-db-directory: "db/mongo"
+     session-directory: "session"
+     telegram-session-directory: "session/td"
+     bin-directory: "bin"
+     mongo-bin-directory: "bin/mongo"
+     tmp-directory: "tmp"
+     logs-directory: "logs"
 
 # Telegram 配置
 telegram:
   # 设备型号标识
   device-model: "Coco Monya"
-  # TDLib 数据库存储目录
-  database-directory: "data/session/td/data"
-  # 文件下载目录
-  download-directory: "data/session/td/downloads"
   # 登录超时时间（分钟），默认 2 分钟
   login-timeout-minutes: 2
 

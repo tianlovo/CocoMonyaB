@@ -5,6 +5,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.xlyo.cocomonyab.config.data.DataDirectoryManager;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -27,15 +28,15 @@ public class EmbeddedMongoConfiguration {
     
     private static final String MONGODB_DOWNLOAD_URL_TEMPLATE = 
         "https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-%s.zip";
-    private static final String MONGODB_BIN_DIR = "data/bin/mongo";
-    private static final String MONGODB_TMP_DIR = "data/tmp";
     
     private final MongoDBProperties properties;
+    private final DataDirectoryManager dataDirectoryManager;
     private Process mongodProcess;
     private volatile boolean isShuttingDown = false;
     
-    public EmbeddedMongoConfiguration(MongoDBProperties properties) {
+    public EmbeddedMongoConfiguration(MongoDBProperties properties, DataDirectoryManager dataDirectoryManager) {
         this.properties = properties;
+        this.dataDirectoryManager = dataDirectoryManager;
     }
     
     @PostConstruct
@@ -44,7 +45,9 @@ public class EmbeddedMongoConfiguration {
             String version = properties.getEmbedded().getVersion();
             int port = properties.getEmbedded().getPort();
             String bindIp = properties.getEmbedded().getBindIp();
-            String storageDirectory = properties.getEmbedded().getStorage().getDirectory();
+            
+            // 使用 DataDirectoryManager 获取存储目录
+            String storageDirectory = dataDirectoryManager.getMongoDbPath().toString();
             Path storagePath = Paths.get(storageDirectory);
             
             // 创建存储目录（如果不存在）
@@ -105,7 +108,7 @@ public class EmbeddedMongoConfiguration {
      * 确保 MongoDB 二进制文件存在，如果不存在则下载
      */
     private Path ensureMongoDBBinary(String version) throws IOException {
-        Path mongodbBinDir = Paths.get(MONGODB_BIN_DIR);
+        Path mongodbBinDir = dataDirectoryManager.getMongoBinPath();
         Path mongodExe = mongodbBinDir.resolve("bin").resolve("mongod.exe");
         
         if (Files.exists(mongodExe)) {
@@ -129,7 +132,7 @@ public class EmbeddedMongoConfiguration {
      */
     private void downloadAndExtractMongoDB(Path targetDir, String version) throws IOException {
         Files.createDirectories(targetDir);
-        Path tmpDir = Paths.get(MONGODB_TMP_DIR);
+        Path tmpDir = dataDirectoryManager.getTmpPath();
         Files.createDirectories(tmpDir);
         
         Path zipFile = tmpDir.resolve("mongodb-" + version + ".zip");

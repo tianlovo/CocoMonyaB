@@ -40,18 +40,5 @@ public class MongoDBProperties {
          * MongoDB 绑定 IP 地址
          */
         private String bindIp = "127.0.0.1";
-        
-        /**
-         * 存储配置
-         */
-        private Storage storage = new Storage();
-        
-        @Data
-        public static class Storage {
-            /**
-             * 嵌入式 MongoDB 数据存储目录
-             */
-            private String directory = "data/db/mongo";
-        }
     }
 }
