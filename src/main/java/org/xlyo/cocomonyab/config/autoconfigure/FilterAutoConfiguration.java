@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.autoconfigure;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -27,13 +27,13 @@ public class FilterAutoConfiguration {
      */
     @PostConstruct
     public void registerFilters() {
-        log.info("Starting filter auto-registration...");
+        log.info("开始自动注册过滤器...");
         
         // 从Spring容器中获取所有MessageFilter类型的Bean
         Map<String, MessageFilter> filterBeans = applicationContext.getBeansOfType(MessageFilter.class);
         
         if (filterBeans.isEmpty()) {
-            log.warn("No MessageFilter beans found in Spring context");
+            log.warn("在 Spring 上下文中未找到 MessageFilter bean");
             return;
         }
         
@@ -44,12 +44,12 @@ public class FilterAutoConfiguration {
             
             try {
                 filterChainManager.registerFilter(filter);
-                log.info("Auto-registered filter: {} (bean: {})", filter.getName(), beanName);
+                log.info("已自动注册过滤器: {} (bean: {})", filter.getName(), beanName);
             } catch (Exception e) {
-                log.error("Failed to auto-register filter: {} (bean: {})", filter.getName(), beanName, e);
+                log.error("自动注册过滤器失败: {} (bean: {})", filter.getName(), beanName, e);
             }
         }
         
-        log.info("Filter auto-registration completed. Total filters: {}", filterBeans.size());
+        log.info("过滤器自动注册完成。总过滤器数: {}", filterBeans.size());
     }
 }

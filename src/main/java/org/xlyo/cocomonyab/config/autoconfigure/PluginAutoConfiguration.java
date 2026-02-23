@@ -31,11 +31,11 @@ public class PluginAutoConfiguration {
     @PostConstruct
     public void registerPlugins() {
         if (!pluginProperties.isEnabled()) {
-            log.info("Plugin system is disabled");
+            log.info("插件系统已禁用");
             return;
         }
         
-        log.info("Registering plugins from configuration");
+        log.info("正在从配置中注册插件");
         
         // 1. 注册Spring容器中的MessagePlugin beans
         registerSpringManagedPlugins();
@@ -43,7 +43,7 @@ public class PluginAutoConfiguration {
         // 2. 注册配置文件中定义的插件
         registerConfiguredPlugins();
         
-        log.info("Plugin registration completed, {} plugins registered", 
+        log.info("插件注册完成，已注册 {} 个插件", 
             pluginManager.getPlugins().size());
     }
     
@@ -56,9 +56,9 @@ public class PluginAutoConfiguration {
             .forEach(plugin -> {
                 try {
                     pluginManager.registerPlugin(plugin);
-                    log.info("Registered Spring-managed plugin: {}", plugin.getName());
+                    log.info("已注册 Spring 管理的插件: {}", plugin.getName());
                 } catch (Exception e) {
-                    log.error("Failed to register Spring-managed plugin: {}", 
+                    log.error("注册 Spring 管理的插件失败: {}", 
                         plugin.getName(), e);
                 }
             });
@@ -74,17 +74,17 @@ public class PluginAutoConfiguration {
             }
             
             if (!config.isEnabled()) {
-                log.info("Plugin {} is disabled in configuration", config.getClassName());
+                log.info("插件 {} 在配置中已禁用", config.getClassName());
                 continue;
             }
             
             try {
                 MessagePlugin plugin = loadPlugin(config);
                 pluginManager.registerPlugin(plugin);
-                log.info("Registered configured plugin: {} with priority {}", 
+                log.info("已注册配置的插件: {}，优先级为 {}", 
                     config.getClassName(), config.getPriority());
             } catch (Exception e) {
-                log.error("Failed to load plugin: {}", config.getClassName(), e);
+                log.error("加载插件失败: {}", config.getClassName(), e);
             }
         }
     }
@@ -94,7 +94,7 @@ public class PluginAutoConfiguration {
      */
     private boolean validatePluginConfig(PluginProperties.PluginConfig config) {
         if (config.getClassName() == null || config.getClassName().trim().isEmpty()) {
-            log.error("Plugin configuration missing className");
+            log.error("插件配置缺少 className");
             return false;
         }
         
@@ -109,7 +109,7 @@ public class PluginAutoConfiguration {
         
         if (!MessagePlugin.class.isAssignableFrom(pluginClass)) {
             throw new IllegalArgumentException(
-                "Class " + config.getClassName() + " does not implement MessagePlugin interface");
+                "类 " + config.getClassName() + " 未实现 MessagePlugin 接口");
         }
         
         return (MessagePlugin) pluginClass.getDeclaredConstructor().newInstance();
