@@ -51,8 +51,8 @@ dependencies {
     // Caffeine for Caching
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     
-    // Micrometer for Metrics
-    implementation("io.micrometer:micrometer-core")
+    // Micrometer for Metrics (via Spring Boot Actuator)
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     // 环境配置
     implementation(platform("me.paulschwarz:spring-dotenv-bom:5.1.0"))

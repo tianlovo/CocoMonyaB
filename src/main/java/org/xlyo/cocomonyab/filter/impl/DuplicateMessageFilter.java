@@ -154,12 +154,16 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     /**
      * 过滤媒体组消息
      * 媒体组的每条消息都需要通过，但要防止整个媒体组被重复处理
+     * 
+     * 注意：媒体组的收集状态由 ChannelMonitorService 的状态机管理
+     * DuplicateMessageFilter 只负责检查数据库中是否已存在该媒体组
      */
     private FilterResult filterMediaGroupMessage(TdApi.Message message, FilterContext context) {
         String albumCacheKey = message.chatId + ":album:" + message.mediaAlbumId;
         String messageCacheKey = buildCacheKey(message);
         
         // 第一层检查：内存缓存（防止并发重复）
+        // 只检查缓存，不在这里添加到缓存
         Boolean inCache = processingCache.getIfPresent(albumCacheKey);
         if (Boolean.TRUE.equals(inCache)) {
             context.setRejectReason(String.format(
@@ -190,10 +194,9 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         }
         
         // 媒体组不存在于数据库，允许通过
-        // 将媒体组标记为正在处理
-        processingCache.put(albumCacheKey, Boolean.TRUE);
-        
-        // 同时标记单条消息
+        // 注意：不在这里标记媒体组为"正在处理"
+        // 媒体组的收集状态由 ChannelMonitorService 的状态机管理
+        // 只标记单条消息（防止同一条消息被重复处理）
         processingCache.put(messageCacheKey, Boolean.TRUE);
         
         context.setAttribute("cacheKey", messageCacheKey);
@@ -220,6 +223,19 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         // 保留此方法用于向后兼容
         log.trace("消息处理完成（缓存将自动过期）: chatId={}, messageId={}", 
             message.chatId, message.id);
+    }
+    
+    /**
+     * 标记媒体组为已处理
+     * 在媒体组成功保存到数据库后调用，防止重复处理
+     * 
+     * @param chatId 频道ID
+     * @param mediaAlbumId 媒体组ID
+     */
+    public void markMediaGroupProcessed(long chatId, long mediaAlbumId) {
+        String albumCacheKey = chatId + ":album:" + mediaAlbumId;
+        processingCache.put(albumCacheKey, Boolean.TRUE);
+        log.debug("标记媒体组为已处理: chatId={}, mediaAlbumId={}", chatId, mediaAlbumId);
     }
     
     /**

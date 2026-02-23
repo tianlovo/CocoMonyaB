@@ -22,6 +22,7 @@ public class MediaGroupMetrics {
     
     public MediaGroupMetrics(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
+        log.info("MediaGroupMetrics initialized with MeterRegistry: {}", meterRegistry.getClass().getSimpleName());
     }
     
     /**

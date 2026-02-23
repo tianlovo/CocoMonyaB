@@ -14,6 +14,7 @@ import org.xlyo.cocomonyab.service.message.MessageParser;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
@@ -40,6 +41,7 @@ public class ChannelMonitorService implements MediaGroupProcessor {
     private final PluginManager pluginManager;
     private final FilterChainManager filterChainManager;
     private final ChannelMonitoringFilter channelMonitoringFilter;
+    private final DuplicateMessageFilter duplicateMessageFilter;
     private final MediaGroupMetrics mediaGroupMetrics;
     private final ConcurrentSafetyProperties concurrentSafetyProperties;
     
@@ -324,6 +326,17 @@ public class ChannelMonitorService implements MediaGroupProcessor {
                 mediaGroupMetrics.recordStateTransition("PROCESSING", "COMPLETED");
                 
                 log.info("媒体组 {} 处理成功，状态转换: PROCESSING -> COMPLETED", groupKey);
+                
+                // 标记媒体组为已处理（防止重复处理）
+                if (!messages.isEmpty()) {
+                    TdApi.Message firstMessage = messages.get(0);
+                    if (firstMessage.mediaAlbumId != 0) {
+                        duplicateMessageFilter.markMediaGroupProcessed(
+                            firstMessage.chatId, 
+                            firstMessage.mediaAlbumId
+                        );
+                    }
+                }
                 
                 // 记录处理延迟
                 long duration = System.currentTimeMillis() - startTime;
