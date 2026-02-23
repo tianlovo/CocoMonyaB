@@ -138,7 +138,8 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "broadcast-client": "ts-node src/channel-broadcast-client.ts"
   },
   "keywords": [],
   "author": "",

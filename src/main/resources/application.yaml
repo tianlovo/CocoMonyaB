@@ -103,3 +103,16 @@ concurrent-safety:
     max-size: 10000
     # 失败消息缓存时间（秒）- 处理失败的消息短暂缓存，防止立即重试
     failed-message-ttl: 5
+
+# 插件配置
+plugin:
+  # WebSocket消息广播插件配置
+  websocket-broadcast:
+    # 是否启用插件
+    enabled: true
+    # 消息广播topic前缀
+    topic-prefix: /topic/channel/real
+    # 监控事件topic前缀
+    monitoring-topic-prefix: /topic/channel/monitoring
+    # 是否启用异步广播
+    async-broadcast: false
