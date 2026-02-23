@@ -1,6 +1,7 @@
 package org.xlyo.cocomonyab.config;
 
 import org.junit.jupiter.api.Test;
+import org.xlyo.cocomonyab.config.properties.PluginProperties;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import jakarta.annotation.PostConstruct;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
@@ -18,7 +19,6 @@ import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;

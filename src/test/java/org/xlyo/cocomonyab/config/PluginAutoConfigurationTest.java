@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.context.ApplicationContext;
+import org.xlyo.cocomonyab.config.autoconfigure.PluginAutoConfiguration;
+import org.xlyo.cocomonyab.config.properties.PluginProperties;
 import org.xlyo.cocomonyab.plugin.MessagePlugin;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin;

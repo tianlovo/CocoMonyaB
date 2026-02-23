@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
@@ -14,7 +14,6 @@ import org.xlyo.cocomonyab.repository.RawMessageRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 /**
  * DuplicateMessageFilter单元测试

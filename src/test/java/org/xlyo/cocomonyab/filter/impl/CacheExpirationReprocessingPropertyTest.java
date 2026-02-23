@@ -3,13 +3,14 @@ package org.xlyo.cocomonyab.filter.impl;
 import it.tdlight.jni.TdApi;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.LongRange;
+
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 /**
  * Property 6: Cache Expiration and Reprocessing

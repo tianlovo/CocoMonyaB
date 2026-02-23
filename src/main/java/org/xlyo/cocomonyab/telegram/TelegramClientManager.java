@@ -8,8 +8,8 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.xlyo.cocomonyab.config.TelegramProperties;
-import org.xlyo.cocomonyab.config.TgEnvProperties;
+import org.xlyo.cocomonyab.config.properties.TelegramProperties;
+import org.xlyo.cocomonyab.config.properties.TgEnvProperties;
 import org.xlyo.cocomonyab.telegram.handler.TgUpdateNewMessageHandler;
 
 import java.nio.file.Paths;

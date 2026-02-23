@@ -5,7 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;

@@ -1,10 +1,11 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.autoconfigure;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
+import org.xlyo.cocomonyab.config.properties.PluginProperties;
 import org.xlyo.cocomonyab.plugin.MessagePlugin;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 

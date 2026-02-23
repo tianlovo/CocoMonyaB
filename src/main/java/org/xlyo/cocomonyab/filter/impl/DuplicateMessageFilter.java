@@ -6,11 +6,11 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import it.tdlight.jni.TdApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.filter.AbstractMessageFilter;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 import java.util.concurrent.TimeUnit;
 

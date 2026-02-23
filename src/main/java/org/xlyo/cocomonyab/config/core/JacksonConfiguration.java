@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.config;
+package org.xlyo.cocomonyab.config.core;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;

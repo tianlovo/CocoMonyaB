@@ -8,9 +8,10 @@ import it.tdlight.client.ParameterInfoPasswordHint;
 import it.tdlight.client.ParameterInfoTermsOfService;
 import it.tdlight.jni.TdApi;
 import lombok.extern.slf4j.Slf4j;
-import org.xlyo.cocomonyab.config.TgEnvProperties;
 
 import java.util.concurrent.CompletableFuture;
+
+import org.xlyo.cocomonyab.config.properties.TgEnvProperties;
 
 /**
  * 自定义客户端交互，自动从环境变量读取手机号和两步验证密码
