@@ -44,12 +44,7 @@ docs/refers
 
 # Data and logs
 .env
-data/config/.env
-data/logs/
-data/session/
-data/bin/
-data/tmp/
-data/db/
+/data/
 /.jqwik-database
 
 # Node.js
