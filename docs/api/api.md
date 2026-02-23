@@ -27,6 +27,13 @@
   - [3.4 常见错误场景](#34-常见错误场景)
   - [3.5 使用示例](#35-使用示例)
   - [3.6 注意事项](#36-注意事项)
+- [4. 标签过滤配置 API](#4-标签过滤配置-api)
+  - [4.1 概述](#41-概述)
+  - [4.2 数据结构](#42-数据结构)
+  - [4.3 API 端点](#43-api-端点)
+  - [4.4 常见错误场景](#44-常见错误场景)
+  - [4.5 使用示例](#45-使用示例)
+  - [4.6 注意事项](#46-注意事项)
 
 ---
 
@@ -1271,6 +1278,790 @@ curl -X GET "http://localhost:8080/api/message/media-album?chatId=-1001234567890
 1. **ID 格式**：MongoDB ID 是 24 位十六进制字符串（如 65f8a1b2c3d4e5f6a7b8c9d0）
 2. **格式校验**：系统会自动校验 ID 格式，无效格式会返回 VALIDATION_ERROR
 3. **大小写**：MongoDB ID 不区分大小写，但建议使用小写
+
+---
+
+## 4. 标签过滤配置 API
+
+### 4.1 概述
+
+标签过滤配置 API 提供了对标签过滤规则的完整管理功能，支持全局级别的默认配置和频道级别的独立配置。系统采用配置优先级机制：频道配置优先于全局配置，实现灵活的标签过滤管理。
+
+主要功能包括：
+- 全局配置管理（创建/更新/查询）
+- 频道配置管理（创建/更新/删除/查询）
+- 配置优先级查询（获取有效配置）
+- 分页查询和过滤
+- 配置重新加载触发
+
+### 4.2 数据结构
+
+#### 4.2.1 TagFilterConfigCreateDTO（创建配置请求）
+
+用于创建全局配置或频道配置。
+
+```json
+{
+  "channelId": -1001234567890,
+  "tags": ["tech", "news", "ai"],
+  "matchMode": "whitelist",
+  "enabled": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 校验规则 | 说明 |
+|------|------|------|----------|------|
+| channelId | Long | 否 | 负数 | Telegram 频道 ID，null 表示全局配置 |
+| tags | List\<String\> | 是 | 不能为 null | 标签列表（可以为空列表） |
+| matchMode | String | 是 | whitelist 或 blacklist | 匹配模式 |
+| enabled | Boolean | 是 | 不能为 null | 是否启用 |
+
+**匹配模式说明：**
+- `whitelist`（白名单）：只允许包含指定标签的消息通过
+- `blacklist`（黑名单）：阻止包含指定标签的消息通过
+
+#### 4.2.2 TagFilterConfigUpdateDTO（更新配置请求）
+
+用于更新现有配置，所有字段均为可选。
+
+```json
+{
+  "tags": ["urgent", "important"],
+  "matchMode": "blacklist",
+  "enabled": false
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 校验规则 | 说明 |
+|------|------|------|----------|------|
+| tags | List\<String\> | 否 | - | 标签列表 |
+| matchMode | String | 否 | whitelist 或 blacklist | 匹配模式 |
+| enabled | Boolean | 否 | - | 是否启用 |
+
+#### 4.2.3 TagFilterConfigQueryDTO（查询配置请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "channelId": -1001234567890,
+  "matchMode": "whitelist",
+  "enabled": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| channelId | Long | 否 | 频道 ID（精确匹配） |
+| matchMode | String | 否 | 匹配模式（精确匹配） |
+| enabled | Boolean | 否 | 启用状态（精确匹配） |
+
+#### 4.2.4 TagFilterConfigVO（配置响应对象）
+
+返回给客户端的配置数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "channelId": -1001234567890,
+  "tags": ["tech", "news", "ai"],
+  "matchMode": "whitelist",
+  "enabled": true,
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:30:00"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID |
+| channelId | Long | Telegram 频道 ID（null 表示全局配置） |
+| tags | List\<String\> | 标签列表 |
+| matchMode | String | 匹配模式（whitelist 或 blacklist） |
+| enabled | Boolean | 是否启用 |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+
+### 4.3 API 端点
+
+#### 4.3.1 创建或更新全局配置
+
+**接口地址：** `POST /api/tag-filter-config/global`
+
+**请求示例：**
+
+```json
+{
+  "tags": ["tech", "news", "ai"],
+  "matchMode": "whitelist",
+  "enabled": true
+}
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "channelId": null,
+    "tags": ["tech", "news", "ai"],
+    "matchMode": "whitelist",
+    "enabled": true,
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+参数校验失败：
+```json
+{
+  "code": -40006,
+  "msg": "标签列表不能为null",
+  "data": null
+}
+```
+
+匹配模式无效：
+```json
+{
+  "code": -40006,
+  "msg": "匹配模式必须是whitelist或blacklist",
+  "data": null
+}
+```
+
+#### 4.3.2 获取全局配置
+
+**接口地址：** `GET /api/tag-filter-config/global`
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "channelId": null,
+    "tags": ["tech", "news", "ai"],
+    "matchMode": "whitelist",
+    "enabled": true,
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+全局配置不存在：
+```json
+{
+  "code": -60002,
+  "msg": "全局配置不存在",
+  "data": null
+}
+```
+
+#### 4.3.3 创建频道配置
+
+**接口地址：** `POST /api/tag-filter-config/channel`
+
+**请求示例：**
+
+```json
+{
+  "channelId": -1001234567890,
+  "tags": ["urgent", "important"],
+  "matchMode": "blacklist",
+  "enabled": true
+}
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+    "channelId": -1001234567890,
+    "tags": ["urgent", "important"],
+    "matchMode": "blacklist",
+    "enabled": true,
+    "createTime": "2024-03-20T11:00:00",
+    "updateTime": "2024-03-20T11:00:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+频道 ID 为空：
+```json
+{
+  "code": -40006,
+  "msg": "频道ID不能为空",
+  "data": null
+}
+```
+
+频道 ID 格式无效：
+```json
+{
+  "code": -40006,
+  "msg": "频道ID必须是负数",
+  "data": null
+}
+```
+
+频道配置已存在：
+```json
+{
+  "code": -60003,
+  "msg": "频道配置已存在: -1001234567890",
+  "data": null
+}
+```
+
+#### 4.3.4 更新配置
+
+**接口地址：** `PUT /api/tag-filter-config/{id}`
+
+**路径参数：**
+- `id`: 配置的 MongoDB 文档 ID
+
+**请求示例：**
+
+```json
+{
+  "enabled": false
+}
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+    "channelId": -1001234567890,
+    "tags": ["urgent", "important"],
+    "matchMode": "blacklist",
+    "enabled": false,
+    "createTime": "2024-03-20T11:00:00",
+    "updateTime": "2024-03-20T15:45:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+配置不存在：
+```json
+{
+  "code": -60002,
+  "msg": "配置不存在: 65f8a1b2c3d4e5f6a7b8c9d1",
+  "data": null
+}
+```
+
+#### 4.3.5 删除配置
+
+**接口地址：** `DELETE /api/tag-filter-config/{id}`
+
+**路径参数：**
+- `id`: 配置的 MongoDB 文档 ID
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": null
+}
+```
+
+**错误响应示例：**
+
+配置不存在：
+```json
+{
+  "code": -60002,
+  "msg": "配置不存在: 65f8a1b2c3d4e5f6a7b8c9d1",
+  "data": null
+}
+```
+
+无法删除全局配置：
+```json
+{
+  "code": -60000,
+  "msg": "不能删除全局配置",
+  "data": null
+}
+```
+
+#### 4.3.6 通过 ID 获取配置
+
+**接口地址：** `GET /api/tag-filter-config/{id}`
+
+**路径参数：**
+- `id`: 配置的 MongoDB 文档 ID
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+    "channelId": -1001234567890,
+    "tags": ["urgent", "important"],
+    "matchMode": "blacklist",
+    "enabled": true,
+    "createTime": "2024-03-20T11:00:00",
+    "updateTime": "2024-03-20T11:00:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+配置不存在：
+```json
+{
+  "code": -60002,
+  "msg": "配置不存在: 65f8a1b2c3d4e5f6a7b8c9d1",
+  "data": null
+}
+```
+
+#### 4.3.7 通过频道 ID 获取配置
+
+**接口地址：** `GET /api/tag-filter-config/channel/{channelId}`
+
+**路径参数：**
+- `channelId`: Telegram 频道 ID
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+    "channelId": -1001234567890,
+    "tags": ["urgent", "important"],
+    "matchMode": "blacklist",
+    "enabled": true,
+    "createTime": "2024-03-20T11:00:00",
+    "updateTime": "2024-03-20T11:00:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+频道配置不存在：
+```json
+{
+  "code": -60002,
+  "msg": "频道配置不存在: -1001234567890",
+  "data": null
+}
+```
+
+#### 4.3.8 获取有效配置
+
+**接口地址：** `GET /api/tag-filter-config/effective/{channelId}`
+
+**路径参数：**
+- `channelId`: Telegram 频道 ID
+
+**说明：** 该接口实现配置优先级逻辑，优先返回频道配置，如果不存在则返回全局配置。
+
+**成功响应（返回频道配置）：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+    "channelId": -1001234567890,
+    "tags": ["urgent", "important"],
+    "matchMode": "blacklist",
+    "enabled": true,
+    "createTime": "2024-03-20T11:00:00",
+    "updateTime": "2024-03-20T11:00:00"
+  }
+}
+```
+
+**成功响应（返回全局配置）：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "channelId": null,
+    "tags": ["tech", "news", "ai"],
+    "matchMode": "whitelist",
+    "enabled": true,
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+频道配置和全局配置都不存在：
+```json
+{
+  "code": -60002,
+  "msg": "未找到有效配置",
+  "data": null
+}
+```
+
+#### 4.3.9 分页查询频道配置
+
+**接口地址：** `GET /api/tag-filter-config/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码 |
+| size | Long | 否 | 10 | 每页大小 |
+| channelId | Long | 否 | - | 频道 ID 过滤 |
+| matchMode | String | 否 | - | 匹配模式过滤 |
+| enabled | Boolean | 否 | - | 启用状态过滤 |
+
+**请求示例：**
+
+```
+GET /api/tag-filter-config/page?current=1&size=20&matchMode=whitelist&enabled=true
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+        "channelId": -1001234567890,
+        "tags": ["tech", "news"],
+        "matchMode": "whitelist",
+        "enabled": true,
+        "createTime": "2024-03-20T11:00:00",
+        "updateTime": "2024-03-20T11:00:00"
+      },
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d2",
+        "channelId": -1009876543210,
+        "tags": ["ai", "ml"],
+        "matchMode": "whitelist",
+        "enabled": true,
+        "createTime": "2024-03-20T12:00:00",
+        "updateTime": "2024-03-20T12:00:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 2,
+    "pages": 1
+  }
+}
+```
+
+**空页响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 10,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+#### 4.3.10 触发重新加载
+
+**接口地址：** `POST /api/tag-filter-config/reload`
+
+**说明：** 该接口发布 RELOAD_ALL 事件，通知所有监听器重新加载配置。
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": null
+}
+```
+
+### 4.4 常见错误场景
+
+#### 4.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的配置 ID
+- 更新不存在的配置
+- 删除不存在的配置
+- 查询不存在的频道配置
+- 全局配置不存在
+
+**响应示例：**
+
+```json
+{
+  "code": -60002,
+  "msg": "配置不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+#### 4.4.2 数据已存在（DATA_ALREADY_EXISTS）
+
+**响应码：** `-60003`
+
+**触发场景：**
+- 创建频道配置时，channelId 已存在
+
+**响应示例：**
+
+```json
+{
+  "code": -60003,
+  "msg": "频道配置已存在: -1001234567890",
+  "data": null
+}
+```
+
+#### 4.4.3 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- tags 为 null
+- matchMode 不是 whitelist 或 blacklist
+- enabled 为 null
+- 创建频道配置时 channelId 为 null 或不是负数
+
+**响应示例（单个错误）：**
+
+```json
+{
+  "code": -40006,
+  "msg": "标签列表不能为null",
+  "data": null
+}
+```
+
+**响应示例（多个错误）：**
+
+```json
+{
+  "code": -40006,
+  "msg": "标签列表不能为null; 匹配模式必须是whitelist或blacklist; 启用状态不能为null",
+  "data": null
+}
+```
+
+#### 4.4.4 业务处理失败（BUSINESS_ERROR）
+
+**响应码：** `-60000`
+
+**触发场景：**
+- 尝试删除全局配置
+
+**响应示例：**
+
+```json
+{
+  "code": -60000,
+  "msg": "不能删除全局配置",
+  "data": null
+}
+```
+
+### 4.5 使用示例
+
+#### 4.5.1 创建全局配置
+
+```bash
+# 创建全局白名单配置
+curl -X POST http://localhost:8080/api/tag-filter-config/global \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tags": ["tech", "news", "ai"],
+    "matchMode": "whitelist",
+    "enabled": true
+  }'
+```
+
+#### 4.5.2 创建频道配置
+
+```bash
+# 为特定频道创建黑名单配置
+curl -X POST http://localhost:8080/api/tag-filter-config/channel \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channelId": -1001234567890,
+    "tags": ["spam", "ads"],
+    "matchMode": "blacklist",
+    "enabled": true
+  }'
+```
+
+#### 4.5.3 更新配置
+
+```bash
+# 禁用某个配置
+curl -X PUT http://localhost:8080/api/tag-filter-config/65f8a1b2c3d4e5f6a7b8c9d1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": false
+  }'
+
+# 更新标签列表
+curl -X PUT http://localhost:8080/api/tag-filter-config/65f8a1b2c3d4e5f6a7b8c9d1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tags": ["urgent", "important", "critical"]
+  }'
+```
+
+#### 4.5.4 查询有效配置
+
+```bash
+# 查询频道的有效配置（优先返回频道配置，否则返回全局配置）
+curl -X GET http://localhost:8080/api/tag-filter-config/effective/-1001234567890
+```
+
+#### 4.5.5 分页查询
+
+```bash
+# 查询所有启用的白名单配置
+curl -X GET "http://localhost:8080/api/tag-filter-config/page?matchMode=whitelist&enabled=true"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/tag-filter-config/page?current=2&size=20"
+```
+
+#### 4.5.6 删除频道配置
+
+```bash
+# 删除指定频道的配置
+curl -X DELETE http://localhost:8080/api/tag-filter-config/65f8a1b2c3d4e5f6a7b8c9d1
+```
+
+#### 4.5.7 触发重新加载
+
+```bash
+# 通知所有监听器重新加载配置
+curl -X POST http://localhost:8080/api/tag-filter-config/reload
+```
+
+### 4.6 注意事项
+
+#### 4.6.1 配置优先级
+
+1. **频道配置优先**：当频道配置存在时，使用频道配置；否则使用全局配置
+2. **全局配置唯一**：系统中只能有一个全局配置（channelId 为 null）
+3. **频道配置唯一**：每个 channelId 只能有一个配置
+4. **有效配置查询**：使用 `/effective/{channelId}` 端点自动应用优先级逻辑
+
+#### 4.6.2 配置管理
+
+1. **全局配置创建**：使用 `POST /global` 端点，如果已存在则更新
+2. **频道配置创建**：使用 `POST /channel` 端点，channelId 必须提供且为负数
+3. **配置更新**：使用 `PUT /{id}` 端点，通过 MongoDB ID 更新
+4. **配置删除**：只能删除频道配置，不能删除全局配置
+5. **部分更新**：更新时只需提供需要修改的字段
+
+#### 4.6.3 参数验证
+
+1. **tags 字段**：不能为 null，但可以是空列表 `[]`
+2. **matchMode 字段**：只能是 `whitelist` 或 `blacklist`
+3. **enabled 字段**：不能为 null，必须是 `true` 或 `false`
+4. **channelId 字段**：创建频道配置时必须提供，且必须是负数（Telegram 频道 ID 格式）
+
+#### 4.6.4 事件机制
+
+1. **配置变更事件**：所有配置的创建、更新、删除操作都会发布事件
+2. **事件类型**：
+   - `CONFIG_CREATED`：频道配置创建
+   - `CONFIG_UPDATED`：配置更新（包括全局配置）
+   - `CONFIG_DELETED`：频道配置删除
+   - `RELOAD_ALL`：重新加载所有配置
+3. **事件监听**：其他组件可以监听这些事件来同步配置变化
+4. **事件发布失败**：事件发布失败不影响数据库操作的成功
+
+#### 4.6.5 时间戳管理
+
+1. **createTime**：创建时自动设置，不可修改
+2. **updateTime**：每次更新时自动更新为当前时间
+3. **时间格式**：ISO 8601 格式（如 `2024-03-20T10:30:00`）
+
+#### 4.6.6 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始
+2. **默认值**：current=1, size=10
+3. **过滤条件**：支持 channelId、matchMode、enabled 的组合过滤
+4. **只查询频道配置**：分页查询不包括全局配置
+
+#### 4.6.7 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200
+2. **错误判断**：通过响应体中的 code 字段判断是否成功
+3. **错误信息**：错误响应包含详细的错误描述
+4. **参数校验**：所有参数都经过严格校验
+
+#### 4.6.8 最佳实践
+
+1. **先创建全局配置**：建议先创建全局配置作为默认规则
+2. **按需创建频道配置**：只为需要特殊规则的频道创建配置
+3. **使用有效配置查询**：在应用中使用 `/effective/{channelId}` 端点获取配置
+4. **定期清理**：删除不再需要的频道配置
+5. **配置测试**：创建配置后使用 `/effective/{channelId}` 验证优先级逻辑
 
 ---
 
