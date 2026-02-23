@@ -20,6 +20,13 @@
   - [2.3 API 端点](#23-api-端点)
   - [2.4 使用示例](#24-使用示例)
   - [2.5 注意事项](#25-注意事项)
+- [3. 消息查询 API](#3-消息查询-api)
+  - [3.1 概述](#31-概述)
+  - [3.2 数据结构](#32-数据结构)
+  - [3.3 API 端点](#33-api-端点)
+  - [3.4 常见错误场景](#34-常见错误场景)
+  - [3.5 使用示例](#35-使用示例)
+  - [3.6 注意事项](#36-注意事项)
 
 ---
 
@@ -707,6 +714,563 @@ curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=100"
 | 是否需要登录 | 否 | 是（需要 TG 客户端登录） |
 | 支持 CRUD | 是 | 否（只读） |
 | 用途 | 管理监控配置 | 查看账号已加入的频道 |
+
+---
+
+## 3. 消息查询 API
+
+### 3.1 概述
+
+消息查询 API 提供了对持久化到 MongoDB 数据库的 Telegram 消息的查询接口。系统已经将 Telegram 频道的消息持久化到 MongoDB 的 raw_messages 集合中，该 API 支持多种查询条件、分页和排序功能，方便用户高效检索和分析消息数据。
+
+主要功能包括：
+- 根据 MongoDB ID 或 Telegram ID 查询单条消息
+- 支持多条件过滤的分页查询（频道、日期范围）
+- 查询媒体组（相册）消息
+
+### 3.2 数据结构
+
+#### 3.2.1 MessageQueryDTO（消息查询请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "chatId": -1001234567890,
+  "startDate": 1708588800,
+  "endDate": 1708675200,
+  "mediaAlbumId": 789012
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 校验规则 | 说明 |
+|------|------|------|----------|------|
+| chatId | Long | 否 | - | Telegram 频道 ID（负数） |
+| startDate | Integer | 否 | ≥ 0 | 开始日期（Unix 时间戳） |
+| endDate | Integer | 否 | ≥ 0 | 结束日期（Unix 时间戳） |
+| mediaAlbumId | Long | 否 | - | 媒体组 ID（当前分页查询不支持此过滤条件） |
+
+**校验规则：**
+- startDate 和 endDate 必须大于等于 0
+- 如果同时提供 startDate 和 endDate，系统会查询该时间范围内的消息
+- 分页查询支持的过滤条件：chatId、startDate、endDate
+- mediaAlbumId 字段存在于 DTO 中，但当前分页查询实现不使用此字段进行过滤
+
+#### 3.2.2 MessageVO（消息响应对象）
+
+返回给客户端的消息数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "chatId": -1001234567890,
+  "messageId": 123456,
+  "mediaAlbumId": 789012,
+  "date": 1708588800,
+  "rawJson": "{\"@type\":\"message\",\"id\":123456,...}",
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:30:00"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID（24位十六进制） |
+| chatId | Long | Telegram 频道 ID（负数） |
+| messageId | Long | Telegram 消息 ID |
+| mediaAlbumId | Long | 媒体组 ID（可能为 null） |
+| date | Integer | 消息日期（Unix 时间戳） |
+| rawJson | String | TDLib 原始消息 JSON |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+
+### 3.3 API 端点
+
+#### 3.3.1 根据 MongoDB ID 查询单条消息
+
+**接口地址：** `GET /api/message/{id}`
+
+**路径参数：**
+- `id`: MongoDB 文档 ID（String，24位十六进制）
+
+**请求示例：**
+
+```
+GET /api/message/65f8a1b2c3d4e5f6a7b8c9d0
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "chatId": -1001234567890,
+    "messageId": 123456,
+    "mediaAlbumId": 789012,
+    "date": 1708588800,
+    "rawJson": "{\"@type\":\"message\",\"id\":123456,\"chat_id\":-1001234567890,...}",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+消息不存在：
+```json
+{
+  "code": -60002,
+  "msg": "消息不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+无效的 MongoDB ID 格式：
+```json
+{
+  "code": -40006,
+  "msg": "无效的MongoDB ID格式: invalid_id",
+  "data": null
+}
+```
+
+#### 3.3.2 根据 ChatId 和 MessageId 查询消息
+
+**接口地址：** `GET /api/message/by-tg-id`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| messageId | Long | 是 | Telegram 消息 ID |
+
+**请求示例：**
+
+```
+GET /api/message/by-tg-id?chatId=-1001234567890&messageId=123456
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "chatId": -1001234567890,
+    "messageId": 123456,
+    "mediaAlbumId": null,
+    "date": 1708588800,
+    "rawJson": "{\"@type\":\"message\",...}",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+消息不存在：
+```json
+{
+  "code": -60002,
+  "msg": "消息不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 3.3.3 分页查询消息列表
+
+**接口地址：** `GET /api/message/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤 |
+| startDate | Integer | 否 | - | 开始日期（Unix 时间戳） |
+| endDate | Integer | 否 | - | 结束日期（Unix 时间戳） |
+
+**注意：** MessageQueryDTO 中包含 mediaAlbumId 字段，但当前分页查询实现不支持按媒体组过滤。如需查询媒体组消息，请使用专用端点 `/api/message/media-album`。
+
+**请求示例：**
+
+```
+GET /api/message/page?current=1&size=20&chatId=-1001234567890&startDate=1708588800&endDate=1708675200
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "chatId": -1001234567890,
+        "messageId": 123456,
+        "mediaAlbumId": null,
+        "date": 1708675000,
+        "rawJson": "{...}",
+        "createTime": "2024-03-20T10:30:00",
+        "updateTime": "2024-03-20T10:30:00"
+      },
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+        "chatId": -1001234567890,
+        "messageId": 123455,
+        "mediaAlbumId": null,
+        "date": 1708674000,
+        "rawJson": "{...}",
+        "createTime": "2024-03-20T10:25:00",
+        "updateTime": "2024-03-20T10:25:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+```
+
+**空页响应（超出范围）：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 10,
+    "size": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+```
+
+**错误响应示例：**
+
+无效的分页参数：
+```json
+{
+  "code": -40006,
+  "msg": "页码必须大于等于1; 每页大小必须大于等于1",
+  "data": null
+}
+```
+
+分页大小超出限制：
+```json
+{
+  "code": -40000,
+  "msg": "每页大小不能超过100",
+  "data": null
+}
+```
+
+#### 3.3.4 查询媒体组消息
+
+**接口地址：** `GET /api/message/media-album`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| mediaAlbumId | Long | 是 | 媒体组 ID |
+
+**请求示例：**
+
+```
+GET /api/message/media-album?chatId=-1001234567890&mediaAlbumId=789012
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": [
+    {
+      "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+      "chatId": -1001234567890,
+      "messageId": 123456,
+      "mediaAlbumId": 789012,
+      "date": 1708588800,
+      "rawJson": "{...}",
+      "createTime": "2024-03-20T10:30:00",
+      "updateTime": "2024-03-20T10:30:00"
+    },
+    {
+      "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+      "chatId": -1001234567890,
+      "messageId": 123457,
+      "mediaAlbumId": 789012,
+      "date": 1708588800,
+      "rawJson": "{...}",
+      "createTime": "2024-03-20T10:30:00",
+      "updateTime": "2024-03-20T10:30:00"
+    }
+  ]
+}
+```
+
+**空列表响应（媒体组不存在）：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": []
+}
+```
+
+**错误响应示例：**
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; mediaAlbumId不能为空",
+  "data": null
+}
+```
+
+### 3.4 常见错误场景
+
+#### 3.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的 MongoDB ID
+- 查询不存在的 ChatId + MessageId 组合
+
+**响应示例：**
+
+根据 MongoDB ID 查询：
+```json
+{
+  "code": -60002,
+  "msg": "消息不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+根据 Telegram ID 查询：
+```json
+{
+  "code": -60002,
+  "msg": "消息不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+#### 3.4.2 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- MongoDB ID 格式无效（不是24位十六进制）
+- 缺少必需参数（chatId、messageId、mediaAlbumId）
+- 分页参数无效（current < 1 或 size < 1）
+- 日期参数无效（startDate < 0 或 endDate < 0）
+
+**响应示例（单个错误）：**
+
+```json
+{
+  "code": -40006,
+  "msg": "无效的MongoDB ID格式: invalid_id",
+  "data": null
+}
+```
+
+**响应示例（多个错误）：**
+
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+**响应示例（日期校验）：**
+
+```json
+{
+  "code": -40006,
+  "msg": "开始日期必须大于等于0; 结束日期必须大于等于0",
+  "data": null
+}
+```
+
+#### 3.4.3 参数超出范围（PARAM_ERROR）
+
+**响应码：** `-40000`
+
+**触发场景：**
+- 分页大小超过最大限制（size > 100）
+
+**响应示例：**
+
+```json
+{
+  "code": -40000,
+  "msg": "每页大小不能超过100",
+  "data": null
+}
+```
+
+#### 3.4.4 系统内部错误（INTERNAL_ERROR）
+
+**响应码：** `-50000`
+
+**触发场景：**
+- 数据库连接失败
+- 数据库操作异常
+- 其他未预期的系统错误
+
+**响应示例：**
+
+```json
+{
+  "code": -50000,
+  "msg": "系统内部错误，请联系管理员",
+  "data": null
+}
+```
+
+### 3.5 使用示例
+
+#### 3.5.1 查询单条消息
+
+```bash
+# 根据 MongoDB ID 查询
+curl -X GET http://localhost:8080/api/message/65f8a1b2c3d4e5f6a7b8c9d0
+
+# 根据 Telegram ID 查询
+curl -X GET "http://localhost:8080/api/message/by-tg-id?chatId=-1001234567890&messageId=123456"
+```
+
+#### 3.5.2 分页查询所有消息
+
+```bash
+# 查询第1页，每页10条（使用默认参数）
+curl -X GET "http://localhost:8080/api/message/page"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/message/page?current=2&size=20"
+```
+
+#### 3.5.3 按频道查询消息
+
+```bash
+# 查询指定频道的所有消息
+curl -X GET "http://localhost:8080/api/message/page?chatId=-1001234567890"
+
+# 查询指定频道的第1页，每页50条
+curl -X GET "http://localhost:8080/api/message/page?chatId=-1001234567890&current=1&size=50"
+```
+
+#### 3.5.4 按日期范围查询消息
+
+```bash
+# 查询2024年2月22日到2月23日的消息
+# startDate: 1708588800 (2024-02-22 00:00:00 UTC)
+# endDate: 1708675200 (2024-02-23 00:00:00 UTC)
+curl -X GET "http://localhost:8080/api/message/page?startDate=1708588800&endDate=1708675200"
+```
+
+#### 3.5.5 组合条件查询
+
+```bash
+# 查询指定频道在指定日期范围内的消息
+curl -X GET "http://localhost:8080/api/message/page?chatId=-1001234567890&startDate=1708588800&endDate=1708675200&current=1&size=20"
+```
+
+#### 3.5.6 查询媒体组消息
+
+```bash
+# 查询指定频道的指定媒体组（相册）
+curl -X GET "http://localhost:8080/api/message/media-album?chatId=-1001234567890&mediaAlbumId=789012"
+```
+
+### 3.6 注意事项
+
+#### 3.6.1 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始，不是从 0 开始
+2. **超出范围处理**：当请求的页码超出范围时，返回空 records 列表，但保持正确的分页元数据（total、pages）
+3. **分页大小限制**：每页最大支持 100 条记录，超过会返回参数错误
+4. **默认值**：如果不提供分页参数，默认 current=1, size=10
+
+#### 3.6.2 过滤条件
+
+1. **过滤条件组合**：过滤条件（chatId、startDate、endDate）可以任意组合使用
+2. **日期范围查询**：startDate 和 endDate 都是 Unix 时间戳（秒），可以只提供其中一个
+3. **频道 ID 格式**：Telegram 频道 ID 通常是负数（如 -1001234567890）
+4. **媒体组查询**：查询媒体组时必须使用专用端点 `/api/message/media-album`，需要同时提供 chatId 和 mediaAlbumId
+
+#### 3.6.3 排序规则
+
+1. **分页查询排序**：消息列表按 date 字段降序排列（最新消息在前）
+2. **媒体组排序**：媒体组内的消息按 messageId 升序排列（保持相册顺序）
+
+#### 3.6.4 性能优化
+
+1. **索引利用**：系统使用 MongoDB 索引优化查询性能
+   - chat_message_unique 索引：用于根据 ChatId + MessageId 查询
+   - chat_album_unique 索引：用于查询媒体组
+   - chat_date_idx 索引：用于按频道和日期查询
+2. **避免大结果集**：建议使用分页查询，避免一次性获取大量数据
+3. **合理设置分页大小**：根据实际需求设置 size 参数，不要盲目设置为最大值
+4. **rawJson 字段**：该字段可能包含大量数据，如果不需要可以考虑在客户端过滤
+
+#### 3.6.5 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200，具体错误通过响应体中的 code 字段判断
+2. **错误信息**：错误响应包含详细的错误信息，帮助定位问题
+3. **参数校验**：所有参数都经过严格校验，无效参数会返回明确的错误信息
+4. **日志记录**：所有错误都会记录到系统日志，但不会在响应中暴露敏感信息
+
+#### 3.6.6 数据一致性
+
+1. **实时性**：查询结果反映数据库的当前状态
+2. **媒体组完整性**：媒体组查询返回该组的所有消息
+
+#### 3.6.7 MongoDB ID 格式
+
+1. **ID 格式**：MongoDB ID 是 24 位十六进制字符串（如 65f8a1b2c3d4e5f6a7b8c9d0）
+2. **格式校验**：系统会自动校验 ID 格式，无效格式会返回 VALIDATION_ERROR
+3. **大小写**：MongoDB ID 不区分大小写，但建议使用小写
 
 ---
 
