@@ -133,6 +133,11 @@ class WebSocketBroadcastClient {
   private client: Client;
   private config: WebSocketClientConfig;
   private subscriptions: Map<string, any> = new Map();
+  // 保存订阅配置，用于重连后恢复订阅
+  private subscriptionConfigs: Map<string, {
+    type: 'channel' | 'monitoring',
+    callback: (data: any) => void
+  }> = new Map();
 
   constructor(config: WebSocketClientConfig) {
     this.config = {
@@ -231,9 +236,16 @@ class WebSocketBroadcastClient {
   ): string {
     const topic = `/topic/channel/real/${channelId}`;
     
+    // 保存订阅配置，用于重连后恢复
+    this.subscriptionConfigs.set(topic, {
+      type: 'channel',
+      callback
+    });
+    
+    // 如果已经订阅，先取消
     if (this.subscriptions.has(topic)) {
-      console.warn(`已订阅: ${topic}`);
-      return topic;
+      console.warn(`已订阅: ${topic}，将重新订阅`);
+      this.subscriptions.get(topic).unsubscribe();
     }
 
     const subscription = this.client.subscribe(topic, (message: IMessage) => {
@@ -263,6 +275,7 @@ class WebSocketBroadcastClient {
     if (subscription) {
       subscription.unsubscribe();
       this.subscriptions.delete(topic);
+      this.subscriptionConfigs.delete(topic); // 同时删除配置
       console.log(`✓ 已取消订阅频道: ${channelId}`);
     } else {
       console.warn(`未订阅频道: ${channelId}`);
@@ -282,9 +295,16 @@ class WebSocketBroadcastClient {
   ): string {
     const topic = `/topic/channel/monitoring/${eventType}`;
     
+    // 保存订阅配置，用于重连后恢复
+    this.subscriptionConfigs.set(topic, {
+      type: 'monitoring',
+      callback
+    });
+    
+    // 如果已经订阅，先取消
     if (this.subscriptions.has(topic)) {
-      console.warn(`已订阅: ${topic}`);
-      return topic;
+      console.warn(`已订阅: ${topic}，将重新订阅`);
+      this.subscriptions.get(topic).unsubscribe();
     }
 
     const subscription = this.client.subscribe(topic, (message: IMessage) => {
@@ -314,6 +334,7 @@ class WebSocketBroadcastClient {
     if (subscription) {
       subscription.unsubscribe();
       this.subscriptions.delete(topic);
+      this.subscriptionConfigs.delete(topic); // 同时删除配置
       console.log(`✓ 已取消订阅监控事件: ${eventType}`);
     } else {
       console.warn(`未订阅监控事件: ${eventType}`);
@@ -329,16 +350,41 @@ class WebSocketBroadcastClient {
 
   /**
    * 连接建立时调用
+   * 重连后会自动恢复所有订阅
    */
   private onConnected(frame: any): void {
     console.log('连接已成功建立');
+    
+    // 清空旧的订阅对象（它们已经失效）
+    this.subscriptions.clear();
+    
+    // 恢复所有订阅
+    if (this.subscriptionConfigs.size > 0) {
+      console.log(`正在恢复 ${this.subscriptionConfigs.size} 个订阅...`);
+      
+      this.subscriptionConfigs.forEach((config, topic) => {
+        const subscription = this.client.subscribe(topic, (message: IMessage) => {
+          try {
+            const dto = JSON.parse(message.body);
+            config.callback(dto);
+          } catch (error) {
+            console.error(`解析消息失败 (${topic}):`, error);
+          }
+        });
+        
+        this.subscriptions.set(topic, subscription);
+        console.log(`✓ 已恢复订阅: ${topic}`);
+      });
+      
+      console.log('✓ 所有订阅已恢复');
+    }
   }
 
   /**
    * 连接断开时调用
    */
   private onDisconnected(frame: any): void {
-    console.log('连接已断开');
+    console.log('连接已断开，将在 ' + (this.config.reconnectDelay! / 1000) + ' 秒后尝试重连...');
   }
 }
 
