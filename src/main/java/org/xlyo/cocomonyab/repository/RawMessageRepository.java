@@ -4,6 +4,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.xlyo.cocomonyab.domain.entity.RawMessage;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -31,4 +32,19 @@ public interface RawMessageRepository extends MongoRepository<RawMessage, String
      * 查找媒体组消息（通过chatId和mediaAlbumId）
      */
     Optional<RawMessage> findByChatIdAndMediaAlbumId(Long chatId, Long mediaAlbumId);
+    
+    /**
+     * 统计指定频道和媒体组的消息数量
+     */
+    long countByChatIdAndMediaAlbumId(Long chatId, Long mediaAlbumId);
+    
+    /**
+     * 统计指定频道的消息数量
+     */
+    long countByChatId(Long chatId);
+    
+    /**
+     * 查找指定频道和媒体组的所有消息
+     */
+    List<RawMessage> findAllByChatIdAndMediaAlbumId(Long chatId, Long mediaAlbumId);
 }
