@@ -1,0 +1,18 @@
+[project]
+name = "cocomonya-py-tools"
+version = "0.1.0"
+description = "CocoMonyaB 项目的 Python 工具脚本集合"
+requires-python = ">=3.8"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+    "gitpython>=3.1.40",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+commit-tool = "commit_tool:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

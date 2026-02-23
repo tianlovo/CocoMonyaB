@@ -34,11 +34,14 @@ class MessageStorageServiceTest {
     @Mock
     private org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter duplicateMessageFilter;
     
+    @Mock
+    private org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics mediaGroupMetrics;
+    
     private MessageStorageService messageStorageService;
     
     @BeforeEach
     void setUp() {
-        messageStorageService = new MessageStorageService(rawMessageRepository, objectMapper, duplicateMessageFilter);
+        messageStorageService = new MessageStorageService(rawMessageRepository, objectMapper, duplicateMessageFilter, mediaGroupMetrics);
     }
     
     @Test
@@ -248,6 +251,128 @@ class MessageStorageServiceTest {
         
         RawMessage savedMessage = captor.getValue();
         assertEquals(1234567890, savedMessage.getDate());
+    }
+    
+    @Test
+    void saveMessage_DuplicateKeyException_LogsWarning() throws Exception {
+        // Arrange
+        TdApi.Message message = createTestMessage(123L, 456L, 0L);
+        String expectedJson = "{\"id\":123,\"chatId\":456}";
+        
+        when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(false);
+        when(objectMapper.writeValueAsString(message)).thenReturn(expectedJson);
+        when(rawMessageRepository.save(any(RawMessage.class)))
+            .thenThrow(new org.springframework.dao.DuplicateKeyException("Duplicate key"));
+        
+        // Act
+        boolean result = messageStorageService.saveMessage(message);
+        
+        // Assert
+        assertFalse(result);
+        // 验证 markFailed 没有被调用（DuplicateKeyException 不应该标记为失败）
+        verify(duplicateMessageFilter, never()).markFailed(any());
+    }
+    
+    @Test
+    void saveMessage_OtherException_LogsErrorAndMarksFailed() throws Exception {
+        // Arrange
+        TdApi.Message message = createTestMessage(123L, 456L, 0L);
+        String expectedJson = "{\"id\":123,\"chatId\":456}";
+        
+        when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(false);
+        when(objectMapper.writeValueAsString(message)).thenReturn(expectedJson);
+        when(rawMessageRepository.save(any(RawMessage.class)))
+            .thenThrow(new RuntimeException("Database connection error"));
+        
+        // Act
+        boolean result = messageStorageService.saveMessage(message);
+        
+        // Assert
+        assertFalse(result);
+        // 验证 markFailed 被调用
+        verify(duplicateMessageFilter, times(1)).markFailed(message);
+    }
+    
+    @Test
+    void saveAll_Success_LogsInfo() throws Exception {
+        // Arrange
+        java.util.List<TdApi.Message> messages = new java.util.ArrayList<>();
+        messages.add(createTestMessage(123L, 456L, 0L));
+        messages.add(createTestMessage(124L, 456L, 0L));
+        
+        when(rawMessageRepository.existsByChatIdAndMessageId(anyLong(), anyLong())).thenReturn(false);
+        when(rawMessageRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        // Act
+        boolean result = messageStorageService.saveAll(messages);
+        
+        // Assert
+        assertTrue(result);
+        verify(rawMessageRepository, times(1)).saveAll(any());
+    }
+    
+    @Test
+    void saveAll_DuplicateKeyException_LogsErrorAndMarksAllFailed() throws Exception {
+        // Arrange
+        java.util.List<TdApi.Message> messages = new java.util.ArrayList<>();
+        messages.add(createTestMessage(123L, 456L, 0L));
+        messages.add(createTestMessage(124L, 456L, 0L));
+        
+        when(rawMessageRepository.existsByChatIdAndMessageId(anyLong(), anyLong())).thenReturn(false);
+        when(rawMessageRepository.saveAll(any()))
+            .thenThrow(new org.springframework.dao.DuplicateKeyException("Duplicate key"));
+        
+        // Act
+        boolean result = messageStorageService.saveAll(messages);
+        
+        // Assert
+        assertFalse(result);
+        // 验证所有消息都被标记为失败
+        verify(duplicateMessageFilter, times(2)).markFailed(any());
+    }
+    
+    @Test
+    void saveAll_OtherException_LogsErrorAndMarksAllFailed() throws Exception {
+        // Arrange
+        java.util.List<TdApi.Message> messages = new java.util.ArrayList<>();
+        messages.add(createTestMessage(123L, 456L, 0L));
+        messages.add(createTestMessage(124L, 456L, 0L));
+        messages.add(createTestMessage(125L, 456L, 0L));
+        
+        when(rawMessageRepository.existsByChatIdAndMessageId(anyLong(), anyLong())).thenReturn(false);
+        when(rawMessageRepository.saveAll(any()))
+            .thenThrow(new RuntimeException("Database connection error"));
+        
+        // Act
+        boolean result = messageStorageService.saveAll(messages);
+        
+        // Assert
+        assertFalse(result);
+        // 验证所有消息都被标记为失败
+        verify(duplicateMessageFilter, times(3)).markFailed(any());
+    }
+    
+    @Test
+    void saveAll_EmptyList_ReturnsFalse() {
+        // Arrange
+        java.util.List<TdApi.Message> messages = new java.util.ArrayList<>();
+        
+        // Act
+        boolean result = messageStorageService.saveAll(messages);
+        
+        // Assert
+        assertFalse(result);
+        verify(rawMessageRepository, never()).saveAll(any());
+    }
+    
+    @Test
+    void saveAll_NullList_ReturnsFalse() {
+        // Act
+        boolean result = messageStorageService.saveAll(null);
+        
+        // Assert
+        assertFalse(result);
+        verify(rawMessageRepository, never()).saveAll(any());
     }
     
     // Helper method to create test messages

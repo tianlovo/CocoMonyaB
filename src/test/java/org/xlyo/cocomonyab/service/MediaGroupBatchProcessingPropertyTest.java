@@ -20,6 +20,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
  * Property 11: Media Group Batch Processing
@@ -48,14 +50,20 @@ class MediaGroupBatchProcessingPropertyTest {
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         // 模拟过滤器链默认接受所有消息
         when(filterChainManager.executeChain(any())).thenReturn(true);
@@ -150,14 +158,20 @@ class MediaGroupBatchProcessingPropertyTest {
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -223,14 +237,20 @@ class MediaGroupBatchProcessingPropertyTest {
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -303,4 +323,17 @@ class MediaGroupBatchProcessingPropertyTest {
         
         return message;
     }
+
+    private ConcurrentSafetyProperties createDefaultProperties() {
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        return properties;
+    }
+
 }

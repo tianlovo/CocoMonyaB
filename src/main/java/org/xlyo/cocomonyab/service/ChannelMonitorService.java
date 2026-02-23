@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.domain.entity.Channel;
+import jakarta.annotation.PostConstruct;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageStorageService;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -15,6 +16,8 @@ import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
+import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +40,8 @@ public class ChannelMonitorService implements MediaGroupProcessor {
     private final PluginManager pluginManager;
     private final FilterChainManager filterChainManager;
     private final ChannelMonitoringFilter channelMonitoringFilter;
+    private final MediaGroupMetrics mediaGroupMetrics;
+    private final ConcurrentSafetyProperties concurrentSafetyProperties;
     
     // 媒体组缓冲区：key = chatId:mediaAlbumId, value = 消息列表
     private final Map<String, List<TdApi.Message>> mediaGroupBuffer = new ConcurrentHashMap<>();
@@ -47,14 +52,32 @@ public class ChannelMonitorService implements MediaGroupProcessor {
     // 媒体组状态机：key = chatId:mediaAlbumId, value = 状态
     private final Map<String, MediaGroupState> mediaGroupStates = new ConcurrentHashMap<>();
     
-    // 分段锁（128 个锁条带）用于减少锁竞争
-    private final Striped<Lock> groupLocks = Striped.lock(128);
+    // 分段锁（锁条带数从配置读取）用于减少锁竞争
+    private Striped<Lock> groupLocks;
     
-    // 媒体组等待超时时间（毫秒）
-    private static final long MEDIA_GROUP_TIMEOUT = 2000; // 2秒
-    
-    // 锁条带数量
-    private static final int LOCK_STRIPES = 128;
+    /**
+     * 初始化监控指标
+     * 注册 Gauge 指标以实时反映缓冲区大小和活跃媒体组数量
+     */
+    @PostConstruct
+    public void initMetrics() {
+        // 初始化分段锁（从配置读取锁条带数量）
+        int lockStripes = concurrentSafetyProperties.getLock().getStripes();
+        this.groupLocks = Striped.lock(lockStripes);
+        log.info("初始化分段锁，锁条带数量: {}", lockStripes);
+        
+        // 注册媒体组缓冲区大小指标
+        mediaGroupMetrics.registerBufferSizeGauge(() -> {
+            return mediaGroupBuffer.values().stream()
+                .mapToInt(List::size)
+                .sum();
+        });
+        
+        // 注册活跃媒体组数量指标
+        mediaGroupMetrics.registerActiveMediaGroupCountGauge(() -> mediaGroupStates.size());
+        
+        log.info("媒体组监控指标已初始化");
+    }
     
     /**
      * 获取媒体组的锁
@@ -111,20 +134,45 @@ public class ChannelMonitorService implements MediaGroupProcessor {
         String groupKey = message.chatId + ":" + message.mediaAlbumId;
         Lock lock = getGroupLock(groupKey);
         
+        long lockStartTime = System.currentTimeMillis();
+        log.debug("尝试获取锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
         lock.lock();
+        long lockWaitTime = System.currentTimeMillis() - lockStartTime;
+        
+        // 记录锁等待时间
+        if (lockWaitTime > 0) {
+            mediaGroupMetrics.recordLockWaitTime(groupKey, lockWaitTime);
+            if (lockWaitTime > 1000) {
+                log.warn("获取锁超时: groupKey={}, waitTime={}ms, thread={}", 
+                    groupKey, lockWaitTime, Thread.currentThread().getName());
+            }
+        }
+        
+        log.debug("已获取锁: groupKey={}, waitTime={}ms, thread={}", 
+            groupKey, lockWaitTime, Thread.currentThread().getName());
+        
         try {
             // 检查当前状态
             MediaGroupState state = mediaGroupStates.get(groupKey);
             
             // 如果正在处理或已完成，拒绝新消息
             if (state == MediaGroupState.PROCESSING || state == MediaGroupState.COMPLETED) {
-                log.warn("媒体组 {} 状态为 {}，拒绝新消息: messageId={}", 
-                    groupKey, state, message.id);
+                String reason = "媒体组状态为 " + state + "，不接受新消息";
+                log.warn("消息被拒绝: groupKey={}, messageId={}, currentState={}, reason={}", 
+                    groupKey, message.id, state, reason);
+                log.warn("并发冲突: groupKey={}, thread={}, operation={}, currentState={}", 
+                    groupKey, Thread.currentThread().getName(), "handleMediaGroupMessage", state);
                 return false;
             }
             
             // 设置为收集状态（如果是新媒体组）
-            mediaGroupStates.putIfAbsent(groupKey, MediaGroupState.COLLECTING);
+            MediaGroupState previousState = mediaGroupStates.putIfAbsent(groupKey, MediaGroupState.COLLECTING);
+            if (previousState == null) {
+                // 新媒体组，记录状态转换
+                log.info("媒体组状态转换: groupKey={}, oldState={}, newState={}", 
+                    groupKey, "NONE", "COLLECTING");
+                mediaGroupMetrics.recordStateTransition("NONE", "COLLECTING");
+            }
             
             // 添加消息到缓冲区
             mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(message);
@@ -140,6 +188,7 @@ public class ChannelMonitorService implements MediaGroupProcessor {
             
         } finally {
             lock.unlock();
+            log.debug("已释放锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
         }
     }
     
@@ -170,14 +219,31 @@ public class ChannelMonitorService implements MediaGroupProcessor {
     @Scheduled(fixedDelay = 1000)
     public void processTimedOutMediaGroups() {
         long now = System.currentTimeMillis();
+        long mediaGroupTimeout = concurrentSafetyProperties.getMediaGroup().getTimeout();
         List<String> timedOutGroups = new ArrayList<>();
         
         // 找出超时的媒体组
         mediaGroupTimestamps.forEach((groupKey, timestamp) -> {
-            if (now - timestamp >= MEDIA_GROUP_TIMEOUT) {
+            if (now - timestamp >= mediaGroupTimeout) {
                 Lock lock = getGroupLock(groupKey);
                 
+                long lockStartTime = System.currentTimeMillis();
+                log.debug("尝试获取锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
                 lock.lock();
+                long lockWaitTime = System.currentTimeMillis() - lockStartTime;
+                
+                // 记录锁等待时间
+                if (lockWaitTime > 0) {
+                    mediaGroupMetrics.recordLockWaitTime(groupKey, lockWaitTime);
+                    if (lockWaitTime > 1000) {
+                        log.warn("获取锁超时: groupKey={}, waitTime={}ms, thread={}", 
+                            groupKey, lockWaitTime, Thread.currentThread().getName());
+                    }
+                }
+                
+                log.debug("已获取锁: groupKey={}, waitTime={}ms, thread={}", 
+                    groupKey, lockWaitTime, Thread.currentThread().getName());
+                
                 try {
                     MediaGroupState state = mediaGroupStates.get(groupKey);
                     
@@ -187,10 +253,16 @@ public class ChannelMonitorService implements MediaGroupProcessor {
                         mediaGroupStates.put(groupKey, MediaGroupState.PROCESSING);
                         timedOutGroups.add(groupKey);
                         
+                        // 记录状态转换
+                        log.info("媒体组状态转换: groupKey={}, oldState={}, newState={}", 
+                            groupKey, "COLLECTING", "PROCESSING");
+                        mediaGroupMetrics.recordStateTransition("COLLECTING", "PROCESSING");
+                        
                         log.debug("媒体组 {} 超时，状态转换: COLLECTING -> PROCESSING", groupKey);
                     }
                 } finally {
                     lock.unlock();
+                    log.debug("已释放锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
                 }
             }
         });
@@ -209,8 +281,25 @@ public class ChannelMonitorService implements MediaGroupProcessor {
      */
     private void processMediaGroup(String groupKey) {
         Lock lock = getGroupLock(groupKey);
+        long startTime = System.currentTimeMillis();
         
+        long lockStartTime = System.currentTimeMillis();
+        log.debug("尝试获取锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
         lock.lock();
+        long lockWaitTime = System.currentTimeMillis() - lockStartTime;
+        
+        // 记录锁等待时间
+        if (lockWaitTime > 0) {
+            mediaGroupMetrics.recordLockWaitTime(groupKey, lockWaitTime);
+            if (lockWaitTime > 1000) {
+                log.warn("获取锁超时: groupKey={}, waitTime={}ms, thread={}", 
+                    groupKey, lockWaitTime, Thread.currentThread().getName());
+            }
+        }
+        
+        log.debug("已获取锁: groupKey={}, waitTime={}ms, thread={}", 
+            groupKey, lockWaitTime, Thread.currentThread().getName());
+        
         try {
             // 移除缓冲区数据
             List<TdApi.Message> messages = mediaGroupBuffer.remove(groupKey);
@@ -229,17 +318,32 @@ public class ChannelMonitorService implements MediaGroupProcessor {
                 // 处理成功，转换状态为 COMPLETED
                 mediaGroupStates.put(groupKey, MediaGroupState.COMPLETED);
                 
+                // 记录状态转换
+                log.info("媒体组状态转换: groupKey={}, oldState={}, newState={}", 
+                    groupKey, "PROCESSING", "COMPLETED");
+                mediaGroupMetrics.recordStateTransition("PROCESSING", "COMPLETED");
+                
                 log.info("媒体组 {} 处理成功，状态转换: PROCESSING -> COMPLETED", groupKey);
+                
+                // 记录处理延迟
+                long duration = System.currentTimeMillis() - startTime;
+                mediaGroupMetrics.recordProcessingDuration(groupKey, duration);
                 
             } catch (Exception e) {
                 log.error("媒体组 {} 处理失败，状态重置为 COLLECTING", groupKey, e);
                 
                 // 处理失败，重置状态允许重试
                 mediaGroupStates.remove(groupKey);
+                
+                // 记录状态转换
+                log.info("媒体组状态转换: groupKey={}, oldState={}, newState={}", 
+                    groupKey, "PROCESSING", "NONE");
+                mediaGroupMetrics.recordStateTransition("PROCESSING", "NONE");
             }
             
         } finally {
             lock.unlock();
+            log.debug("已释放锁: groupKey={}, thread={}", groupKey, Thread.currentThread().getName());
         }
     }
     

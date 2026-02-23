@@ -4,13 +4,13 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import it.tdlight.jni.TdApi;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.filter.AbstractMessageFilter;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 import java.util.concurrent.TimeUnit;
 
@@ -38,6 +38,7 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     private static final int PRIORITY = 95; // 高优先级，尽早过滤重复消息
     
     private final RawMessageRepository rawMessageRepository;
+    private final ConcurrentSafetyProperties concurrentSafetyProperties;
     
     /**
      * 正在处理的消息缓存（内存去重）
@@ -47,34 +48,46 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
      * - 媒体组: "chatId:album:mediaAlbumId"
      * <p>
      * 使用 Caffeine 缓存：
-     * - 10秒自动过期
-     * - 最大缓存大小 10000
+     * - TTL 从配置读取（默认10秒）
+     * - 最大缓存大小从配置读取（默认10000）
      * - 启用统计
      */
     private final Cache<String, Boolean> processingCache;
     
     /**
-     * 失败消息的短暂缓存（5秒 TTL）
+     * 失败消息的短暂缓存
+     * TTL 从配置读取（默认5秒）
      * 用于防止失败消息立即重试
      */
     private final Cache<String, Boolean> failedCache;
     
-    public DuplicateMessageFilter(RawMessageRepository rawMessageRepository) {
+    public DuplicateMessageFilter(
+            RawMessageRepository rawMessageRepository,
+            ConcurrentSafetyProperties concurrentSafetyProperties) {
         this.rawMessageRepository = rawMessageRepository;
+        this.concurrentSafetyProperties = concurrentSafetyProperties;
         
-        // 配置主缓存：10秒过期，最大10000条
+        // 从配置读取缓存参数
+        int cacheTtl = concurrentSafetyProperties.getCache().getTtl();
+        int cacheMaxSize = concurrentSafetyProperties.getCache().getMaxSize();
+        int failedMessageTtl = concurrentSafetyProperties.getCache().getFailedMessageTtl();
+        
+        // 配置主缓存
         this.processingCache = Caffeine.newBuilder()
-            .expireAfterWrite(10, TimeUnit.SECONDS)
-            .maximumSize(10000)
+            .expireAfterWrite(cacheTtl, TimeUnit.SECONDS)
+            .maximumSize(cacheMaxSize)
             .recordStats()
             .build();
         
-        // 配置失败缓存：5秒过期
+        // 配置失败缓存
         this.failedCache = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.SECONDS)
+            .expireAfterWrite(failedMessageTtl, TimeUnit.SECONDS)
             .maximumSize(1000)
             .recordStats()
             .build();
+        
+        log.info("DuplicateMessageFilter 初始化完成 - 缓存TTL: {}秒, 最大大小: {}, 失败消息TTL: {}秒",
+            cacheTtl, cacheMaxSize, failedMessageTtl);
     }
     
     @Override
@@ -211,14 +224,14 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     
     /**
      * 标记消息处理失败
-     * 保留在短暂缓存中（5秒），防止立即重试
+     * 保留在短暂缓存中（TTL从配置读取），防止立即重试
      * 
      * @param message 处理失败的消息
      */
     public void markFailed(TdApi.Message message) {
         String cacheKey = buildCacheKey(message);
         
-        // 添加到失败缓存（5秒 TTL）
+        // 添加到失败缓存（TTL从配置读取）
         failedCache.put(cacheKey, Boolean.TRUE);
         
         // 如果是媒体组消息，也标记媒体组
@@ -227,7 +240,8 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
             failedCache.put(albumCacheKey, Boolean.TRUE);
         }
         
-        log.debug("消息处理失败，短暂缓存（5秒）: {}", cacheKey);
+        int failedMessageTtl = concurrentSafetyProperties.getCache().getFailedMessageTtl();
+        log.debug("消息处理失败，短暂缓存（{}秒）: {}", failedMessageTtl, cacheKey);
     }
     
     /**

@@ -4,6 +4,7 @@ import it.tdlight.jni.TdApi;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 import net.jqwik.api.constraints.LongRange;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
@@ -12,6 +13,7 @@ import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
 import org.xlyo.cocomonyab.service.message.MessageStorageService;
+import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +52,8 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
@@ -57,8 +61,11 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -126,6 +133,8 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
@@ -133,8 +142,11 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -205,6 +217,8 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
         
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
@@ -212,8 +226,11 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -297,5 +314,17 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         message.content = content;
         
         return message;
+    }
+    
+    private ConcurrentSafetyProperties createDefaultProperties() {
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        return properties;
     }
 }

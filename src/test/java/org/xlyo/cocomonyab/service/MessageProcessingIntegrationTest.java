@@ -7,6 +7,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.TextMessageEntity;
@@ -23,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
  * 消息处理流程集成测试
@@ -49,18 +52,33 @@ class MessageProcessingIntegrationTest {
     @Mock
     private org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter;
     
+    @Mock
+    private org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics mediaGroupMetrics;
+    
     private ChannelMonitorService channelMonitorService;
     
     @BeforeEach
     void setUp() {
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        
         channelMonitorService = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        channelMonitorService.initMetrics();
         
         // 模拟过滤器链默认接受所有消息
         when(filterChainManager.executeChain(any())).thenReturn(true);

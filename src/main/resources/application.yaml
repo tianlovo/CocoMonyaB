@@ -78,3 +78,28 @@ websocket:
   heartbeat:
     incoming: 10000
     outgoing: 10000
+
+# 并发安全性配置
+concurrent-safety:
+  # 媒体组配置
+  media-group:
+    # 媒体组超时时间（毫秒）- 超过此时间未收到新消息则触发处理
+    timeout: 2000
+    # 最大缓冲区大小 - 防止内存溢出
+    max-buffer-size: 1000
+  
+  # 锁配置
+  lock:
+    # 分段锁数量（锁条带数）- 用于减少锁竞争，提高并发性能
+    stripes: 128
+    # 锁超时时间（毫秒）- 获取锁的最大等待时间
+    timeout: 5000
+  
+  # 缓存配置
+  cache:
+    # 缓存过期时间（秒）- 消息去重缓存的有效期
+    ttl: 10
+    # 最大缓存大小 - 防止内存溢出
+    max-size: 10000
+    # 失败消息缓存时间（秒）- 处理失败的消息短暂缓存，防止立即重试
+    failed-message-ttl: 5

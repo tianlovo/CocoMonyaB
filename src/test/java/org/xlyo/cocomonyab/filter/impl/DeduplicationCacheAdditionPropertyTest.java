@@ -9,6 +9,7 @@ import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 /**
  * Property 11: Deduplication Check Cache Addition
@@ -30,7 +31,8 @@ class DeduplicationCacheAdditionPropertyTest {
     ) {
         // Given: Create filter with mocked repository
         RawMessageRepository repository = mock(RawMessageRepository.class);
-        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository, properties);
         
         // Message does not exist in database
         when(repository.existsByChatIdAndMessageId(chatId, messageId)).thenReturn(false);
@@ -70,7 +72,8 @@ class DeduplicationCacheAdditionPropertyTest {
     ) {
         // Given: Create filter with mocked repository
         RawMessageRepository repository = mock(RawMessageRepository.class);
-        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository, properties);
         
         // Media group does not exist in database
         when(repository.existsByChatIdAndMediaAlbumId(chatId, mediaAlbumId)).thenReturn(false);
@@ -110,7 +113,8 @@ class DeduplicationCacheAdditionPropertyTest {
     ) {
         // Given: Create filter with mocked repository
         RawMessageRepository repository = mock(RawMessageRepository.class);
-        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        DuplicateMessageFilter filter = new DuplicateMessageFilter(repository, properties);
         
         // Message does not exist in database
         when(repository.existsByChatIdAndMessageId(chatId, messageId)).thenReturn(false);
@@ -155,4 +159,17 @@ class DeduplicationCacheAdditionPropertyTest {
         );
         return message;
     }
+
+    private ConcurrentSafetyProperties createDefaultProperties() {
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        return properties;
+    }
+
 }

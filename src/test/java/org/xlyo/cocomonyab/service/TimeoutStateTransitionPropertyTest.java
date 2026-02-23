@@ -18,6 +18,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
  * 属性 9：超时状态转换
@@ -46,14 +48,20 @@ class TimeoutStateTransitionPropertyTest {
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -114,14 +122,20 @@ class TimeoutStateTransitionPropertyTest {
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -181,14 +195,20 @@ class TimeoutStateTransitionPropertyTest {
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
         
+        MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        ConcurrentSafetyProperties properties = createDefaultProperties();
+        
         ChannelMonitorService service = new ChannelMonitorService(
             channelRepository,
             messageStorageService,
             messageParser,
             pluginManager,
             filterChainManager,
-            channelMonitoringFilter
+            channelMonitoringFilter,
+            mediaGroupMetrics,
+            properties
         );
+        service.initMetrics();
         
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
@@ -260,4 +280,17 @@ class TimeoutStateTransitionPropertyTest {
         
         return message;
     }
+
+    private ConcurrentSafetyProperties createDefaultProperties() {
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        return properties;
+    }
+
 }

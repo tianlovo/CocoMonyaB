@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.filter.FilterContext;
 import org.xlyo.cocomonyab.filter.FilterResult;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
@@ -13,6 +14,7 @@ import org.xlyo.cocomonyab.repository.RawMessageRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 /**
  * DuplicateMessageFilter单元测试
@@ -28,7 +30,16 @@ class DuplicateMessageFilterTest {
     
     @BeforeEach
     void setUp() {
-        filter = new DuplicateMessageFilter(rawMessageRepository);
+        ConcurrentSafetyProperties properties = new ConcurrentSafetyProperties();
+        properties.getMediaGroup().setTimeout(2000);
+        properties.getMediaGroup().setMaxBufferSize(1000);
+        properties.getLock().setStripes(128);
+        properties.getLock().setTimeout(5000);
+        properties.getCache().setTtl(10);
+        properties.getCache().setMaxSize(10000);
+        properties.getCache().setFailedMessageTtl(5);
+        
+        filter = new DuplicateMessageFilter(rawMessageRepository, properties);
         context = new FilterContext();
     }
     
