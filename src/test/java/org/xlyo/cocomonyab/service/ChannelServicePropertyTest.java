@@ -19,17 +19,17 @@ import java.util.Random;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Property-based tests for ChannelService business logic.
- * Tests Property 3 from the design document.
+ * ChannelService 业务逻辑的基于属性的测试
+ * 测试设计文档中的 Property 3
  * 
- * Note: Using JUnit @Test with manual property generation instead of jqwik
- * because jqwik doesn't support Spring's dependency injection well.
+ * 注意：使用 JUnit @Test 手动生成属性而不是 jqwik
+ * 因为 jqwik 对 Spring 的依赖注入支持不好
  */
 @SpringBootTest
 @TestPropertySource(properties = {
     "spring.data.mongodb.mode=embedded",
     "spring.data.mongodb.embedded.storage.directory=data/db/mongo-test",
-    "spring.data.mongodb.database=cocomonya"
+    "spring.data.mongodb.database=cocomonya_test"
 })
 class ChannelServicePropertyTest {
     
@@ -43,36 +43,36 @@ class ChannelServicePropertyTest {
     
     @BeforeEach
     void setUp() {
-        // Clean up any existing test data
+        // 清理任何现有的测试数据
         channelRepository.deleteAll();
     }
     
     @AfterEach
     void tearDown() {
-        // Clean up after tests
+        // 测试后清理
         channelRepository.deleteAll();
     }
     
     /**
-     * Property 3: Duplicate channel ID rejection
+     * Property 3: 重复的 channel ID 拒绝
      * 
-     * For any valid ChannelCreateDTO, if a channel with the same channelId already exists
-     * in the database, attempting to create another channel with that channelId should throw
-     * a BusinessException with ResponseCode.DATA_ALREADY_EXISTS.
+     * 对于任何有效的 ChannelCreateDTO，如果数据库中已存在具有相同 channelId 的 channel
+     * 尝试创建另一个具有该 channelId 的 channel 应该抛出
+     * 带有 ResponseCode.DATA_ALREADY_EXISTS 的 BusinessException
      * 
-     * Validates: Requirements 5.4
+     * 验证：Requirements 5.4
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 3: Duplicate channel ID rejection")
     void duplicateChannelIdRejection() {
-        // Run 100 iterations with random valid inputs
+        // 使用随机有效输入运行 100 次迭代
         for (int i = 0; i < 100; i++) {
             Long channelId = generateValidChannelId();
             String firstUsername = generateValidChannelUsername();
             String firstTitle = generateValidChannelTitle();
             Boolean firstStatus = random.nextBoolean();
             
-            // Create first channel with this channelId
+            // 使用此 channelId 创建第一个 channel
             ChannelCreateDTO firstDTO = new ChannelCreateDTO();
             firstDTO.setChannelId(channelId);
             firstDTO.setChannelUsername(firstUsername);
@@ -82,18 +82,18 @@ class ChannelServicePropertyTest {
             ChannelVO firstChannel = channelService.create(firstDTO);
             assertNotNull(firstChannel, "First channel should be created successfully (iteration " + i + ")");
             
-            // Attempt to create second channel with same channelId but different other fields
+            // 尝试创建具有相同 channelId 但其他字段不同的第二个 channel
             String secondUsername = generateValidChannelUsername();
             String secondTitle = generateValidChannelTitle();
             Boolean secondStatus = random.nextBoolean();
             
             ChannelCreateDTO secondDTO = new ChannelCreateDTO();
-            secondDTO.setChannelId(channelId); // Same channelId
+            secondDTO.setChannelId(channelId); // 相同的 channelId
             secondDTO.setChannelUsername(secondUsername);
             secondDTO.setChannelTitle(secondTitle);
             secondDTO.setMonitoringStatus(secondStatus);
             
-            // Verify that BusinessException is thrown with DATA_ALREADY_EXISTS
+            // 验证抛出带有 DATA_ALREADY_EXISTS 的 BusinessException
             BusinessException exception = assertThrows(BusinessException.class, 
                 () -> channelService.create(secondDTO),
                 "Creating channel with duplicate channelId should throw BusinessException (iteration " + i + ")");
@@ -104,30 +104,30 @@ class ChannelServicePropertyTest {
             assertTrue(exception.getMessage().contains(channelId.toString()),
                 "Exception message should contain the duplicate channelId (iteration " + i + ")");
             
-            // Cleanup for this iteration
+            // 清理此次迭代
             channelRepository.deleteById(firstChannel.getId());
         }
     }
     
     /**
-     * Property 4: Channel creation round-trip
+     * Property 4: Channel 创建往返
      * 
-     * For any valid ChannelCreateDTO, creating a channel and then retrieving it by ID
-     * should return a ChannelVO with matching channelId, channelUsername, and channelTitle values.
+     * 对于任何有效的 ChannelCreateDTO，创建一个 channel 然后通过 ID 检索它
+     * 应该返回一个具有匹配的 channelId、channelUsername 和 channelTitle 值的 ChannelVO
      * 
-     * Validates: Requirements 5.5, 5.6, 8.2
+     * 验证：Requirements 5.5, 5.6, 8.2
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 4: Channel creation round-trip")
     void channelCreationRoundTrip() {
-        // Run 100 iterations with random valid inputs
+        // 使用随机有效输入运行 100 次迭代
         for (int i = 0; i < 100; i++) {
             Long channelId = generateValidChannelId();
             String channelUsername = generateValidChannelUsername();
             String channelTitle = generateValidChannelTitle();
             Boolean monitoringStatus = random.nextBoolean();
             
-            // Create channel
+            // 创建 channel
             ChannelCreateDTO createDTO = new ChannelCreateDTO();
             createDTO.setChannelId(channelId);
             createDTO.setChannelUsername(channelUsername);
@@ -138,11 +138,11 @@ class ChannelServicePropertyTest {
             assertNotNull(createdChannel, "Created channel should not be null (iteration " + i + ")");
             assertNotNull(createdChannel.getId(), "Created channel should have an ID (iteration " + i + ")");
             
-            // Retrieve channel by ID
+            // 通过 ID 检索 channel
             ChannelVO retrievedChannel = channelService.getById(createdChannel.getId());
             assertNotNull(retrievedChannel, "Retrieved channel should not be null (iteration " + i + ")");
             
-            // Verify round-trip: all fields should match
+            // 验证往返：所有字段应该匹配
             assertEquals(channelId, retrievedChannel.getChannelId(),
                 "Retrieved channelId should match original (iteration " + i + ")");
             assertEquals(channelUsername, retrievedChannel.getChannelUsername(),
@@ -152,7 +152,7 @@ class ChannelServicePropertyTest {
             assertEquals(monitoringStatus, retrievedChannel.getMonitoringStatus(),
                 "Retrieved monitoringStatus should match original (iteration " + i + ")");
             
-            // Verify VO completeness (all required fields present)
+            // 验证 VO 完整性（所有必需字段都存在）
             assertNotNull(retrievedChannel.getId(), 
                 "Retrieved channel should have id field (iteration " + i + ")");
             assertNotNull(retrievedChannel.getChannelId(), 
@@ -168,26 +168,26 @@ class ChannelServicePropertyTest {
             assertNotNull(retrievedChannel.getUpdateTime(), 
                 "Retrieved channel should have updateTime field (iteration " + i + ")");
             
-            // Cleanup for this iteration
+            // 清理此次迭代
             channelRepository.deleteById(createdChannel.getId());
         }
     }
 
     /**
-     * Property 5: Partial update field preservation
+     * Property 5: 部分更新字段保留
      *
-     * For any existing channel and any ChannelUpdateDTO with a subset of fields populated,
-     * updating the channel should preserve all fields not included in the DTO while updating
-     * only the specified fields.
+     * 对于任何现有的 channel 和任何填充了字段子集的 ChannelUpdateDTO
+     * 更新 channel 应该保留 DTO 中未包含的所有字段，同时仅更新
+     * 指定的字段
      *
-     * Validates: Requirements 6.6
+     * 验证：Requirements 6.6
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 5: Partial update field preservation")
     void partialUpdateFieldPreservation() {
-        // Run 100 iterations with random valid inputs
+        // 使用随机有效输入运行 100 次迭代
         for (int i = 0; i < 100; i++) {
-            // Create initial channel with all fields
+            // 创建包含所有字段的初始 channel
             Long originalChannelId = generateValidChannelId();
             String originalUsername = generateValidChannelUsername();
             String originalTitle = generateValidChannelTitle();
@@ -202,7 +202,7 @@ class ChannelServicePropertyTest {
             ChannelVO createdChannel = channelService.create(createDTO);
             assertNotNull(createdChannel, "Created channel should not be null (iteration " + i + ")");
 
-            // Test Case 1: Update only channelUsername
+            // 测试用例 1：仅更新 channelUsername
             String newUsername = generateValidChannelUsername();
             ChannelUpdateDTO updateUsernameOnly = new ChannelUpdateDTO();
             updateUsernameOnly.setChannelUsername(newUsername);
@@ -217,7 +217,7 @@ class ChannelServicePropertyTest {
             assertEquals(originalChannelId, afterUsernameUpdate.getChannelId(),
                 "ChannelId should be preserved (iteration " + i + ")");
 
-            // Test Case 2: Update only channelTitle
+            // 测试用例 2：仅更新 channelTitle
             String newTitle = generateValidChannelTitle();
             ChannelUpdateDTO updateTitleOnly = new ChannelUpdateDTO();
             updateTitleOnly.setChannelTitle(newTitle);
@@ -232,8 +232,8 @@ class ChannelServicePropertyTest {
             assertEquals(originalChannelId, afterTitleUpdate.getChannelId(),
                 "ChannelId should be preserved (iteration " + i + ")");
 
-            // Test Case 3: Update only monitoringStatus
-            Boolean newStatus = !originalStatus; // Toggle status
+            // 测试用例 3：仅更新 monitoringStatus
+            Boolean newStatus = !originalStatus; // 切换状态
             ChannelUpdateDTO updateStatusOnly = new ChannelUpdateDTO();
             updateStatusOnly.setMonitoringStatus(newStatus);
 
@@ -247,7 +247,7 @@ class ChannelServicePropertyTest {
             assertEquals(originalChannelId, afterStatusUpdate.getChannelId(),
                 "ChannelId should be preserved (iteration " + i + ")");
 
-            // Test Case 4: Update two fields (username and title), preserve status
+            // 测试用例 4：更新两个字段（username 和 title），保留 status
             String finalUsername = generateValidChannelUsername();
             String finalTitle = generateValidChannelTitle();
             ChannelUpdateDTO updateTwoFields = new ChannelUpdateDTO();
@@ -264,7 +264,7 @@ class ChannelServicePropertyTest {
             assertEquals(originalChannelId, afterTwoFieldUpdate.getChannelId(),
                 "ChannelId should be preserved (iteration " + i + ")");
 
-            // Test Case 5: Empty update (no fields set) - all fields should be preserved
+            // 测试用例 5：空更新（未设置字段）- 所有字段应该被保留
             ChannelUpdateDTO emptyUpdate = new ChannelUpdateDTO();
 
             ChannelVO afterEmptyUpdate = channelService.update(createdChannel.getId(), emptyUpdate);
@@ -277,26 +277,26 @@ class ChannelServicePropertyTest {
             assertEquals(originalChannelId, afterEmptyUpdate.getChannelId(),
                 "ChannelId should be preserved (iteration " + i + ")");
 
-            // Cleanup for this iteration
+            // 清理此次迭代
             channelRepository.deleteById(createdChannel.getId());
         }
     }
 
     
     /**
-     * Property 6: Channel deletion removes from database
+     * Property 6: Channel 删除从数据库中移除
      *
-     * For any existing channel, after successfully deleting it by ID, attempting to retrieve
-     * that channel should throw a BusinessException with ResponseCode.DATA_NOT_FOUND.
+     * 对于任何现有的 channel，在通过 ID 成功删除它之后，尝试检索
+     * 该 channel 应该抛出带有 ResponseCode.DATA_NOT_FOUND 的 BusinessException
      *
-     * Validates: Requirements 7.2, 7.4
+     * 验证：Requirements 7.2, 7.4
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 6: Channel deletion removes from database")
     void channelDeletionRemovesFromDatabase() {
-        // Run 100 iterations with random valid inputs
+        // 使用随机有效输入运行 100 次迭代
         for (int i = 0; i < 100; i++) {
-            // Create a channel
+            // 创建一个 channel
             Long channelId = generateValidChannelId();
             String channelUsername = generateValidChannelUsername();
             String channelTitle = generateValidChannelTitle();
@@ -312,15 +312,15 @@ class ChannelServicePropertyTest {
             assertNotNull(createdChannel, "Created channel should not be null (iteration " + i + ")");
             String channelIdToDelete = createdChannel.getId();
 
-            // Verify channel exists before deletion
+            // 验证删除前 channel 存在
             ChannelVO beforeDeletion = channelService.getById(channelIdToDelete);
             assertNotNull(beforeDeletion, "Channel should exist before deletion (iteration " + i + ")");
 
-            // Delete the channel
+            // 删除 channel
             assertDoesNotThrow(() -> channelService.deleteById(channelIdToDelete),
                 "Deletion should not throw exception (iteration " + i + ")");
 
-            // Verify that attempting to retrieve the deleted channel throws DATA_NOT_FOUND
+            // 验证尝试检索已删除的 channel 抛出 DATA_NOT_FOUND
             BusinessException exception = assertThrows(BusinessException.class,
                 () -> channelService.getById(channelIdToDelete),
                 "Retrieving deleted channel should throw BusinessException (iteration " + i + ")");
@@ -331,7 +331,7 @@ class ChannelServicePropertyTest {
             assertTrue(exception.getMessage().contains(channelIdToDelete),
                 "Exception message should contain the deleted channel ID (iteration " + i + ")");
 
-            // Verify channel is not in repository
+            // 验证 channel 不在 repository 中
             assertFalse(channelRepository.existsById(channelIdToDelete),
                 "Channel should not exist in repository after deletion (iteration " + i + ")");
         }
@@ -339,20 +339,20 @@ class ChannelServicePropertyTest {
 
     
     /**
-     * Property 7: Channel retrieval returns complete data
+     * Property 7: Channel 检索返回完整数据
      *
-     * For any existing channel, retrieving it by ID should return a ChannelVO containing
-     * all required fields: id, channelId, channelUsername, channelTitle, monitoringStatus,
-     * createTime, and updateTime.
+     * 对于任何现有的 channel，通过 ID 检索它应该返回一个包含
+     * 所有必需字段的 ChannelVO：id、channelId、channelUsername、channelTitle、monitoringStatus
+     * createTime 和 updateTime
      *
-     * Validates: Requirements 8.2, 8.4
+     * 验证：Requirements 8.2, 8.4
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 7: Channel retrieval returns complete data")
     void channelRetrievalReturnsCompleteData() {
-        // Run 100 iterations with random valid inputs
+        // 使用随机有效输入运行 100 次迭代
         for (int i = 0; i < 100; i++) {
-            // Create a channel with random valid data
+            // 使用随机有效数据创建一个 channel
             Long channelId = generateValidChannelId();
             String channelUsername = generateValidChannelUsername();
             String channelTitle = generateValidChannelTitle();
@@ -367,11 +367,11 @@ class ChannelServicePropertyTest {
             ChannelVO createdChannel = channelService.create(createDTO);
             assertNotNull(createdChannel, "Created channel should not be null (iteration " + i + ")");
 
-            // Retrieve the channel by ID
+            // 通过 ID 检索 channel
             ChannelVO retrievedChannel = channelService.getById(createdChannel.getId());
             assertNotNull(retrievedChannel, "Retrieved channel should not be null (iteration " + i + ")");
 
-            // Verify all required fields are present and non-null
+            // 验证所有必需字段都存在且非空
             assertNotNull(retrievedChannel.getId(),
                 "Retrieved channel must have non-null id field (iteration " + i + ")");
             assertNotNull(retrievedChannel.getChannelId(),
@@ -387,7 +387,7 @@ class ChannelServicePropertyTest {
             assertNotNull(retrievedChannel.getUpdateTime(),
                 "Retrieved channel must have non-null updateTime field (iteration " + i + ")");
 
-            // Verify field values match the created channel
+            // 验证字段值与创建的 channel 匹配
             assertEquals(createdChannel.getId(), retrievedChannel.getId(),
                 "Retrieved id should match created channel (iteration " + i + ")");
             assertEquals(channelId, retrievedChannel.getChannelId(),
@@ -399,7 +399,7 @@ class ChannelServicePropertyTest {
             assertEquals(monitoringStatus, retrievedChannel.getMonitoringStatus(),
                 "Retrieved monitoringStatus should match original (iteration " + i + ")");
 
-            // Verify timestamps are reasonable (not in the future, not too old)
+            // 验证时间戳是合理的（不在未来，不太旧）
             assertNotNull(retrievedChannel.getCreateTime(),
                 "CreateTime should not be null (iteration " + i + ")");
             assertNotNull(retrievedChannel.getUpdateTime(),
@@ -409,7 +409,7 @@ class ChannelServicePropertyTest {
             assertTrue(retrievedChannel.getUpdateTime().isBefore(java.time.LocalDateTime.now().plusSeconds(1)),
                 "UpdateTime should not be in the future (iteration " + i + ")");
 
-            // Verify field types are correct (implicit through getters, but verify values are sensible)
+            // 验证字段类型正确（通过 getter 隐式验证，但验证值是合理的）
             assertTrue(retrievedChannel.getId().length() > 0,
                 "ID should be a non-empty string (iteration " + i + ")");
             assertTrue(retrievedChannel.getChannelId() > 0,
@@ -421,29 +421,29 @@ class ChannelServicePropertyTest {
                        retrievedChannel.getChannelTitle().length() <= 200,
                 "ChannelTitle should be within valid length range (iteration " + i + ")");
 
-            // Cleanup for this iteration
+            // 清理此次迭代
             channelRepository.deleteById(createdChannel.getId());
         }
     }
 
     
     /**
-     * Property 8: Non-existent channel operations throw DATA_NOT_FOUND
+     * Property 8: 不存在的 channel 操作抛出 DATA_NOT_FOUND
      *
-     * For any non-existent channel ID, attempting to retrieve, update, or delete that channel
-     * should throw a BusinessException with ResponseCode.DATA_NOT_FOUND.
+     * 对于任何不存在的 channel ID，尝试检索、更新或删除该 channel
+     * 应该抛出带有 ResponseCode.DATA_NOT_FOUND 的 BusinessException
      *
-     * Validates: Requirements 6.4, 7.3, 8.3
+     * 验证：Requirements 6.4, 7.3, 8.3
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Property 8: Non-existent channel operations throw DATA_NOT_FOUND")
     void nonExistentChannelOperationsThrowDataNotFound() {
-        // Run 100 iterations with random non-existent IDs
+        // 使用随机不存在的 ID 运行 100 次迭代
         for (int i = 0; i < 100; i++) {
-            // Generate a random non-existent channel ID (MongoDB ObjectId format)
+            // 生成一个随机的不存在的 channel ID（MongoDB ObjectId 格式）
             String nonExistentId = generateNonExistentChannelId();
 
-            // Test Case 1: Retrieve non-existent channel
+            // 测试用例 1：检索不存在的 channel
             BusinessException getException = assertThrows(BusinessException.class,
                 () -> channelService.getById(nonExistentId),
                 "Retrieving non-existent channel should throw BusinessException (iteration " + i + ")");
@@ -453,7 +453,7 @@ class ChannelServicePropertyTest {
             assertTrue(getException.getMessage().contains(nonExistentId),
                 "Get exception message should contain the channel ID (iteration " + i + ")");
 
-            // Test Case 2: Update non-existent channel
+            // 测试用例 2：更新不存在的 channel
             ChannelUpdateDTO updateDTO = new ChannelUpdateDTO();
             updateDTO.setChannelUsername(generateValidChannelUsername());
             updateDTO.setChannelTitle(generateValidChannelTitle());
@@ -468,7 +468,7 @@ class ChannelServicePropertyTest {
             assertTrue(updateException.getMessage().contains(nonExistentId),
                 "Update exception message should contain the channel ID (iteration " + i + ")");
 
-            // Test Case 3: Delete non-existent channel
+            // 测试用例 3：删除不存在的 channel
             BusinessException deleteException = assertThrows(BusinessException.class,
                 () -> channelService.deleteById(nonExistentId),
                 "Deleting non-existent channel should throw BusinessException (iteration " + i + ")");
@@ -478,14 +478,14 @@ class ChannelServicePropertyTest {
             assertTrue(deleteException.getMessage().contains(nonExistentId),
                 "Delete exception message should contain the channel ID (iteration " + i + ")");
 
-            // Verify that the non-existent ID truly doesn't exist in the repository
+            // 验证不存在的 ID 确实不存在于 repository 中
             assertFalse(channelRepository.existsById(nonExistentId),
                 "Non-existent ID should not exist in repository (iteration " + i + ")");
         }
     }
 
     /**
-     * Generates a non-existent channel ID (MongoDB ObjectId format: 24 hex characters)
+     * 生成一个不存在的 channel ID（MongoDB ObjectId 格式：24 个十六进制字符）
      */
     private String generateNonExistentChannelId() {
         StringBuilder sb = new StringBuilder();
@@ -497,17 +497,17 @@ class ChannelServicePropertyTest {
     }
 
     /**
-     * Generates a valid channel ID (positive Long value)
+     * 生成一个有效的 channel ID（正 Long 值）
      */
     private Long generateValidChannelId() {
         return Math.abs(random.nextLong()) + 1;
     }
     
     /**
-     * Generates a valid channel username (1-100 characters)
+     * 生成一个有效的 channel username（1-100 个字符）
      */
     private String generateValidChannelUsername() {
-        int length = random.nextInt(100) + 1; // 1 to 100
+        int length = random.nextInt(100) + 1; // 1 到 100
         StringBuilder sb = new StringBuilder();
         String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
         for (int i = 0; i < length; i++) {
@@ -517,10 +517,10 @@ class ChannelServicePropertyTest {
     }
     
     /**
-     * Generates a valid channel title (1-200 characters)
+     * 生成一个有效的 channel title（1-200 个字符）
      */
     private String generateValidChannelTitle() {
-        int length = random.nextInt(200) + 1; // 1 to 200
+        int length = random.nextInt(200) + 1; // 1 到 200
         StringBuilder sb = new StringBuilder();
         String chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -_";
         for (int i = 0; i < length; i++) {
@@ -530,13 +530,13 @@ class ChannelServicePropertyTest {
     }
     
     /**
-     * Test pagination parameter validation
-     * Validates that invalid pagination parameters throw appropriate exceptions
+     * 测试分页参数验证
+     * 验证无效的分页参数抛出适当的异常
      */
     @Test
     @Tag("Feature: mongodb-channel-management, Pagination Parameter Validation")
     void testPaginationParameterValidation() {
-        // Test Case 1: current < 1 should throw exception
+        // 测试用例 1：current < 1 应该抛出异常
         BusinessException currentZeroException = assertThrows(BusinessException.class,
             () -> channelService.page(0L, 10L, null),
             "Page index 0 should throw BusinessException");
@@ -546,7 +546,7 @@ class ChannelServicePropertyTest {
         assertTrue(currentZeroException.getMessage().contains("页码必须大于等于1"),
             "Exception message should indicate page index must be >= 1");
         
-        // Test Case 2: current < 0 should throw exception
+        // 测试用例 2：current < 0 应该抛出异常
         BusinessException currentNegativeException = assertThrows(BusinessException.class,
             () -> channelService.page(-1L, 10L, null),
             "Negative page index should throw BusinessException");
@@ -554,7 +554,7 @@ class ChannelServicePropertyTest {
         assertEquals(ResponseCode.BAD_REQUEST.getCode(), currentNegativeException.getCode(),
             "Should throw BAD_REQUEST for negative current");
         
-        // Test Case 3: size < 1 should throw exception
+        // 测试用例 3：size < 1 应该抛出异常
         BusinessException sizeZeroException = assertThrows(BusinessException.class,
             () -> channelService.page(1L, 0L, null),
             "Page size 0 should throw BusinessException");
@@ -564,7 +564,7 @@ class ChannelServicePropertyTest {
         assertTrue(sizeZeroException.getMessage().contains("每页大小必须大于等于1"),
             "Exception message should indicate page size must be >= 1");
         
-        // Test Case 4: size > 100 should throw exception
+        // 测试用例 4：size > 100 应该抛出异常
         BusinessException sizeTooLargeException = assertThrows(BusinessException.class,
             () -> channelService.page(1L, 101L, null),
             "Page size > 100 should throw BusinessException");
@@ -574,7 +574,7 @@ class ChannelServicePropertyTest {
         assertTrue(sizeTooLargeException.getMessage().contains("每页大小不能超过100"),
             "Exception message should indicate page size cannot exceed 100");
         
-        // Test Case 5: null current should throw exception
+        // 测试用例 5：null current 应该抛出异常
         BusinessException currentNullException = assertThrows(BusinessException.class,
             () -> channelService.page(null, 10L, null),
             "Null current should throw BusinessException");
@@ -582,7 +582,7 @@ class ChannelServicePropertyTest {
         assertEquals(ResponseCode.BAD_REQUEST.getCode(), currentNullException.getCode(),
             "Should throw BAD_REQUEST for null current");
         
-        // Test Case 6: null size should throw exception
+        // 测试用例 6：null size 应该抛出异常
         BusinessException sizeNullException = assertThrows(BusinessException.class,
             () -> channelService.page(1L, null, null),
             "Null size should throw BusinessException");
@@ -590,7 +590,7 @@ class ChannelServicePropertyTest {
         assertEquals(ResponseCode.BAD_REQUEST.getCode(), sizeNullException.getCode(),
             "Should throw BAD_REQUEST for null size");
         
-        // Test Case 7: Valid parameters should not throw exception
+        // 测试用例 7：有效参数不应该抛出异常
         assertDoesNotThrow(() -> channelService.page(1L, 10L, null),
             "Valid pagination parameters should not throw exception");
         

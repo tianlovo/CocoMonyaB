@@ -100,6 +100,22 @@ public class MongoDatabaseInitializer implements ApplicationRunner {
     }
     
     /**
+     * 安全创建索引 - 如果索引已存在则跳过
+     */
+    private void createIndexSafely(String collectionName, Index index, String indexName) {
+        try {
+            mongoTemplate.indexOps(collectionName).createIndex(index);
+            log.info("索引 '{}' 已创建", indexName);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            if (e.getMessage().contains("IndexOptionsConflict") || e.getMessage().contains("already exists")) {
+                log.warn("索引 '{}' 已存在，跳过创建", indexName);
+            } else {
+                throw e;
+            }
+        }
+    }
+    
+    /**
      * 创建频道集合索引
      */
     private void createChannelIndexes() {
@@ -108,15 +124,13 @@ public class MongoDatabaseInitializer implements ApplicationRunner {
                 .on("channelId", Sort.Direction.ASC)
                 .unique()
                 .named("idx_channelId_unique");
-        mongoTemplate.indexOps(COLLECTION_NAME).createIndex(channelIdIndex);
-        log.info("索引 'idx_channelId_unique' 已创建");
+        createIndexSafely(COLLECTION_NAME, channelIdIndex, "idx_channelId_unique");
         
         // 创建 monitoringStatus 索引
         Index monitoringStatusIndex = new Index()
                 .on("monitoringStatus", Sort.Direction.ASC)
                 .named("idx_monitoringStatus");
-        mongoTemplate.indexOps(COLLECTION_NAME).createIndex(monitoringStatusIndex);
-        log.info("索引 'idx_monitoringStatus' 已创建");
+        createIndexSafely(COLLECTION_NAME, monitoringStatusIndex, "idx_monitoringStatus");
     }
     
     /**
@@ -144,15 +158,13 @@ public class MongoDatabaseInitializer implements ApplicationRunner {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_author_name_unique");
-        mongoTemplate.indexOps(collectionName).createIndex(nameIndex);
-        log.info("作者库索引 'idx_author_name_unique' 已创建");
+        createIndexSafely(collectionName, nameIndex, "idx_author_name_unique");
         
         // 为 Author.aliases 创建多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_author_aliases");
-        mongoTemplate.indexOps(collectionName).createIndex(aliasesIndex);
-        log.info("作者库索引 'idx_author_aliases' 已创建");
+        createIndexSafely(collectionName, aliasesIndex, "idx_author_aliases");
     }
     
     /**
@@ -166,15 +178,13 @@ public class MongoDatabaseInitializer implements ApplicationRunner {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_work_name_unique");
-        mongoTemplate.indexOps(collectionName).createIndex(nameIndex);
-        log.info("原作库索引 'idx_work_name_unique' 已创建");
+        createIndexSafely(collectionName, nameIndex, "idx_work_name_unique");
         
         // 为 Work.aliases 创建多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_work_aliases");
-        mongoTemplate.indexOps(collectionName).createIndex(aliasesIndex);
-        log.info("原作库索引 'idx_work_aliases' 已创建");
+        createIndexSafely(collectionName, aliasesIndex, "idx_work_aliases");
     }
     
     /**
@@ -188,21 +198,18 @@ public class MongoDatabaseInitializer implements ApplicationRunner {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_character_name_unique");
-        mongoTemplate.indexOps(collectionName).createIndex(nameIndex);
-        log.info("角色库索引 'idx_character_name_unique' 已创建");
+        createIndexSafely(collectionName, nameIndex, "idx_character_name_unique");
         
         // 为 Character.aliases 创建多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_character_aliases");
-        mongoTemplate.indexOps(collectionName).createIndex(aliasesIndex);
-        log.info("角色库索引 'idx_character_aliases' 已创建");
+        createIndexSafely(collectionName, aliasesIndex, "idx_character_aliases");
         
         // 为 Character.workId 创建普通索引
         Index workIdIndex = new Index()
                 .on("workId", Sort.Direction.ASC)
                 .named("idx_character_workId");
-        mongoTemplate.indexOps(collectionName).createIndex(workIdIndex);
-        log.info("角色库索引 'idx_character_workId' 已创建");
+        createIndexSafely(collectionName, workIdIndex, "idx_character_workId");
     }
 }

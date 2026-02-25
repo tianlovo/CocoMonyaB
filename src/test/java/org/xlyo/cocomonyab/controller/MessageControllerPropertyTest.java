@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
     "spring.data.mongodb.mode=embedded",
     "spring.data.mongodb.embedded.storage.directory=data/db/mongo-test",
-    "spring.data.mongodb.database=cocomonya"
+    "spring.data.mongodb.database=cocomonya_test"
 })
 class MessageControllerPropertyTest {
     
