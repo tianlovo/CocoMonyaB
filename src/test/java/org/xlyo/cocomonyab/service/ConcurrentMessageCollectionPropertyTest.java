@@ -24,16 +24,15 @@ import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
  * Property 4: Concurrent Message Collection Integrity
  * 
- * For any media group, when multiple messages arrive concurrently, 
- * all messages should be collected into the same buffer without loss.
+ * 对于任何媒体组，当多条消息并发到达时，所有消息应该被收集到同一个缓冲区而不丢失
  * 
- * **Validates: Requirements 1.1**
+ * **验证需求: Requirements 1.1**
  * 
  * Feature: concurrent-safety-optimization, Property 4: Concurrent Message Collection Integrity
  */
@@ -46,7 +45,7 @@ class ConcurrentMessageCollectionPropertyTest {
         @ForAll @IntRange(min = 1000, max = 9999) long mediaAlbumId,
         @ForAll @LongRange(min = -1001999999999L, max = -1001000000000L) long chatId
     ) throws InterruptedException {
-        // Given: Create mock dependencies
+        // Given: 创建mock依赖
         ChannelRepository channelRepository = mock(ChannelRepository.class);
         MessageStorageService messageStorageService = mock(MessageStorageService.class);
         MessageParser messageParser = mock(MessageParser.class);
@@ -55,6 +54,7 @@ class ConcurrentMessageCollectionPropertyTest {
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
         
         ChannelMonitorService service = new ChannelMonitorService(
@@ -64,12 +64,13 @@ class ConcurrentMessageCollectionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
         service.initMetrics();
         
-        // Mock filter chain to accept all messages
+        // Mock filter chain接受所有消息
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         
@@ -92,7 +93,7 @@ class ConcurrentMessageCollectionPropertyTest {
             return entity;
         });
         
-        // Create media group messages
+        // 创建媒体组消息
         List<TdApi.Message> messages = new ArrayList<>();
         for (int i = 0; i < messageCount; i++) {
             long messageId = 1000L + i;
@@ -100,7 +101,7 @@ class ConcurrentMessageCollectionPropertyTest {
             messages.add(message);
         }
         
-        // When: Process messages concurrently
+        // When: 并发处理消息
         ExecutorService executor = Executors.newFixedThreadPool(messageCount);
         CountDownLatch latch = new CountDownLatch(messageCount);
         
@@ -117,27 +118,27 @@ class ConcurrentMessageCollectionPropertyTest {
         latch.await();
         executor.shutdown();
         
-        // Then: Verify all messages are in the buffer
+        // Then: 验证所有消息都在缓冲区中
         String groupKey = chatId + ":" + mediaAlbumId;
         
-        // Property 1: State should be COLLECTING
+        // Property 1: 状态应该是COLLECTING
         MediaGroupState state = service.getMediaGroupState(groupKey);
         assertThat(state)
             .as("Media group state should be COLLECTING")
             .isEqualTo(MediaGroupState.COLLECTING);
         
-        // Property 2: All messages should be accepted (no rejections)
-        // We verify this by checking that all handleMediaGroupMessage calls returned true
-        // Since we're testing the property, we check the final state
+        // Property 2: 所有消息应该被接受（没有拒绝）
+        // 我们通过检查所有handleMediaGroupMessage调用返回true来验证这一点
+        // 由于我们正在测试属性，我们检查最终状态
         
-        // Wait for timeout and process
+        // 等待超时并处理
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // Property 3: Plugin manager should be called once with all messages
+        // Property 3: Plugin manager应该被调用一次，处理所有消息
         verify(pluginManager, times(1)).process(any(BaseMessageEntity.class), any(TdApi.Message.class));
         
-        // Property 4: All messages should be saved
+        // Property 4: 所有消息应该被保存
         verify(messageStorageService, times(messageCount)).saveMessage(any(TdApi.Message.class));
     }
     
@@ -148,7 +149,7 @@ class ConcurrentMessageCollectionPropertyTest {
         @ForAll @IntRange(min = 1000, max = 9999) long mediaAlbumId,
         @ForAll @LongRange(min = -1001999999999L, max = -1001000000000L) long chatId
     ) throws InterruptedException {
-        // Given: Setup service with mocks
+        // Given: 使用mock设置service
         ChannelRepository channelRepository = mock(ChannelRepository.class);
         MessageStorageService messageStorageService = mock(MessageStorageService.class);
         MessageParser messageParser = mock(MessageParser.class);
@@ -157,6 +158,7 @@ class ConcurrentMessageCollectionPropertyTest {
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
         
         ChannelMonitorService service = new ChannelMonitorService(
@@ -166,6 +168,7 @@ class ConcurrentMessageCollectionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -188,13 +191,13 @@ class ConcurrentMessageCollectionPropertyTest {
             return entity;
         });
         
-        // Create messages
+        // 创建消息
         List<TdApi.Message> messages = new ArrayList<>();
         for (int i = 0; i < messageCount; i++) {
             messages.add(createMediaGroupMessage(1000L + i, chatId, mediaAlbumId));
         }
         
-        // When: Add messages concurrently with high contention
+        // When: 在高竞争下并发添加消息
         ExecutorService executor = Executors.newFixedThreadPool(messageCount);
         CountDownLatch latch = new CountDownLatch(messageCount);
         List<Boolean> results = new ArrayList<>();
@@ -215,21 +218,21 @@ class ConcurrentMessageCollectionPropertyTest {
         latch.await();
         executor.shutdown();
         
-        // Then: All messages should be accepted
+        // Then: 所有消息应该被接受
         assertThat(results)
             .as("All messages should be accepted during COLLECTING state")
             .hasSize(messageCount)
             .allMatch(accepted -> accepted);
         
-        // Wait and process
+        // 等待并处理
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // Verify all messages were saved
+        // 验证所有消息都被保存
         verify(messageStorageService, times(messageCount)).saveMessage(any(TdApi.Message.class));
     }
     
-    // Helper method
+    // 辅助方法
     private TdApi.Message createMediaGroupMessage(long messageId, long chatId, long mediaAlbumId) {
         TdApi.Message message = new TdApi.Message();
         message.id = messageId;

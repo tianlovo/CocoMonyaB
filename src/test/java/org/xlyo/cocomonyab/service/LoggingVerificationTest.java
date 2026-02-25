@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.LoggerFactory;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
@@ -27,7 +27,6 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
 
 /**
  * 日志记录验证测试
@@ -51,6 +50,8 @@ class LoggingVerificationTest {
     private FilterChainManager filterChainManager;
     @Mock
     private ChannelMonitoringFilter channelMonitoringFilter;
+    @Mock
+    private DuplicateMessageFilter duplicateMessageFilter;
     @Mock
     private MediaGroupMetrics mediaGroupMetrics;
 
@@ -87,6 +88,7 @@ class LoggingVerificationTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );

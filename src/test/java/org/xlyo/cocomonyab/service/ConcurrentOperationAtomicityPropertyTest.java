@@ -8,6 +8,7 @@ import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -23,16 +24,16 @@ import java.util.concurrent.Executors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
- * 属性 3：并发操作原子性
+ * 属�?3：并发操作原子�?
  * 
- * 对于任何媒体组，当多个线程并发访问时，状态检查、状态更新和数据操作应该是原子的，
- * 不会出现中间状态或数据不一致
+ * 对于任何媒体组，当多个线程并发访问时，状态检查、状态更新和数据操作应该是原子的�?
+ * 不会出现中间状态或数据不一�?
  * 
- * **验证：需求 4.1, 4.2, 4.3, 4.5**
+ * **验证：需�?4.1, 4.2, 4.3, 4.5**
  * 
  * Feature: concurrent-safety-optimization, Property 3: Concurrent Operation Atomicity
  */
@@ -52,6 +53,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -63,6 +65,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -119,7 +122,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         latch.await();
         executor.shutdown();
         
-        // Then: 在 COLLECTING 状态下所有消息都应该被接受
+        // Then: �?COLLECTING 状态下所有消息都应该被接�?
         assertThat(acceptResults)
             .as("All concurrent additions should succeed in COLLECTING state")
             .hasSize(threadCount)
@@ -145,6 +148,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -156,6 +160,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -178,7 +183,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             return entity;
         });
         
-        // 并发添加消息以测试缓冲区操作的原子性
+        // 并发添加消息以测试缓冲区操作的原子�?
         ExecutorService executor = Executors.newFixedThreadPool(messageCount);
         CountDownLatch latch = new CountDownLatch(messageCount);
         List<Boolean> results = new ArrayList<>();
@@ -215,12 +220,12 @@ class ConcurrentOperationAtomicityPropertyTest {
             .as("State should be COLLECTING after concurrent additions")
             .isEqualTo(MediaGroupState.COLLECTING);
         
-        // 处理组
+        // 处理�?
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
         
-        // 所有消息应该被精确保存一次
+        // 所有消息应该被精确保存一�?
         verify(messageStorageService, times(messageCount)).saveMessage(any(TdApi.Message.class));
         
         // 最终状态应该是 COMPLETED
@@ -243,6 +248,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -254,6 +260,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -276,7 +283,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             return entity;
         });
         
-        // When: 多个线程在高竞争下添加消息
+        // When: 多个线程在高竞争下添加消�?
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
         
@@ -300,7 +307,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         latch.await();
         executor.shutdown();
         
-        // 处理媒体组
+        // 处理媒体�?
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
@@ -326,6 +333,7 @@ class ConcurrentOperationAtomicityPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -337,6 +345,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -366,12 +375,12 @@ class ConcurrentOperationAtomicityPropertyTest {
         
         String groupKey = chatId + ":" + mediaAlbumId;
         
-        // When: 在转换期间监控状态
+        // When: 在转换期间监控状�?
         List<MediaGroupState> observedStates = new ArrayList<>();
         ExecutorService executor = Executors.newFixedThreadPool(2);
         CountDownLatch latch = new CountDownLatch(2);
         
-        // 线程 1: 持续观察状态
+        // 线程 1: 持续观察状�?
         executor.submit(() -> {
             try {
                 for (int i = 0; i < 50; i++) {
@@ -390,7 +399,7 @@ class ConcurrentOperationAtomicityPropertyTest {
             }
         });
         
-        // 线程 2: 延迟后触发状态转换
+        // 线程 2: 延迟后触发状态转�?
         executor.submit(() -> {
             try {
                 Thread.sleep(2500);
@@ -405,8 +414,8 @@ class ConcurrentOperationAtomicityPropertyTest {
         latch.await();
         executor.shutdown();
         
-        // Then: 所有观察到的状态都应该是有效的（COLLECTING、PROCESSING 或 COMPLETED）
-        // 没有 null 或不一致的状态
+        // Then: 所有观察到的状态都应该是有效的（COLLECTING、PROCESSING �?COMPLETED�?
+        // 没有 null 或不一致的状�?
         assertThat(observedStates)
             .as("All observed states should be valid")
             .allMatch(state -> 
@@ -415,7 +424,7 @@ class ConcurrentOperationAtomicityPropertyTest {
                 state == MediaGroupState.COMPLETED
             );
         
-        // 状态转换应该遵循有效序列
+        // 状态转换应该遵循有效序�?
         // COLLECTING -> PROCESSING -> COMPLETED
         for (int i = 1; i < observedStates.size(); i++) {
             MediaGroupState prev = observedStates.get(i - 1);

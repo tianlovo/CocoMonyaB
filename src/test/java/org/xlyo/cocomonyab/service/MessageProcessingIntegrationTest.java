@@ -52,6 +52,9 @@ class MessageProcessingIntegrationTest {
     private org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter;
     
     @Mock
+    private org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter duplicateMessageFilter;
+    
+    @Mock
     private org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics mediaGroupMetrics;
     
     private ChannelMonitorService channelMonitorService;
@@ -74,6 +77,7 @@ class MessageProcessingIntegrationTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );

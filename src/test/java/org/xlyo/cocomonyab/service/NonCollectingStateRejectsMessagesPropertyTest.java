@@ -4,11 +4,12 @@ import it.tdlight.jni.TdApi;
 import net.jqwik.api.*;
 import net.jqwik.api.constraints.IntRange;
 import net.jqwik.api.constraints.LongRange;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -27,12 +28,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * 属性 2：非收集状态拒绝新消息
+ * 属�?2：非收集状态拒绝新消息
  * 
- * 对于任何处于 PROCESSING 或 COMPLETED 状态的媒体组，
+ * 对于任何处于 PROCESSING �?COMPLETED 状态的媒体组，
  * 尝试添加新消息应该被拒绝
  * 
- * **验证：需求 1.3, 2.5**
+ * **验证：需�?1.3, 2.5**
  * 
  * Feature: concurrent-safety-optimization, Property 2: Non-Collecting State Rejects New Messages
  */
@@ -52,6 +53,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
         
@@ -62,6 +64,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -90,7 +93,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             TdApi.Message message = createMediaGroupMessage(1000L + i, chatId, mediaAlbumId);
             initialMessages.add(message);
             boolean accepted = service.handleMediaGroupMessage(message);
-            assertThat(accepted).as("初始消息应该在 COLLECTING 状态下被接受").isTrue();
+            assertThat(accepted).as("初始消息应该在COLLECTING状态下被接受").isTrue();
         }
         
         String groupKey = chatId + ":" + mediaAlbumId;
@@ -99,23 +102,23 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         MediaGroupState stateBefore = service.getMediaGroupState(groupKey);
         assertThat(stateBefore).isEqualTo(MediaGroupState.COLLECTING);
         
-        // When: 触发超时以转换到 PROCESSING 状态
+        // When: 触发超时以转换到 PROCESSING 状�?
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // Then: 状态应该是 PROCESSING 或 COMPLETED
+        // Then: 状态应该是 PROCESSING �?COMPLETED
         MediaGroupState stateAfter = service.getMediaGroupState(groupKey);
         assertThat(stateAfter)
-            .as("超时后状态应该是 PROCESSING 或 COMPLETED")
+            .as("超时后状态应该是 PROCESSING �?COMPLETED")
             .isIn(MediaGroupState.PROCESSING, MediaGroupState.COMPLETED);
         
-        // When: 尝试添加新消息
+        // When: 尝试添加新消�?
         TdApi.Message newMessage = createMediaGroupMessage(9999L, chatId, mediaAlbumId);
         boolean acceptedAfterProcessing = service.handleMediaGroupMessage(newMessage);
         
         // Then: 新消息应该被拒绝
         assertThat(acceptedAfterProcessing)
-            .as("当状态是 " + stateAfter + " 时新消息应该被拒绝")
+            .as("当状态是" + stateAfter + "时新消息应该被拒绝")
             .isFalse();
     }
     
@@ -133,6 +136,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
         
@@ -143,6 +147,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -177,7 +182,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // 给予时间让处理完成
+        // 给予时间让处理完�?
         Thread.sleep(500);
         
         // Then: 状态应该是 COMPLETED
@@ -186,7 +191,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             .as("成功处理后状态应该是 COMPLETED")
             .isEqualTo(MediaGroupState.COMPLETED);
         
-        // When: 尝试添加新消息
+        // When: 尝试添加新消�?
         TdApi.Message newMessage1 = createMediaGroupMessage(8888L, chatId, mediaAlbumId);
         TdApi.Message newMessage2 = createMediaGroupMessage(9999L, chatId, mediaAlbumId);
         
@@ -195,10 +200,10 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         
         // Then: 所有新消息都应该被拒绝
         assertThat(accepted1)
-            .as("第一条新消息应该在 COMPLETED 状态下被拒绝")
+            .as("第一条新消息应该在COMPLETED状态下被拒绝")
             .isFalse();
         assertThat(accepted2)
-            .as("第二条新消息应该在 COMPLETED 状态下被拒绝")
+            .as("第二条新消息应该在COMPLETED状态下被拒绝")
             .isFalse();
     }
     
@@ -217,6 +222,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
         
@@ -227,6 +233,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -254,7 +261,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
             service.handleMediaGroupMessage(createMediaGroupMessage(1000L + i, chatId, mediaAlbumId));
         }
         
-        // 转换到 PROCESSING/COMPLETED
+        // 转换�?PROCESSING/COMPLETED
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
@@ -262,9 +269,9 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         String groupKey = chatId + ":" + mediaAlbumId;
         MediaGroupState state = service.getMediaGroupState(groupKey);
         
-        // 验证状态不是 COLLECTING
+        // 验证状态不�?COLLECTING
         assertThat(state)
-            .as("状态不应该是 COLLECTING")
+            .as("状态不应该�?COLLECTING")
             .isNotEqualTo(MediaGroupState.COLLECTING);
         
         // When: 尝试并发添加多条消息
@@ -292,7 +299,7 @@ class NonCollectingStateRejectsMessagesPropertyTest {
         
         // Then: 所有并发消息都应该被拒绝
         assertThat(results)
-            .as("在 " + state + " 状态下所有消息都应该被拒绝")
+            .as("在" + state + "状态下所有消息都应该被拒绝")
             .hasSize(rejectedMessageCount)
             .allMatch(accepted -> !accepted);
     }

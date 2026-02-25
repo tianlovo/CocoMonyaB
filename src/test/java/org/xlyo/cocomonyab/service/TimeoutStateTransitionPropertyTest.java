@@ -8,6 +8,7 @@ import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -18,16 +19,16 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
- * 属性 9：超时状态转换
+ * 属�?9：超时状态转�?
  * 
- * 对于任何超时且状态为 COLLECTING 的媒体组，
+ * 对于任何超时且状态为 COLLECTING 的媒体组�?
  * 其状态应该转换为 PROCESSING
  * 
- * **验证：需求 2.3**
+ * **验证：需�?2.3**
  * 
  * Feature: concurrent-safety-optimization, Property 9: Timeout State Transition
  */
@@ -47,6 +48,7 @@ class TimeoutStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -58,6 +60,7 @@ class TimeoutStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -94,16 +97,16 @@ class TimeoutStateTransitionPropertyTest {
             .as("初始状态应该是 COLLECTING")
             .isEqualTo(MediaGroupState.COLLECTING);
         
-        // When: 等待超时（2秒超时 + 500ms 缓冲）
+        // When: 等待超时�?秒超�?+ 500ms 缓冲�?
         Thread.sleep(2500);
         
         // 触发定时任务
         service.processTimedOutMediaGroups();
         
-        // Then: 状态应该转换为 PROCESSING 或 COMPLETED
+        // Then: 状态应该转换为 PROCESSING �?COMPLETED
         MediaGroupState finalState = service.getMediaGroupState(groupKey);
         assertThat(finalState)
-            .as("超时后状态应该从 COLLECTING 转换为 PROCESSING 或 COMPLETED")
+            .as("超时后状态应该从 COLLECTING 转换�?PROCESSING �?COMPLETED")
             .isIn(MediaGroupState.PROCESSING, MediaGroupState.COMPLETED);
     }
     
@@ -121,6 +124,7 @@ class TimeoutStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -132,6 +136,7 @@ class TimeoutStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -177,7 +182,7 @@ class TimeoutStateTransitionPropertyTest {
         // Then: 状态应该仍然是 COLLECTING
         MediaGroupState finalState = service.getMediaGroupState(groupKey);
         assertThat(finalState)
-            .as("未超时时状态应该保持 COLLECTING")
+            .as("未超时时状态应该保�?COLLECTING")
             .isEqualTo(MediaGroupState.COLLECTING);
     }
     
@@ -194,6 +199,7 @@ class TimeoutStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -205,6 +211,7 @@ class TimeoutStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -233,31 +240,31 @@ class TimeoutStateTransitionPropertyTest {
             TdApi.Message message = createMediaGroupMessage(1000L, chatId, mediaAlbumId);
             service.handleMediaGroupMessage(message);
             
-            // 每个组之间间隔1秒（确保时间差异明显）
+            // 每个组之间间�?秒（确保时间差异明显�?
             if (i < groupCount - 1) {
                 Thread.sleep(1000);
             }
         }
         
-        // 等待第一个组超时（2.5秒，确保第一个组超时但最后一个组未超时）
+        // 等待第一个组超时�?.5秒，确保第一个组超时但最后一个组未超时）
         Thread.sleep(1500);
         
         // 触发定时任务
         service.processTimedOutMediaGroups();
         
-        // Then: 验证第一个组已转换，后续组仍在 COLLECTING
+        // Then: 验证第一个组已转换，后续组仍�?COLLECTING
         String firstGroupKey = chatId + ":" + 1000L;
         MediaGroupState firstGroupState = service.getMediaGroupState(firstGroupKey);
         assertThat(firstGroupState)
             .as("第一个组应该已超时并转换状态")
             .isIn(MediaGroupState.PROCESSING, MediaGroupState.COMPLETED);
         
-        // 最后一个组应该还在 COLLECTING（因为间隔添加且时间未到）
+        // 最后一个组应该还在 COLLECTING（因为间隔添加且时间未到�?
         if (groupCount > 1) {
             String lastGroupKey = chatId + ":" + (1000L + groupCount - 1);
             MediaGroupState lastGroupState = service.getMediaGroupState(lastGroupKey);
             assertThat(lastGroupState)
-                .as("最后一个组应该还在 COLLECTING 状态")
+                .as("最后一个组应该还在COLLECTING状态")
                 .isEqualTo(MediaGroupState.COLLECTING);
         }
     }

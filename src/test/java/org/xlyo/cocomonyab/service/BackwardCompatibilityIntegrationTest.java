@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.domain.entity.RawMessage;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
@@ -59,6 +59,9 @@ class BackwardCompatibilityIntegrationTest {
     private ChannelMonitoringFilter channelMonitoringFilter;
     
     @Mock
+    private DuplicateMessageFilter duplicateMessageFilter;
+    
+    @Mock
     private MediaGroupMetrics mediaGroupMetrics;
     
     private ChannelMonitorService channelMonitorService;
@@ -85,6 +88,7 @@ class BackwardCompatibilityIntegrationTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );

@@ -8,6 +8,7 @@ import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -18,15 +19,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
- * 属性 7：失败重试机制
+ * 属�?7：失败重试机�?
  * 
  * 对于任何处理失败的媒体组，其状态应该被重置，允许重新收集和处理
  * 
- * **验证：需求 1.5**
+ * **验证：需�?1.5**
  * 
  * Feature: concurrent-safety-optimization, Property 7: Failure Retry Mechanism
  */
@@ -39,13 +40,14 @@ class FailureRetryMechanismPropertyTest {
         @ForAll @IntRange(min = 1000, max = 9999) long mediaAlbumId,
         @ForAll @LongRange(min = -1001999999999L, max = -1001000000000L) long chatId
     ) throws InterruptedException {
-        // Given: 设置服务，模拟处理失败
+        // Given: 设置服务，模拟处理失�?
         ChannelRepository channelRepository = mock(ChannelRepository.class);
         MessageStorageService messageStorageService = mock(MessageStorageService.class);
         MessageParser messageParser = mock(MessageParser.class);
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -57,6 +59,7 @@ class FailureRetryMechanismPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -100,13 +103,13 @@ class FailureRetryMechanismPropertyTest {
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
         
-        // Then: 状态应该被重置（null 或不存在）
+        // Then: 状态应该被重置（null 或不存在�?
         MediaGroupState stateAfterFailure = service.getMediaGroupState(groupKey);
         assertThat(stateAfterFailure)
-            .as("失败后状态应该被重置为 null")
+            .as("失败后状态应该被重置�?null")
             .isNull();
         
-        // When: 尝试添加新消息（应该被接受，因为状态已重置）
+        // When: 尝试添加新消息（应该被接受，因为状态已重置�?
         TdApi.Message retryMessage = createMediaGroupMessage(9999L, chatId, mediaAlbumId);
         boolean acceptedAfterFailure = service.handleMediaGroupMessage(retryMessage);
         
@@ -115,10 +118,10 @@ class FailureRetryMechanismPropertyTest {
             .as("失败后新消息应该被接受以支持重试")
             .isTrue();
         
-        // 验证状态重新初始化为 COLLECTING
+        // 验证状态重新初始化�?COLLECTING
         MediaGroupState stateAfterRetry = service.getMediaGroupState(groupKey);
         assertThat(stateAfterRetry)
-            .as("重试后状态应该重新初始化为 COLLECTING")
+            .as("重试后状态应该重新初始化�?COLLECTING")
             .isEqualTo(MediaGroupState.COLLECTING);
     }
     
@@ -136,6 +139,7 @@ class FailureRetryMechanismPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -147,6 +151,7 @@ class FailureRetryMechanismPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -220,6 +225,7 @@ class FailureRetryMechanismPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -231,6 +237,7 @@ class FailureRetryMechanismPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -239,7 +246,7 @@ class FailureRetryMechanismPropertyTest {
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         
-        // 前两次调用失败，第三次成功
+        // 前两次调用失败，第三次成�?
         when(messageStorageService.saveMessage(any()))
             .thenThrow(new RuntimeException("First attempt failed"))
             .thenThrow(new RuntimeException("Second attempt failed"))
@@ -260,7 +267,7 @@ class FailureRetryMechanismPropertyTest {
         
         String groupKey = chatId + ":" + mediaAlbumId;
         
-        // 第一次尝试
+        // 第一次尝�?
         for (int i = 0; i < messageCount; i++) {
             service.handleMediaGroupMessage(createMediaGroupMessage(1000L + i, chatId, mediaAlbumId));
         }
@@ -272,7 +279,7 @@ class FailureRetryMechanismPropertyTest {
             .as("第一次失败后状态应该被重置")
             .isNull();
         
-        // 第二次尝试
+        // 第二次尝�?
         for (int i = 0; i < messageCount; i++) {
             service.handleMediaGroupMessage(createMediaGroupMessage(2000L + i, chatId, mediaAlbumId));
         }
@@ -284,7 +291,7 @@ class FailureRetryMechanismPropertyTest {
             .as("第二次失败后状态应该被重置")
             .isNull();
         
-        // 第三次尝试
+        // 第三次尝�?
         for (int i = 0; i < messageCount; i++) {
             service.handleMediaGroupMessage(createMediaGroupMessage(3000L + i, chatId, mediaAlbumId));
         }
@@ -292,7 +299,7 @@ class FailureRetryMechanismPropertyTest {
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
         
-        // Then: 第三次应该成功
+        // Then: 第三次应该成�?
         MediaGroupState finalState = service.getMediaGroupState(groupKey);
         assertThat(finalState)
             .as("第三次重试成功后状态应该是 COMPLETED")

@@ -8,6 +8,7 @@ import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
 import org.xlyo.cocomonyab.filter.FilterChainManager;
 import org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.plugin.PluginManager;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.service.message.MessageParser;
@@ -18,15 +19,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
- * 属性 1：成功处理后状态转换
+ * 属�?1：成功处理后状态转�?
  * 
  * 对于任何成功处理的媒体组，其最终状态应该是 COMPLETED
  * 
- * **验证：需求 1.4, 2.4**
+ * **验证：需�?1.4, 2.4**
  * 
  * Feature: concurrent-safety-optimization, Property 1: Successful Processing State Transition
  */
@@ -46,6 +47,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -57,6 +59,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -93,11 +96,11 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             .as("初始状态应该是 COLLECTING")
             .isEqualTo(MediaGroupState.COLLECTING);
         
-        // When: 等待超时并处理
+        // When: 等待超时并处�?
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // 给予时间让处理完成
+        // 给予时间让处理完�?
         Thread.sleep(500);
         
         // Then: 状态应该是 COMPLETED
@@ -121,6 +124,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -132,6 +136,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -154,7 +159,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             return entity;
         });
         
-        // 添加消息并处理
+        // 添加消息并处�?
         for (int i = 0; i < messageCount; i++) {
             service.handleMediaGroupMessage(createMediaGroupMessage(1000L + i, chatId, mediaAlbumId));
         }
@@ -174,10 +179,10 @@ class SuccessfulProcessingStateTransitionPropertyTest {
         // When: 再次调用定时任务
         service.processTimedOutMediaGroups();
         
-        // Then: 状态应该保持 COMPLETED
+        // Then: 状态应该保持COMPLETED
         MediaGroupState state2 = service.getMediaGroupState(groupKey);
         assertThat(state2)
-            .as("COMPLETED 状态应该持久保持")
+            .as("COMPLETED状态应该持久保持")
             .isEqualTo(MediaGroupState.COMPLETED);
     }
     
@@ -194,6 +199,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         FilterChainManager filterChainManager = mock(FilterChainManager.class);
         ChannelMonitoringFilter channelMonitoringFilter = mock(ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -205,6 +211,7 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -227,24 +234,24 @@ class SuccessfulProcessingStateTransitionPropertyTest {
             return entity;
         });
         
-        // 创建多个媒体组
+        // 创建多个媒体�?
         for (int i = 0; i < groupCount; i++) {
             long mediaAlbumId = 1000L + i;
             TdApi.Message message = createMediaGroupMessage(1000L, chatId, mediaAlbumId);
             service.handleMediaGroupMessage(message);
         }
         
-        // 等待所有组超时并处理
+        // 等待所有组超时并处�?
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         Thread.sleep(500);
         
-        // Then: 验证所有组都是 COMPLETED 状态
+        // Then: 验证所有组都是COMPLETED状态
         for (int i = 0; i < groupCount; i++) {
             String groupKey = chatId + ":" + (1000L + i);
             MediaGroupState state = service.getMediaGroupState(groupKey);
             assertThat(state)
-                .as("媒体组 " + groupKey + " 应该是 COMPLETED 状态")
+                .as("媒体组" + groupKey + "应该是COMPLETED状态")
                 .isEqualTo(MediaGroupState.COMPLETED);
         }
     }

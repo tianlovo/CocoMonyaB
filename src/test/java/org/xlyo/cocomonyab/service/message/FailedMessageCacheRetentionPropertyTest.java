@@ -11,7 +11,7 @@ import org.xlyo.cocomonyab.repository.RawMessageRepository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
 
 /**
  * 属性 12：失败消息缓存保留

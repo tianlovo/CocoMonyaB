@@ -20,7 +20,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import org.xlyo.cocomonyab.config.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.config.properties.ConcurrentSafetyProperties;
+import org.xlyo.cocomonyab.filter.impl.DuplicateMessageFilter;
 import org.xlyo.cocomonyab.service.metrics.MediaGroupMetrics;
 
 /**
@@ -49,6 +50,7 @@ class MediaGroupBatchProcessingPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -60,19 +62,20 @@ class MediaGroupBatchProcessingPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
         service.initMetrics();
         
-        // 模拟过滤器链默认接受所有消息
+        // 模拟过滤器链默认接受所有消�?
         when(filterChainManager.executeChain(any())).thenReturn(true);
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         
         // 启动监控
         service.startMonitoring(chatId);
         
-        // 创建媒体组消息
+        // 创建媒体组消�?
         List<TdApi.Message> messages = new ArrayList<>();
         List<BaseMessageEntity> parsedEntities = new ArrayList<>();
         
@@ -101,7 +104,7 @@ class MediaGroupBatchProcessingPropertyTest {
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // Then: 验证属性
+        // Then: 验证属�?
         ArgumentCaptor<BaseMessageEntity> entityCaptor = ArgumentCaptor.forClass(BaseMessageEntity.class);
         verify(pluginManager, times(1)).process(entityCaptor.capture(), any());
         
@@ -114,12 +117,12 @@ class MediaGroupBatchProcessingPropertyTest {
         
         MediaGroupMessageEntity mediaGroup = (MediaGroupMessageEntity) capturedEntity;
         
-        // Property 2: 媒体组应包含所有消息
+        // Property 2: 媒体组应包含所有消�?
         assertThat(mediaGroup.getItems())
             .as("Media group should contain all messages")
             .hasSize(messageCount);
         
-        // Property 3: 媒体组ID应正确设置
+        // Property 3: 媒体组ID应正确设�?
         assertThat(mediaGroup.getMediaAlbumId())
             .as("Media album ID should match")
             .isEqualTo(mediaAlbumId);
@@ -157,6 +160,7 @@ class MediaGroupBatchProcessingPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -168,6 +172,7 @@ class MediaGroupBatchProcessingPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -177,7 +182,7 @@ class MediaGroupBatchProcessingPropertyTest {
         when(channelMonitoringFilter.isMonitoring(chatId)).thenReturn(true);
         service.startMonitoring(chatId);
         
-        // 创建乱序的消息
+        // 创建乱序的消�?
         List<TdApi.Message> messages = new ArrayList<>();
         for (Integer msgId : messageIds) {
             TdApi.Message message = createMediaGroupMessage(msgId.longValue(), chatId, mediaAlbumId);
@@ -236,6 +241,7 @@ class MediaGroupBatchProcessingPropertyTest {
         PluginManager pluginManager = mock(PluginManager.class);
         org.xlyo.cocomonyab.filter.FilterChainManager filterChainManager = mock(org.xlyo.cocomonyab.filter.FilterChainManager.class);
         org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter channelMonitoringFilter = mock(org.xlyo.cocomonyab.filter.impl.ChannelMonitoringFilter.class);
+        DuplicateMessageFilter duplicateMessageFilter = mock(DuplicateMessageFilter.class);
         
         MediaGroupMetrics mediaGroupMetrics = mock(MediaGroupMetrics.class);
         ConcurrentSafetyProperties properties = createDefaultProperties();
@@ -247,6 +253,7 @@ class MediaGroupBatchProcessingPropertyTest {
             pluginManager,
             filterChainManager,
             channelMonitoringFilter,
+            duplicateMessageFilter,
             mediaGroupMetrics,
             properties
         );
@@ -280,7 +287,7 @@ class MediaGroupBatchProcessingPropertyTest {
         Thread.sleep(2500);
         service.processTimedOutMediaGroups();
         
-        // Then: 验证两个媒体组都被独立处理
+        // Then: 验证两个媒体组都被独立处�?
         ArgumentCaptor<BaseMessageEntity> entityCaptor = ArgumentCaptor.forClass(BaseMessageEntity.class);
         verify(pluginManager, times(2)).process(entityCaptor.capture(), any());
         
@@ -296,7 +303,7 @@ class MediaGroupBatchProcessingPropertyTest {
             .as("All should be MediaGroupMessageEntity")
             .allMatch(e -> e instanceof MediaGroupMessageEntity);
         
-        // Property 3: 媒体组大小应该正确
+        // Property 3: 媒体组大小应该正�?
         MediaGroupMessageEntity mg1 = (MediaGroupMessageEntity) capturedEntities.get(0);
         MediaGroupMessageEntity mg2 = (MediaGroupMessageEntity) capturedEntities.get(1);
         
