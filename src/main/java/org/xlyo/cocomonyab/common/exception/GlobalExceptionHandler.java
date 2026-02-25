@@ -16,6 +16,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.xlyo.cocomonyab.common.enums.ResponseCode;
 import org.xlyo.cocomonyab.common.response.ApiResponse;
 
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +36,58 @@ public class GlobalExceptionHandler {
     public ApiResponse<Void> handleBusinessException(BusinessException e) {
         log.warn("业务异常: code={}, message={}", e.getCode(), e.getMessage());
         return ApiResponse.error(e.getCode(), e.getMessage());
+    }
+    
+    /**
+     * 标签唯一性冲突异常处理
+     * 返回详细的冲突信息，包括冲突实体类型、ID和名称
+     */
+    @ExceptionHandler(TagUniquenessException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<Void> handleTagUniquenessException(TagUniquenessException e) {
+        log.warn("标签唯一性冲突: type={}, id={}, value={}", 
+                e.getConflictType(), e.getConflictId(), e.getConflictValue());
+        
+        String detailedMessage = String.format(
+                "名称或别名已存在：冲突实体类型=%s, ID=%s, 名称=%s",
+                e.getConflictType(),
+                e.getConflictId(),
+                e.getConflictValue()
+        );
+        
+        return ApiResponse.error(ResponseCode.DATA_ALREADY_EXISTS, detailedMessage);
+    }
+    
+    /**
+     * 引用完整性异常处理
+     * 返回详细的引用信息列表
+     */
+    @ExceptionHandler(ReferenceIntegrityException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public ApiResponse<Map<String, List<String>>> handleReferenceIntegrityException(ReferenceIntegrityException e) {
+        log.warn("引用完整性冲突: message={}, references={}", e.getMessage(), e.getReferences());
+        
+        // 构建详细的错误消息
+        StringBuilder messageBuilder = new StringBuilder(e.getMessage());
+        if (e.getReferences() != null && !e.getReferences().isEmpty()) {
+            messageBuilder.append("：");
+            e.getReferences().forEach((key, values) -> {
+                if (values != null && !values.isEmpty()) {
+                    messageBuilder.append(String.format("%s(%d个)", key, values.size()));
+                    messageBuilder.append(", ");
+                }
+            });
+            // 移除最后的逗号和空格
+            if (messageBuilder.length() > 2) {
+                messageBuilder.setLength(messageBuilder.length() - 2);
+            }
+        }
+        
+        return new ApiResponse<>(
+                ResponseCode.OPERATION_FAILED.getCode(),
+                messageBuilder.toString(),
+                e.getReferences()
+        );
     }
     
     /**

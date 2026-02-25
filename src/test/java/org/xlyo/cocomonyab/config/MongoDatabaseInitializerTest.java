@@ -135,6 +135,113 @@ class MongoDatabaseInitializerTest {
                     "索引数量应该保持不变");
     }
     
+    @Test
+    void testAuthorIndexCreation() throws Exception {
+        // Given: 作者集合不存在
+        String collectionName = "tag_authors";
+        if (mongoTemplate.collectionExists(collectionName)) {
+            mongoTemplate.dropCollection(collectionName);
+        }
+        
+        // When: 运行初始化器
+        databaseInitializer.run(new TestApplicationArguments());
+        
+        // Then: 作者库索引应该被创建
+        List<IndexInfo> indexes = mongoTemplate.indexOps(collectionName).getIndexInfo();
+        
+        // 验证 name 唯一索引
+        boolean foundNameIndex = false;
+        boolean foundAliasesIndex = false;
+        
+        for (IndexInfo index : indexes) {
+            if ("idx_author_name_unique".equals(index.getName())) {
+                foundNameIndex = true;
+                assertTrue(index.isUnique(), "作者 name 索引应该是唯一索引");
+            } else if ("idx_author_aliases".equals(index.getName())) {
+                foundAliasesIndex = true;
+            }
+        }
+        
+        assertTrue(foundNameIndex, "应该存在作者 name 唯一索引");
+        assertTrue(foundAliasesIndex, "应该存在作者 aliases 索引");
+    }
+    
+    @Test
+    void testWorkIndexCreation() throws Exception {
+        // Given: 原作集合不存在
+        String collectionName = "tag_works";
+        if (mongoTemplate.collectionExists(collectionName)) {
+            mongoTemplate.dropCollection(collectionName);
+        }
+        
+        // When: 运行初始化器
+        databaseInitializer.run(new TestApplicationArguments());
+        
+        // Then: 原作库索引应该被创建
+        List<IndexInfo> indexes = mongoTemplate.indexOps(collectionName).getIndexInfo();
+        
+        // 验证索引
+        boolean foundNameIndex = false;
+        boolean foundAliasesIndex = false;
+        
+        for (IndexInfo index : indexes) {
+            if ("idx_work_name_unique".equals(index.getName())) {
+                foundNameIndex = true;
+                assertTrue(index.isUnique(), "原作 name 索引应该是唯一索引");
+            } else if ("idx_work_aliases".equals(index.getName())) {
+                foundAliasesIndex = true;
+            }
+        }
+        
+        assertTrue(foundNameIndex, "应该存在原作 name 唯一索引");
+        assertTrue(foundAliasesIndex, "应该存在原作 aliases 索引");
+    }
+    
+    @Test
+    void testCharacterIndexCreation() throws Exception {
+        // Given: 角色集合不存在
+        String collectionName = "tag_characters";
+        if (mongoTemplate.collectionExists(collectionName)) {
+            mongoTemplate.dropCollection(collectionName);
+        }
+        
+        // When: 运行初始化器
+        databaseInitializer.run(new TestApplicationArguments());
+        
+        // Then: 角色库索引应该被创建
+        List<IndexInfo> indexes = mongoTemplate.indexOps(collectionName).getIndexInfo();
+        
+        // 验证索引
+        boolean foundNameIndex = false;
+        boolean foundAliasesIndex = false;
+        boolean foundWorkIdIndex = false;
+        
+        for (IndexInfo index : indexes) {
+            if ("idx_character_name_unique".equals(index.getName())) {
+                foundNameIndex = true;
+                assertTrue(index.isUnique(), "角色 name 索引应该是唯一索引");
+            } else if ("idx_character_aliases".equals(index.getName())) {
+                foundAliasesIndex = true;
+            } else if ("idx_character_workId".equals(index.getName())) {
+                foundWorkIdIndex = true;
+            }
+        }
+        
+        assertTrue(foundNameIndex, "应该存在角色 name 唯一索引");
+        assertTrue(foundAliasesIndex, "应该存在角色 aliases 索引");
+        assertTrue(foundWorkIdIndex, "应该存在角色 workId 索引");
+    }
+    
+    @Test
+    void testDatabaseConnectionCheck() throws Exception {
+        // Given: 数据库连接正常
+        
+        // When: 运行初始化器
+        // Then: 不应该抛出异常
+        assertDoesNotThrow(() -> databaseInitializer.run(new TestApplicationArguments()),
+                "数据库连接检查应该成功");
+    }
+    
     /**
      * 测试用的 ApplicationArguments 实现
      */
