@@ -166,12 +166,11 @@ public class ForwardScheduler {
             client.send(request).whenComplete((result, error) -> {
                 if (error != null) {
                     handleForwardError(item, error);
-                } else if (result instanceof TdApi.Messages) {
+                } else if (result != null) {
                     handleForwardSuccess(item);
                 } else {
                     // 处理意外的结果类型（包括TdApi.Error）
-                    String errorMsg = "意外的结果类型: " + 
-                            (result != null ? result.getClass().getName() : "null");
+                    String errorMsg = "意外的结果类型: null";
                     log.warn("转发请求返回意外结果: chatId={}, messageId={}, result={}", 
                             item.getSourceChatId(), item.getSourceMessageId(), errorMsg);
                     handleForwardError(item, new RuntimeException(errorMsg));

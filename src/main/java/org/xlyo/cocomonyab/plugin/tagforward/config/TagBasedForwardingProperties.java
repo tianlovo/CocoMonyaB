@@ -64,4 +64,34 @@ public class TagBasedForwardingProperties {
      * 默认值: 3
      */
     private Integer maxRetryCount = 3;
+    
+    /**
+     * 欢迎消息模板
+     * 用于验证目标频道的发送权限并提供插件状态信息
+     * 支持占位符：
+     * - {pluginName}: 插件名称
+     * - {version}: 插件版本
+     * - {tagPrefix}: 标签前缀
+     * - {rateLimitPerMinute}: 每分钟转发速率限制
+     * - {batchSize}: 批次大小
+     * - {scheduleInterval}: 调度间隔（秒）
+     * - {maxRetryCount}: 最大重试次数
+     * <p>
+     * 默认值: 多行欢迎消息模板
+     */
+    private String welcomeMessage = """
+            🎉 标签转发插件已启动
+            
+            📋 基础信息:
+            • 插件名称: {pluginName}
+            • 标签前缀: {tagPrefix}
+            
+            ⚙️ 运行配置:
+            • 转发速率: {rateLimitPerMinute} 次/分钟
+            • 批次大小: {batchSize} 条消息
+            • 调度间隔: {scheduleInterval} 秒
+            • 最大重试: {maxRetryCount} 次
+            
+            ✅ 权限验证通过，插件运行正常
+            """;
 }
