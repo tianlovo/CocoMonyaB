@@ -7,24 +7,69 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
   background-color: var(--fluent-bg-base);
   color: var(--fluent-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Acrylic Material Effect */
+/* ============================================
+   Acrylic Material Effect - Semi-transparent frosted glass
+   ============================================ */
 .fluent-acrylic {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--fluent-acrylic-bg);
   backdrop-filter: blur(30px) saturate(125%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+  border: 1px solid var(--fluent-acrylic-border);
 }
 
-/* Card with depth */
+.fluent-acrylic-dark {
+  background: var(--fluent-acrylic-dark-bg);
+  backdrop-filter: blur(30px) saturate(125%);
+  -webkit-backdrop-filter: blur(30px) saturate(125%);
+  border: 1px solid var(--fluent-acrylic-dark-border);
+}
+
+.fluent-acrylic-strong {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   Depth and Shadow System - Visual hierarchy
+   ============================================ */
+.fluent-depth-2 {
+  box-shadow: var(--fluent-shadow-2);
+}
+
+.fluent-depth-4 {
+  box-shadow: var(--fluent-shadow-4);
+}
+
+.fluent-depth-8 {
+  box-shadow: var(--fluent-shadow-8);
+}
+
+.fluent-depth-16 {
+  box-shadow: var(--fluent-shadow-16);
+}
+
+.fluent-depth-32 {
+  box-shadow: var(--fluent-shadow-32);
+}
+
+/* Card with depth and hover effect */
 .fluent-card {
   background: var(--fluent-bg-card);
   border-radius: var(--radius-md);
   box-shadow: var(--fluent-shadow-4);
   transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+  border: 1px solid var(--fluent-border);
 }
 
 .fluent-card:hover {
@@ -32,16 +77,93 @@ body {
   transform: translateY(-2px);
 }
 
-/* Smooth transitions */
+.fluent-card-elevated {
+  background: var(--fluent-bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--fluent-shadow-8);
+  border: none;
+}
+
+.fluent-card-elevated:hover {
+  box-shadow: var(--fluent-shadow-16);
+  transform: translateY(-4px);
+}
+
+/* ============================================
+   Smooth Transitions and Animations
+   ============================================ */
 .fluent-transition {
   transition: all var(--transition-normal);
 }
 
-/* Button styles */
+.fluent-transition-fast {
+  transition: all var(--transition-fast);
+}
+
+.fluent-transition-slow {
+  transition: all var(--transition-slow);
+}
+
+/* Fade in animation */
+@keyframes fluent-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fluent-fade-in {
+  animation: fluent-fade-in var(--transition-normal) ease-out;
+}
+
+/* Scale in animation */
+@keyframes fluent-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fluent-scale-in {
+  animation: fluent-scale-in var(--transition-normal) ease-out;
+}
+
+/* Slide in from right */
+@keyframes fluent-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fluent-slide-in-right {
+  animation: fluent-slide-in-right var(--transition-normal) ease-out;
+}
+
+/* ============================================
+   Button Styles
+   ============================================ */
 .fluent-button {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   font-weight: 600;
+  font-family: var(--font-family);
+  cursor: pointer;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-sm);
 }
 
 .fluent-button:hover {
@@ -49,11 +171,36 @@ body {
   box-shadow: var(--fluent-shadow-4);
 }
 
-/* Input styles */
+.fluent-button:active {
+  transform: translateY(0);
+  box-shadow: var(--fluent-shadow-2);
+}
+
+.fluent-button-primary {
+  background-color: var(--fluent-primary);
+  color: var(--fluent-text-on-accent);
+}
+
+.fluent-button-primary:hover {
+  background-color: var(--fluent-primary-hover);
+}
+
+.fluent-button-primary:active {
+  background-color: var(--fluent-primary-active);
+}
+
+/* ============================================
+   Input Styles
+   ============================================ */
 .fluent-input {
   border-radius: var(--radius-sm);
   border: 1px solid var(--fluent-border);
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  background-color: var(--fluent-bg-card);
+  color: var(--fluent-text-primary);
 }
 
 .fluent-input:hover {
@@ -61,14 +208,21 @@ body {
 }
 
 .fluent-input:focus {
-  border-color: var(--fluent-primary);
+  border-color: var(--fluent-border-active);
   outline: none;
+  box-shadow: 0 0 0 2px var(--fluent-primary-light);
 }
 
-/* Page transitions */
+.fluent-input::placeholder {
+  color: var(--fluent-text-tertiary);
+}
+
+/* ============================================
+   Page Transitions
+   ============================================ */
 .page-enter-active,
 .page-leave-active {
-  transition: opacity var(--transition-normal), transform var(--transition-normal);
+  transition: opacity var(--transition-page), transform var(--transition-page);
 }
 
 .page-enter-from {
@@ -81,10 +235,26 @@ body {
   transform: translateX(-20px);
 }
 
-/* Element Plus customization for Fluent Design */
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity var(--transition-normal);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ============================================
+   Element Plus Customization for Fluent Design
+   ============================================ */
+
+/* Buttons */
 .el-button {
   border-radius: var(--radius-sm);
   font-weight: 600;
+  font-family: var(--font-family);
   transition: all var(--transition-fast);
 }
 
@@ -100,26 +270,222 @@ body {
   box-shadow: var(--fluent-shadow-4);
 }
 
+.el-button--primary:active {
+  background-color: var(--fluent-primary-active);
+  border-color: var(--fluent-primary-active);
+  transform: translateY(0);
+}
+
+.el-button--success {
+  background-color: var(--fluent-success);
+  border-color: var(--fluent-success);
+}
+
+.el-button--warning {
+  background-color: var(--fluent-warning);
+  border-color: var(--fluent-warning);
+}
+
+.el-button--danger {
+  background-color: var(--fluent-danger);
+  border-color: var(--fluent-danger);
+}
+
+/* Cards */
 .el-card {
   border-radius: var(--radius-md);
   box-shadow: var(--fluent-shadow-4);
+  border: 1px solid var(--fluent-border);
+  transition: box-shadow var(--transition-normal), transform var(--transition-normal);
+}
+
+.el-card:hover {
+  box-shadow: var(--fluent-shadow-8);
+}
+
+.el-card__header {
+  border-bottom: 1px solid var(--fluent-border);
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-weight: 600;
+}
+
+.el-card__body {
+  padding: var(--spacing-lg);
+}
+
+/* Dialogs */
+.el-dialog {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--fluent-shadow-32);
   border: none;
 }
 
-.el-dialog {
-  border-radius: var(--radius-lg);
-  box-shadow: var(--fluent-shadow-16);
+.el-dialog__header {
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--fluent-border);
 }
 
+.el-dialog__body {
+  padding: var(--spacing-lg);
+}
+
+.el-dialog__footer {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-top: 1px solid var(--fluent-border);
+}
+
+/* Tables */
 .el-table {
   border-radius: var(--radius-md);
+  font-family: var(--font-family);
 }
 
+.el-table th {
+  background-color: var(--fluent-bg-alt);
+  color: var(--fluent-text-secondary);
+  font-weight: 600;
+}
+
+.el-table tr:hover {
+  background-color: var(--fluent-bg-alt);
+}
+
+.el-table__body tr {
+  transition: background-color var(--transition-fast);
+}
+
+/* Inputs */
 .el-input__wrapper {
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
+  box-shadow: none;
+  border: 1px solid var(--fluent-border);
 }
 
 .el-input__wrapper:hover {
   box-shadow: var(--fluent-shadow-2);
+  border-color: var(--fluent-border-hover);
 }
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 2px var(--fluent-primary-light);
+  border-color: var(--fluent-border-active);
+}
+
+.el-input__inner {
+  font-family: var(--font-family);
+}
+
+/* Select */
+.el-select-dropdown {
+  border-radius: var(--radius-md);
+  box-shadow: var(--fluent-shadow-16);
+  border: 1px solid var(--fluent-border);
+}
+
+.el-select-dropdown__item:hover {
+  background-color: var(--fluent-bg-alt);
+}
+
+.el-select-dropdown__item.selected {
+  color: var(--fluent-primary);
+  font-weight: 600;
+}
+
+/* Message */
+.el-message {
+  border-radius: var(--radius-md);
+  box-shadow: var(--fluent-shadow-16);
+  border: none;
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+/* Pagination */
+.el-pagination {
+  font-family: var(--font-family);
+}
+
+.el-pagination button {
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.el-pagination button:hover {
+  background-color: var(--fluent-bg-alt);
+}
+
+.el-pager li {
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.el-pager li:hover {
+  background-color: var(--fluent-bg-alt);
+}
+
+.el-pager li.active {
+  background-color: var(--fluent-primary);
+  color: var(--fluent-text-on-accent);
+}
+
+/* Loading */
+.el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Switch */
+.el-switch.is-checked .el-switch__core {
+  background-color: var(--fluent-primary);
+}
+
+/* Tag */
+.el-tag {
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+/* Spacing utilities */
+.p-xs { padding: var(--spacing-xs); }
+.p-sm { padding: var(--spacing-sm); }
+.p-md { padding: var(--spacing-md); }
+.p-lg { padding: var(--spacing-lg); }
+.p-xl { padding: var(--spacing-xl); }
+
+.m-xs { margin: var(--spacing-xs); }
+.m-sm { margin: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+.m-lg { margin: var(--spacing-lg); }
+.m-xl { margin: var(--spacing-xl); }
+
+/* Text utilities */
+.text-primary { color: var(--fluent-text-primary); }
+.text-secondary { color: var(--fluent-text-secondary); }
+.text-tertiary { color: var(--fluent-text-tertiary); }
+.text-disabled { color: var(--fluent-text-disabled); }
+
+.text-xs { font-size: var(--font-size-xs); }
+.text-sm { font-size: var(--font-size-sm); }
+.text-md { font-size: var(--font-size-md); }
+.text-lg { font-size: var(--font-size-lg); }
+.text-xl { font-size: var(--font-size-xl); }
+
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+/* Border utilities */
+.border { border: 1px solid var(--fluent-border); }
+.border-top { border-top: 1px solid var(--fluent-border); }
+.border-bottom { border-bottom: 1px solid var(--fluent-border); }
+.border-left { border-left: 1px solid var(--fluent-border); }
+.border-right { border-right: 1px solid var(--fluent-border); }
+
+.rounded-sm { border-radius: var(--radius-sm); }
+.rounded-md { border-radius: var(--radius-md); }
+.rounded-lg { border-radius: var(--radius-lg); }
+.rounded-xl { border-radius: var(--radius-xl); }
