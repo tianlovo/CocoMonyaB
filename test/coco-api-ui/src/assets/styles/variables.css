@@ -1,0 +1,44 @@
+:root {
+  /* Fluent Design Colors */
+  --fluent-primary: #0078d4;
+  --fluent-primary-hover: #106ebe;
+  --fluent-primary-active: #005a9e;
+  
+  --fluent-accent: #0078d4;
+  --fluent-accent-light: #50e6ff;
+  --fluent-accent-dark: #005a9e;
+  
+  --fluent-bg-base: #f3f3f3;
+  --fluent-bg-alt: #ffffff;
+  --fluent-bg-card: #ffffff;
+  
+  --fluent-text-primary: #323130;
+  --fluent-text-secondary: #605e5c;
+  --fluent-text-disabled: #a19f9d;
+  
+  --fluent-border: #edebe9;
+  --fluent-border-hover: #d2d0ce;
+  
+  /* Shadows for depth */
+  --fluent-shadow-2: 0 0.3px 0.9px rgba(0, 0, 0, 0.1), 0 1.6px 3.6px rgba(0, 0, 0, 0.13);
+  --fluent-shadow-4: 0 0.6px 1.8px rgba(0, 0, 0, 0.1), 0 3.2px 7.2px rgba(0, 0, 0, 0.13);
+  --fluent-shadow-8: 0 1.2px 3.6px rgba(0, 0, 0, 0.1), 0 6.4px 14.4px rgba(0, 0, 0, 0.13);
+  --fluent-shadow-16: 0 2.4px 7.2px rgba(0, 0, 0, 0.1), 0 12.8px 28.8px rgba(0, 0, 0, 0.13);
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Border radius */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  
+  /* Transitions */
+  --transition-fast: 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
+  --transition-normal: 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
