@@ -28,8 +28,9 @@
           type="primary"
           @click="handleSubmit"
           :loading="loading"
+          :disabled="loading"
         >
-          {{ loading ? '提交中...' : '确定' }}
+          确定
         </el-button>
       </div>
     </template>

@@ -129,6 +129,12 @@
   </div>
 </template>
 
+<script lang="ts">
+export default {
+  name: 'WorkView'
+}
+</script>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Search, Plus, Download, Upload } from '@element-plus/icons-vue'

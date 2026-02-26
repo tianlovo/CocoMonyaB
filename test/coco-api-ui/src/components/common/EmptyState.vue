@@ -69,12 +69,12 @@ const displayMessage = computed(() => {
   
   switch (props.type) {
     case 'no-result':
-      return '无搜索结果'
+      return '无搜索结果，请尝试其他关键词'
     case 'error':
       return '加载失败，请重试'
     case 'empty':
     default:
-      return '暂无数据'
+      return '暂无数据，点击下方按钮开始添加'
   }
 })
 

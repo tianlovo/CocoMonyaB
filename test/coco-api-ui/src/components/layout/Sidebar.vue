@@ -1,7 +1,10 @@
 <template>
   <aside 
     class="sidebar fluent-acrylic fluent-depth-8"
-    :class="{ 'sidebar-collapsed': collapsed }"
+    :class="{ 
+      'sidebar-collapsed': collapsed,
+      'sidebar-mobile-hidden': isMobile && collapsed 
+    }"
   >
     <div class="sidebar-header">
       <h1 class="sidebar-title" v-if="!collapsed">标签管理系统</h1>
@@ -22,15 +25,24 @@
         :to="item.path"
         class="nav-item fluent-transition"
         :class="{ 'nav-item-active': isActive(item.path) }"
+        @click="handleNavClick"
       >
         <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
         <span class="nav-text" v-if="!collapsed">{{ item.label }}</span>
       </router-link>
     </nav>
   </aside>
+  
+  <!-- Mobile overlay -->
+  <div 
+    v-if="isMobile && !collapsed" 
+    class="sidebar-overlay"
+    @click="$emit('toggle')"
+  ></div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { User, Document, Avatar, Setting } from '@element-plus/icons-vue'
 
@@ -40,11 +52,12 @@ interface Props {
 
 defineProps<Props>()
 
-defineEmits<{
+const emit = defineEmits<{
   toggle: []
 }>()
 
 const route = useRoute()
+const isMobile = ref(false)
 
 const navItems = [
   { path: '/authors', label: '作者库', icon: User },
@@ -56,6 +69,26 @@ const navItems = [
 const isActive = (path: string) => {
   return route.path === path
 }
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+const handleNavClick = () => {
+  // Auto-collapse sidebar on mobile after navigation
+  if (isMobile.value) {
+    emit('toggle')
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <style scoped>
@@ -177,24 +210,47 @@ const isActive = (path: string) => {
 /* Mobile responsive */
 @media (max-width: 767px) {
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
+    width: 280px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    transform: translateX(0);
+    transition: transform var(--transition-normal);
   }
   
-  .sidebar-collapsed {
-    width: 100%;
+  .sidebar-mobile-hidden {
+    transform: translateX(-100%);
   }
   
   .sidebar-nav {
     display: flex;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    flex-direction: column;
   }
   
   .nav-item {
-    flex: 1;
-    min-width: calc(50% - var(--spacing-sm));
+    width: 100%;
+  }
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn var(--transition-fast);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 </style>

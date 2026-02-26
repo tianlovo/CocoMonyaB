@@ -263,18 +263,30 @@
 /* Dialog responsive width */
 @media (max-width: 767px) {
   .el-dialog {
-    width: 95% !important;
-    margin: var(--spacing-sm);
+    width: 90% !important;
+    max-width: 90vw !important;
+    margin: var(--spacing-sm) !important;
   }
   
   .el-dialog__body {
+    padding: var(--spacing-md);
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  
+  .el-dialog__header {
+    padding: var(--spacing-md);
+  }
+  
+  .el-dialog__footer {
     padding: var(--spacing-md);
   }
 }
 
 @media (min-width: 768px) and (max-width: 1199px) {
   .el-dialog {
-    width: 80% !important;
+    width: 75% !important;
+    max-width: 700px !important;
   }
 }
 
@@ -290,8 +302,30 @@
   }
   
   /* Hide less important columns on mobile */
-  .el-table .hidden-mobile {
-    display: none;
+  .el-table .mobile-hidden {
+    display: none !important;
+  }
+  
+  /* Adjust table cell content for mobile */
+  .el-table__cell {
+    word-break: break-word;
+  }
+  
+  /* Make action buttons smaller on mobile */
+  .el-table .el-button--small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .el-table {
+    font-size: var(--font-size-sm);
+  }
+  
+  /* Hide some columns on tablet */
+  .el-table .tablet-hidden {
+    display: none !important;
   }
 }
 

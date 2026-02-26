@@ -1,8 +1,22 @@
 <template>
   <div class="data-table">
+    <!-- Skeleton loader for initial loading -->
+    <SkeletonLoader 
+      v-if="loading && data.length === 0"
+      type="table"
+      :rows="pagination?.size || 10"
+      :columns="columns.length"
+    />
+    
+    <!-- 
+      Table with loading overlay for refresh
+      Note: Virtual scrolling is handled by pagination (max 100 items per page)
+      For lists without pagination, use useVirtualScroll composable
+    -->
     <el-table
+      v-else
       :data="data"
-      v-loading="loading"
+      v-loading="loading && data.length > 0"
       stripe
       style="width: 100%"
       @row-click="handleRowClick"
@@ -16,6 +30,7 @@
         :width="column.width"
         :min-width="column.minWidth"
         :align="column.align || 'left'"
+        :class-name="getColumnClass(column)"
       >
         <template #default="scope">
           <slot
@@ -79,6 +94,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import EmptyState from './EmptyState.vue'
+import SkeletonLoader from './SkeletonLoader.vue'
 
 export interface TableColumn {
   prop: string
@@ -87,6 +103,8 @@ export interface TableColumn {
   minWidth?: string | number
   align?: 'left' | 'center' | 'right'
   slot?: string
+  hideOnMobile?: boolean
+  hideOnTablet?: boolean
 }
 
 export interface TableAction {
@@ -167,6 +185,17 @@ const handleAction = (actionName: string, row: any, index: number) => {
 
 const handleEmptyAction = () => {
   emit('empty-action')
+}
+
+const getColumnClass = (column: TableColumn) => {
+  const classes: string[] = []
+  if (column.hideOnMobile) {
+    classes.push('mobile-hidden')
+  }
+  if (column.hideOnTablet) {
+    classes.push('tablet-hidden')
+  }
+  return classes.join(' ')
 }
 </script>
 

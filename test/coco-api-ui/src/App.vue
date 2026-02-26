@@ -1,5 +1,9 @@
 <template>
-  <router-view />
+  <router-view v-slot="{ Component }">
+    <keep-alive :include="['AuthorView', 'WorkView', 'CharacterView']">
+      <component :is="Component" />
+    </keep-alive>
+  </router-view>
 </template>
 
 <script setup lang="ts">

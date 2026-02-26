@@ -160,6 +160,12 @@
   </div>
 </template>
 
+<script lang="ts">
+export default {
+  name: 'CharacterView'
+}
+</script>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Search, Plus, Download, Upload } from '@element-plus/icons-vue'
@@ -345,9 +351,6 @@ const handleDelete = async (character: Character) => {
       // Other errors are already handled by the interceptor
       console.error('Delete failed:', error)
     }
-  }
-}
-
   }
 }
 

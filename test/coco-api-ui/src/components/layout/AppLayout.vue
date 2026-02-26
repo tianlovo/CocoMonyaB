@@ -9,7 +9,11 @@
       class="main-container"
       :class="{ 'main-container-expanded': sidebarCollapsed }"
     >
-      <Header @refresh="handleRefresh" />
+      <Header 
+        @refresh="handleRefresh"
+        @toggle-sidebar="toggleSidebar"
+        :show-menu-button="isMobile"
+      />
       
       <main class="main-content fluent-fade-in">
         <div class="content-wrapper">
@@ -25,13 +29,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
 
 const router = useRouter()
 const sidebarCollapsed = ref(false)
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 768
+  // Auto-collapse sidebar on mobile
+  if (isMobile.value) {
+    sidebarCollapsed.value = true
+  }
+}
 
 const toggleSidebar = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value
@@ -41,6 +54,15 @@ const handleRefresh = () => {
   // Trigger a route refresh by navigating to the same route
   router.go(0)
 }
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <style scoped>

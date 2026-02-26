@@ -354,13 +354,6 @@ const handleSubmit = async () => {
   }
 }
 
-    ElMessage.error({
-      message: message || '名称或别名已存在',
-      duration: 5000
-    })
-  }
-}
-
 // Initialize
 onMounted(() => {
   loadWorks()
