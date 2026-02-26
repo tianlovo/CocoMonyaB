@@ -10,6 +10,7 @@ import org.xlyo.cocomonyab.domain.dto.tag.CharacterCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.CharacterQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.CharacterUpdateDTO;
 import org.xlyo.cocomonyab.domain.vo.tag.CharacterVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.service.tag.CharacterService;
 
 import java.util.List;
@@ -131,12 +132,12 @@ public class CharacterController {
      * POST /api/config/tag/character/import
      *
      * @param json JSON格式的角色数据
-     * @return 成功响应
+     * @return 导入结果
      */
     @PostMapping(value = "/import", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<Void> importCharacters(@RequestBody String json) {
-        characterService.importFromJson(json);
-        return ApiResponse.success();
+    public ApiResponse<ImportResultVO> importCharacters(@RequestBody String json) {
+        ImportResultVO result = characterService.importFromJson(json);
+        return ApiResponse.success(result);
     }
 
     /**

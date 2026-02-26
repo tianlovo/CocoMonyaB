@@ -5,6 +5,7 @@ import org.xlyo.cocomonyab.domain.dto.tag.CharacterCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.CharacterQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.CharacterUpdateDTO;
 import org.xlyo.cocomonyab.domain.vo.tag.CharacterVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 
 import java.util.List;
 
@@ -83,8 +84,9 @@ public interface CharacterService {
      * 从JSON导入角色数据
      * 
      * @param json JSON字符串
+     * @return 导入结果
      */
-    void importFromJson(String json);
+    ImportResultVO importFromJson(String json);
     
     /**
      * 导出角色数据为JSON

@@ -5,6 +5,7 @@ import org.xlyo.cocomonyab.domain.dto.tag.AuthorCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.AuthorQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.AuthorUpdateDTO;
 import org.xlyo.cocomonyab.domain.vo.tag.AuthorVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 
 /**
  * 作者服务接口
@@ -73,8 +74,9 @@ public interface AuthorService {
      * 从JSON导入作者数据
      * 
      * @param json JSON字符串
+     * @return 导入结果
      */
-    void importFromJson(String json);
+    ImportResultVO importFromJson(String json);
     
     /**
      * 导出作者数据为JSON

@@ -302,8 +302,11 @@ const handleExport = async () => {
   try {
     const data = await workStore.exportWorks()
     
+    // Parse if data is a string (backend returns JSON string)
+    const jsonData = typeof data === 'string' ? JSON.parse(data) : data
+    
     // Create JSON blob
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' })
     
     // Create download link
     const url = URL.createObjectURL(blob)
@@ -382,10 +385,19 @@ const handleFileChange = async (event: Event) => {
     
     try {
       // Call import API
+      console.log('Calling import API with data:', data)
       const result = await workStore.importWorks(data)
+      console.log('Import API returned:', result)
       
       // Close loading message
       loadingMessage.close()
+      
+      // Validate result
+      if (!result || typeof result.successCount === 'undefined') {
+        console.error('Invalid import result:', result)
+        ElMessage.error('导入失败：服务器返回数据格式错误')
+        return
+      }
       
       // Show result dialog
       importResult.value = result
@@ -394,9 +406,15 @@ const handleFileChange = async (event: Event) => {
       // Reload list
       loadWorks()
     } catch (error) {
+      console.error('Import failed with error:', error)
       loadingMessage.close()
-      // Error already handled by interceptor
-      console.error('Import failed:', error)
+      
+      // Show error message if not already shown by interceptor
+      if (error instanceof Error) {
+        ElMessage.error(`导入失败: ${error.message}`)
+      } else {
+        ElMessage.error('导入失败，请检查控制台日志')
+      }
     }
   } catch (error) {
     ElMessage.error('读取文件失败')

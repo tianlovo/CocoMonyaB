@@ -26,6 +26,7 @@ import org.xlyo.cocomonyab.domain.entity.tag.Character;
 import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
 import org.xlyo.cocomonyab.domain.enums.EntityType;
 import org.xlyo.cocomonyab.domain.vo.tag.AuthorVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.repository.tag.AuthorRepository;
 import org.xlyo.cocomonyab.repository.tag.CharacterRepository;
@@ -291,11 +292,17 @@ public class AuthorServiceImpl implements AuthorService {
     
     @Override
     @Transactional
-    public void importFromJson(String json) {
+    public ImportResultVO importFromJson(String json) {
+        int successCount = 0;
+        int failureCount = 0;
+        List<ImportResultVO.ImportError> errors = new ArrayList<>();
+        
         try {
             List<Author> authors = objectMapper.readValue(json, new TypeReference<List<Author>>() {});
             
-            for (Author author : authors) {
+            for (int i = 0; i < authors.size(); i++) {
+                Author author = authors.get(i);
+                
                 // 验证唯一性
                 try {
                     uniquenessValidationService.validateNameUniqueness(
@@ -319,9 +326,16 @@ public class AuthorServiceImpl implements AuthorService {
                     
                     // 保存
                     authorRepository.save(author);
+                    successCount++;
                     
                     log.info("导入作者成功: name={}", author.getName());
                 } catch (BusinessException e) {
+                    failureCount++;
+                    errors.add(ImportResultVO.ImportError.builder()
+                        .index(i)
+                        .name(author.getName())
+                        .error(e.getMessage())
+                        .build());
                     log.warn("跳过冲突的作者: name={}, reason={}", author.getName(), e.getMessage());
                 }
             }
@@ -331,7 +345,14 @@ public class AuthorServiceImpl implements AuthorService {
                 TagConfigurationEvent.reloadAll(this)
             );
             
-            log.info("批量导入作者完成，已发布标签配置重新加载事件");
+            log.info("批量导入作者完成，成功: {}, 失败: {}, 已发布标签配置重新加载事件", successCount, failureCount);
+            
+            return ImportResultVO.builder()
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .errors(errors)
+                .build();
+                
         } catch (JsonProcessingException e) {
             throw new BusinessException(
                 ResponseCode.VALIDATION_ERROR, 

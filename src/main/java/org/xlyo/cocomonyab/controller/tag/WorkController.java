@@ -9,6 +9,7 @@ import org.xlyo.cocomonyab.common.response.PageResponse;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkUpdateDTO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.domain.vo.tag.WorkVO;
 import org.xlyo.cocomonyab.service.tag.WorkService;
 
@@ -116,12 +117,12 @@ public class WorkController {
      * POST /api/config/tag/work/import
      *
      * @param json JSON格式的原作数据
-     * @return 成功响应
+     * @return 导入结果
      */
     @PostMapping(value = "/import", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<Void> importWorks(@RequestBody String json) {
-        workService.importFromJson(json);
-        return ApiResponse.success();
+    public ApiResponse<ImportResultVO> importWorks(@RequestBody String json) {
+        ImportResultVO result = workService.importFromJson(json);
+        return ApiResponse.success(result);
     }
 
     /**

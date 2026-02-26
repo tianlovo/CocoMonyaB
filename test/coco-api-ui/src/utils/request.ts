@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 const request = axios.create({
-  baseURL: 'http://127.0.0.1:10721',
+  baseURL: 'http://127.0.0.1:10721/api',
   timeout: 10000
 })
 
@@ -38,6 +38,15 @@ request.interceptors.response.use(
 
     // Success response
     if (code === 200) {
+      // Parse data if it's a JSON string (backend sometimes returns stringified JSON)
+      if (typeof data === 'string' && data.length > 0) {
+        try {
+          return JSON.parse(data)
+        } catch {
+          // If parsing fails, return as is
+          return data
+        }
+      }
       return data
     }
 

@@ -25,6 +25,7 @@ import org.xlyo.cocomonyab.domain.entity.tag.Character;
 import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
 import org.xlyo.cocomonyab.domain.enums.EntityType;
 import org.xlyo.cocomonyab.domain.vo.tag.CharacterVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.repository.tag.CharacterRepository;
 import org.xlyo.cocomonyab.repository.tag.TagFilterConfigRepository;
@@ -316,11 +317,17 @@ public class CharacterServiceImpl implements CharacterService {
     
     @Override
     @Transactional
-    public void importFromJson(String json) {
+    public ImportResultVO importFromJson(String json) {
+        int successCount = 0;
+        int failureCount = 0;
+        List<ImportResultVO.ImportError> errors = new ArrayList<>();
+        
         try {
             List<Character> characters = objectMapper.readValue(json, new TypeReference<List<Character>>() {});
             
-            for (Character character : characters) {
+            for (int i = 0; i < characters.size(); i++) {
+                Character character = characters.get(i);
+                
                 // 验证唯一性
                 try {
                     uniquenessValidationService.validateNameUniqueness(
@@ -338,7 +345,13 @@ public class CharacterServiceImpl implements CharacterService {
                     }
                     
                     // 验证原作引用
-                    if (!workRepository.existsById(character.getWorkId())) {
+                    if (character.getWorkId() != null && !workRepository.existsById(character.getWorkId())) {
+                        failureCount++;
+                        errors.add(ImportResultVO.ImportError.builder()
+                            .index(i)
+                            .name(character.getName())
+                            .error("原作不存在: workId=" + character.getWorkId())
+                            .build());
                         log.warn("跳过角色（原作不存在）: name={}, workId={}", 
                             character.getName(), character.getWorkId());
                         continue;
@@ -351,9 +364,16 @@ public class CharacterServiceImpl implements CharacterService {
                     
                     // 保存
                     characterRepository.save(character);
+                    successCount++;
                     
                     log.info("导入角色成功: name={}", character.getName());
                 } catch (BusinessException e) {
+                    failureCount++;
+                    errors.add(ImportResultVO.ImportError.builder()
+                        .index(i)
+                        .name(character.getName())
+                        .error(e.getMessage())
+                        .build());
                     log.warn("跳过冲突的角色: name={}, reason={}", character.getName(), e.getMessage());
                 }
             }
@@ -363,7 +383,14 @@ public class CharacterServiceImpl implements CharacterService {
                 TagConfigurationEvent.reloadAll(this)
             );
             
-            log.info("批量导入角色完成，已发布标签配置重新加载事件");
+            log.info("批量导入角色完成，成功: {}, 失败: {}, 已发布标签配置重新加载事件", successCount, failureCount);
+            
+            return ImportResultVO.builder()
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .errors(errors)
+                .build();
+                
         } catch (JsonProcessingException e) {
             throw new BusinessException(
                 ResponseCode.VALIDATION_ERROR, 

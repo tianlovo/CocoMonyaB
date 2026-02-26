@@ -10,6 +10,7 @@ import org.xlyo.cocomonyab.domain.dto.tag.AuthorCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.AuthorQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.AuthorUpdateDTO;
 import org.xlyo.cocomonyab.domain.vo.tag.AuthorVO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.service.tag.AuthorService;
 
 /**
@@ -116,12 +117,12 @@ public class AuthorController {
      * POST /api/config/tag/author/import
      *
      * @param json JSON格式的作者数据
-     * @return 成功响应
+     * @return 导入结果
      */
     @PostMapping(value = "/import", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ApiResponse<Void> importAuthors(@RequestBody String json) {
-        authorService.importFromJson(json);
-        return ApiResponse.success();
+    public ApiResponse<ImportResultVO> importAuthors(@RequestBody String json) {
+        ImportResultVO result = authorService.importFromJson(json);
+        return ApiResponse.success(result);
     }
 
     /**

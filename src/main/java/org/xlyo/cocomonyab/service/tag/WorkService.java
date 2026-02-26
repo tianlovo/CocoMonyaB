@@ -4,6 +4,7 @@ import org.xlyo.cocomonyab.common.response.PageResponse;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkQueryDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.WorkUpdateDTO;
+import org.xlyo.cocomonyab.domain.vo.tag.ImportResultVO;
 import org.xlyo.cocomonyab.domain.vo.tag.WorkVO;
 
 /**
@@ -73,8 +74,9 @@ public interface WorkService {
      * 从JSON导入原作数据
      * 
      * @param json JSON字符串
+     * @return 导入结果
      */
-    void importFromJson(String json);
+    ImportResultVO importFromJson(String json);
     
     /**
      * 导出原作数据为JSON
