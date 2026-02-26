@@ -267,6 +267,22 @@ watch(
   { immediate: true }
 )
 
+// Watch for dialog visibility to repopulate form when opening
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && props.author) {
+      formData.id = props.author.id
+      formData.name = props.author.name
+      formData.aliases = [...props.author.aliases]
+      formData.signature = props.author.signature
+      formData.urls = [...props.author.urls]
+      formData.avatarBase64 = props.author.avatarBase64
+      formData.remark = props.author.remark
+    }
+  }
+)
+
 // Add alias
 const addAlias = () => {
   formData.aliases.push('')

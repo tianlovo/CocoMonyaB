@@ -270,6 +270,22 @@ watch(
   { immediate: true }
 )
 
+// Watch for dialog visibility to repopulate form when opening
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && props.character) {
+      formData.id = props.character.id
+      formData.name = props.character.name
+      formData.aliases = [...props.character.aliases]
+      formData.workId = props.character.workId
+      formData.species = props.character.species
+      formData.avatarBase64 = props.character.avatarBase64
+      formData.remark = props.character.remark
+    }
+  }
+)
+
 // Add alias
 const addAlias = () => {
   formData.aliases.push('')
