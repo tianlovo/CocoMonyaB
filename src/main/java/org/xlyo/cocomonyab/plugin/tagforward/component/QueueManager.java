@@ -35,9 +35,22 @@ public class QueueManager {
      * @param matchedTags 匹配到的标签列表
      */
     public void enqueue(Long sourceChatId, Long sourceMessageId, List<String> matchedTags) {
+        enqueue(sourceChatId, sourceMessageId, null, matchedTags);
+    }
+    
+    /**
+     * 将消息加入转发队列（支持媒体组）
+     * 
+     * @param sourceChatId 源频道ID
+     * @param sourceMessageId 源消息ID（对于媒体组，这是第一条消息的ID）
+     * @param mediaGroupMessageIds 媒体组消息ID列表（仅用于媒体组，普通消息传null）
+     * @param matchedTags 匹配到的标签列表
+     */
+    public void enqueue(Long sourceChatId, Long sourceMessageId, List<Long> mediaGroupMessageIds, List<String> matchedTags) {
         ForwardQueueItem item = ForwardQueueItem.builder()
                 .sourceChatId(sourceChatId)
                 .sourceMessageId(sourceMessageId)
+                .mediaGroupMessageIds(mediaGroupMessageIds)
                 .matchedTags(matchedTags)
                 .status(ForwardStatus.PENDING)
                 .createTime(Instant.now())
@@ -46,8 +59,13 @@ public class QueueManager {
         
         try {
             mongoTemplate.insert(item, "forward_queue");
-            log.debug("消息已加入队列: chatId={}, messageId={}, tags={}", 
-                    sourceChatId, sourceMessageId, matchedTags);
+            if (mediaGroupMessageIds != null && !mediaGroupMessageIds.isEmpty()) {
+                log.debug("媒体组消息已加入队列: chatId={}, messageId={}, groupSize={}, tags={}", 
+                        sourceChatId, sourceMessageId, mediaGroupMessageIds.size(), matchedTags);
+            } else {
+                log.debug("消息已加入队列: chatId={}, messageId={}, tags={}", 
+                        sourceChatId, sourceMessageId, matchedTags);
+            }
         } catch (DuplicateKeyException e) {
             log.debug("消息已在队列中: chatId={}, messageId={}", 
                     sourceChatId, sourceMessageId);

@@ -156,21 +156,9 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             // 第一步：获取频道信息
             TdApi.GetChat getChat = new TdApi.GetChat(targetChannelId);
             
-            client.send(getChat).whenComplete((chatResult, error) -> {
+            client.send(getChat).whenCompleteAsync((chatResult, error) -> {
                 if (error != null) {
-                    log.error("获取目标频道信息失败: chatId={}", targetChannelId, error);
-                    return;
-                }
-                
-                if (chatResult == null) {
-                    log.warn("获取目标频道返回 null 结果: chatId={}", targetChannelId);
-                    return;
-                }
-                
-                // 检查是否返回错误
-                TdApi.Error tdError = extractErrorIfPresent(chatResult);
-                if (tdError != null) {
-                    handleChatValidationError(targetChannelId, tdError);
+                    log.error("❌ 获取目标频道信息失败: chatId={}", targetChannelId, error);
                     return;
                 }
                 
@@ -222,46 +210,30 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
 
             TdApi.InputMessageText inputMessageContent = new TdApi.InputMessageText(
                     messageText,
-                    null,  // linkPreviewOptions
-                    false  // clearDraft
+                    null,  // 链接预览选项
+                    false  // 清除草稿
             );
 
             // 构造发送消息请求
             TdApi.SendMessage sendMessage = new TdApi.SendMessage(
                     chatId,
-                    0,     // messageThreadId
-                    null,  // replyTo
-                    null,  // options
-                    null,  // replyMarkup
+                    0,     // 消息线程ID
+                    null,  // 回复消息
+                    null,  // 发送选项
+                    null,  // 回复标记
                     inputMessageContent
             );
 
             // 发送消息
-            client.send(sendMessage).whenComplete((messageResult, error) -> {
+            client.send(sendMessage).whenCompleteAsync((messageResult, error) -> {
                 if (error != null) {
-                    log.error("发送欢迎消息失败: chatId={}", chatId, error);
+                    log.error("❌ 发送欢迎消息失败: chatId={}", chatId, error);
                     log.error("  ❌ 权限验证失败: 无法发送消息到目标频道");
-                    log.error("  💡 建议: 请确保账号是频道管理员，并且有发送消息的权限");
-                    return;
-                }
-
-                if (messageResult == null) {
-                    log.warn("发送欢迎消息返回 null 结果: chatId={}", chatId);
-                    return;
-                }
-
-                // 检查是否返回错误
-                TdApi.Error tdError = extractErrorIfPresent(messageResult);
-                if (tdError != null) {
-                    log.error("发送欢迎消息失败: chatId={}, code={}, message={}", 
-                            chatId, tdError.code, tdError.message);
-                    handleSendMessageError(chatId, tdError);
                     return;
                 }
 
                 // 成功发送消息
-                TdApi.Message message = (TdApi.Message) messageResult;
-                log.info("✅ 欢迎消息发送成功: messageId={}", message.id);
+                log.info("✅ 欢迎消息发送成功: messageId={}", messageResult.id);
                 log.info("✅ 目标频道权限验证完成: 所有权限正常");
             });
 
@@ -287,95 +259,6 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                 .replace("{maxRetryCount}", String.valueOf(properties.getMaxRetryCount()));
     }
 
-    
-    /**
-     * 处理发送消息错误
-     * 
-     * @param chatId 频道 ID
-     * @param error TDLib 错误对象
-     */
-    private void handleSendMessageError(Long chatId, TdApi.Error error) {
-        log.error("❌ 发送测试消息失败: chatId={}", chatId);
-        log.error("  - 错误代码: {}", error.code);
-        log.error("  - 错误消息: {}", error.message);
-        
-        switch (error.code) {
-            case 400:
-                log.error("  💡 建议: 请求参数错误，请检查频道ID是否正确");
-                break;
-                
-            case 403:
-                if (error.message.contains("CHAT_WRITE_FORBIDDEN") || 
-                    error.message.contains("CHAT_SEND_PLAIN_FORBIDDEN")) {
-                    log.error("  💡 建议: 没有在该频道发送消息的权限");
-                    log.error("     1. 确保账号是频道管理员");
-                    log.error("     2. 确保管理员有 '发送消息' 权限");
-                    log.error("     3. 检查频道设置是否限制了消息发送");
-                } else {
-                    log.error("  💡 建议: 访问被拒绝，可能是权限不足");
-                }
-                break;
-                
-            case 404:
-                log.error("  💡 建议: 频道不存在或无法访问");
-                break;
-                
-            case 420:
-                log.error("  💡 建议: 请求过于频繁，请稍后重试");
-                break;
-                
-            default:
-                log.error("  💡 建议: 请检查网络连接和 Telegram 客户端状态");
-                break;
-        }
-    }
-    
-    /**
-     * 处理频道验证失败的错误
-     * 
-     * @param chatId 频道 ID
-     * @param error TDLib 错误对象
-     */
-    private void handleChatValidationError(Long chatId, TdApi.Error error) {
-        log.error("❌ 目标频道验证失败: chatId={}", chatId);
-        log.error("  - 错误代码: {}", error.code);
-        log.error("  - 错误消息: {}", error.message);
-        
-        // 根据错误代码提供具体的解决建议
-        switch (error.code) {
-            case 400:
-                if (error.message.contains("CHAT_ID_INVALID") || 
-                    error.message.contains("CHANNEL_INVALID")) {
-                    log.error("  💡 建议: 频道ID无效，请检查配置的 target-channel-id 是否正确");
-                    log.error("     频道ID应该是负数，格式如: -1001234567890");
-                }
-                break;
-                
-            case 403:
-                if (error.message.contains("CHAT_WRITE_FORBIDDEN")) {
-                    log.error("  💡 建议: 没有在该频道发送消息的权限");
-                    log.error("     请确保机器人是频道管理员，并且有发送消息的权限");
-                } else {
-                    log.error("  💡 建议: 访问被拒绝，可能是权限不足或频道设置问题");
-                }
-                break;
-                
-            case 404:
-                log.error("  💡 建议: 频道不存在或无法访问");
-                log.error("     1. 检查频道ID是否正确");
-                log.error("     2. 确保账号已加入该频道");
-                log.error("     3. 如果是私有频道，确保有访问权限");
-                break;
-                
-            case 420:
-                log.error("  💡 建议: 请求过于频繁，请稍后重试");
-                break;
-                
-            default:
-                log.error("  💡 建议: 请检查网络连接和 Telegram 客户端状态");
-                break;
-        }
-    }
     
     @Override
     protected boolean supports(BaseMessageEntity entity) {
@@ -426,28 +309,49 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             log.info("[TagForward] 匹配到 {} 个标签: chatId={}, messageId={}, type={}, tags={}", 
                     matchedTags.size(), chatId, messageId, messageType, matchedTags);
             
-            // 阶段 5: 确定要转发的消息ID
-            // 对于媒体组，转发第一条消息即可（TDLib会自动转发整个媒体组）
+            // 阶段 5: 确定要转发的消息ID（保证媒体组原子性）
+            // 对于媒体组，需要收集所有消息ID（按递增顺序）
             Long forwardMessageId = messageId;
+            List<Long> mediaGroupMessageIds = null;
+            
             if (entity instanceof MediaGroupMessageEntity mediaGroup) {
                 if (mediaGroup.getItems() != null && !mediaGroup.getItems().isEmpty()) {
-                    forwardMessageId = mediaGroup.getItems().getFirst().getMessageId();
-                    log.info("[TagForward] 媒体组消息，将转发第一条消息: chatId={}, originalId={}, forwardId={}, itemCount={}", 
-                            chatId, messageId, forwardMessageId, mediaGroup.getItems().size());
+                    // 收集媒体组中所有消息的ID
+                    mediaGroupMessageIds = mediaGroup.getItems().stream()
+                            .map(BaseMessageEntity::getMessageId)
+                            .sorted()  // 确保按递增顺序排序（TDLib要求）
+                            .toList();
+                    
+                    forwardMessageId = mediaGroupMessageIds.get(0);  // 第一条消息ID作为主ID
+                    
+                    log.info("[TagForward] 媒体组消息，将转发整个媒体组: chatId={}, firstMessageId={}, messageIds={}, itemCount={}", 
+                            chatId, forwardMessageId, mediaGroupMessageIds, mediaGroup.getItems().size());
                 }
             }
             
-            // 阶段 6: 加入转发队列
+            // 阶段 6: 加入转发队列（原子操作）
+            // 注意：enqueue方法使用唯一索引保证同一消息只入队一次
+            // 对于媒体组，使用第一条消息ID作为唯一标识，确保整个媒体组作为一个单元处理
             log.debug("[TagForward] 正在将消息加入转发队列: chatId={}, messageId={}", chatId, forwardMessageId);
-            queueManager.enqueue(chatId, forwardMessageId, matchedTags);
+            queueManager.enqueue(chatId, forwardMessageId, mediaGroupMessageIds, matchedTags);
             
-            log.info("[TagForward] 消息已成功加入转发队列: chatId={}, messageId={}, type={}, tags={}", 
-                    chatId, forwardMessageId, messageType, matchedTags);
+            if (mediaGroupMessageIds != null && !mediaGroupMessageIds.isEmpty()) {
+                log.info("[TagForward] 媒体组已成功加入转发队列（原子性保证）: chatId={}, firstMessageId={}, groupSize={}, tags={}", 
+                        chatId, forwardMessageId, mediaGroupMessageIds.size(), matchedTags);
+            } else {
+                log.info("[TagForward] 消息已成功加入转发队列: chatId={}, messageId={}, type={}, tags={}", 
+                        chatId, forwardMessageId, messageType, matchedTags);
+            }
             
         } catch (Exception e) {
             // 捕获所有异常，确保不影响其他插件
+            // 对于媒体组，如果处理失败，整个媒体组都不会被加入队列（保证原子性）
             log.error("[TagForward] 处理消息时发生异常: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType, e);
+            
+            if (entity instanceof MediaGroupMessageEntity) {
+                log.error("[TagForward] 媒体组处理失败，整个媒体组将被跳过（保证原子性）");
+            }
         }
         
         // 始终返回CONTINUE，确保不影响其他插件
@@ -506,38 +410,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             log.error("销毁 TagBasedMessageForwardingPlugin 时出错", e);
         }
     }
-    
-    /**
-     * 从 TDLib 返回结果中提取错误对象（如果存在）
-     * 
-     * <p>TDLib API 可能返回 Error 对象而不是预期的结果类型
-     * 由于泛型类型推断的限制，需要通过反射检查实际类型
-     * 
-     * @param result TDLib API 返回的结果对象
-     * @return 如果结果是 Error 类型则返回 Error 对象，否则返回 null
-     */
-    private TdApi.Error extractErrorIfPresent(Object result) {
-        if (result == null) {
-            return null;
-        }
-        
-        String className = result.getClass().getSimpleName();
-        if (!"Error".equals(className)) {
-            return null;
-        }
-        
-        // 结果是 Error 类型，通过反射提取错误信息
-        try {
-            int code = (int) result.getClass().getField("code").get(result);
-            String message = (String) result.getClass().getField("message").get(result);
-            return new TdApi.Error(code, message);
-        } catch (Exception e) {
-            log.error("提取 TDLib Error 对象失败", e);
-            // 返回一个通用错误
-            return new TdApi.Error(-1, "未知错误");
-        }
-    }
-    
+
     /**
      * 验证目标频道配置
      * 

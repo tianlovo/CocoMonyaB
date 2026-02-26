@@ -45,6 +45,13 @@ public class ForwardQueueItem {
     private Long sourceMessageId;
     
     /**
+     * 媒体组消息ID列表（仅用于媒体组消息）
+     * <p>如果是媒体组消息，此字段包含组内所有消息的ID（按递增顺序）
+     * <p>如果是普通消息，此字段为null或空
+     */
+    private List<Long> mediaGroupMessageIds;
+    
+    /**
      * 匹配到的标签列表
      */
     private List<String> matchedTags;
