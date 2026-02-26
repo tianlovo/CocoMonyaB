@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,6 +26,7 @@ import org.xlyo.cocomonyab.domain.entity.tag.Character;
 import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
 import org.xlyo.cocomonyab.domain.enums.EntityType;
 import org.xlyo.cocomonyab.domain.vo.tag.AuthorVO;
+import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.repository.tag.AuthorRepository;
 import org.xlyo.cocomonyab.repository.tag.CharacterRepository;
 import org.xlyo.cocomonyab.repository.tag.TagFilterConfigRepository;
@@ -53,6 +55,7 @@ public class AuthorServiceImpl implements AuthorService {
     private final UniquenessValidationService uniquenessValidationService;
     private final MongoTemplate mongoTemplate;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Override
     @Transactional
@@ -86,6 +89,11 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 保存
         author = authorRepository.save(author);
+        
+        // 发布作者标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.authorChanged(this, author.getId())
+        );
         
         log.info("创建作者成功: id={}, name={}", author.getId(), author.getName());
         
@@ -140,6 +148,11 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 保存
         author = authorRepository.save(author);
+        
+        // 发布作者标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.authorChanged(this, author.getId())
+        );
         
         log.info("更新作者成功: id={}, name={}", author.getId(), author.getName());
         
@@ -198,6 +211,11 @@ public class AuthorServiceImpl implements AuthorService {
         
         // 删除作者
         authorRepository.deleteById(id);
+        
+        // 发布作者标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.authorChanged(this, id)
+        );
         
         log.info("删除作者成功: id={}, name={}", id, author.getName());
     }
@@ -307,6 +325,13 @@ public class AuthorServiceImpl implements AuthorService {
                     log.warn("跳过冲突的作者: name={}, reason={}", author.getName(), e.getMessage());
                 }
             }
+            
+            // 批量导入完成后，发布重新加载事件
+            eventPublisher.publishEvent(
+                TagConfigurationEvent.reloadAll(this)
+            );
+            
+            log.info("批量导入作者完成，已发布标签配置重新加载事件");
         } catch (JsonProcessingException e) {
             throw new BusinessException(
                 ResponseCode.VALIDATION_ERROR, 

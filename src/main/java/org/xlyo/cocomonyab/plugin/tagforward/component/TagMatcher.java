@@ -1,10 +1,13 @@
 package org.xlyo.cocomonyab.plugin.tagforward.component;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
+import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.plugin.tagforward.config.TagBasedForwardingProperties;
 import org.xlyo.cocomonyab.plugin.tagforward.model.TagEntity;
 import org.xlyo.cocomonyab.plugin.tagforward.model.TagFilterConfig;
@@ -17,6 +20,14 @@ import java.util.stream.Collectors;
  * 
  * <p>负责从MongoDB标签系统加载标签配置，维护展开的标签列表，
  * 并对消息文本执行大小写不敏感的标签匹配
+ * 
+ * <p>动态更新支持：
+ * <ul>
+ *   <li>监听 TagConfigurationEvent 事件，自动更新缓存</li>
+ *   <li>支持增量更新（标签过滤配置、作者、角色、作品变更）</li>
+ *   <li>支持全量重载（重新加载所有标签配置）</li>
+ *   <li>线程安全：使用 volatile 保证并发安全</li>
+ * </ul>
  */
 @Component
 @Slf4j
@@ -30,10 +41,8 @@ public class TagMatcher {
      * 使用volatile确保多线程可见性
      */
     private volatile Set<String> expandedTagList = new HashSet<>();
-    
-    /**
-     * 标签配置是否已加载
-     */
+
+    @Getter
     private volatile boolean configurationLoaded = false;
     
     public TagMatcher(MongoTemplate mongoTemplate, TagBasedForwardingProperties properties) {
@@ -183,16 +192,7 @@ public class TagMatcher {
         
         return matchedTags;
     }
-    
-    /**
-     * 检查标签配置是否已加载
-     * 
-     * @return 如果配置已加载返回true，否则返回false
-     */
-    public boolean isConfigurationLoaded() {
-        return configurationLoaded;
-    }
-    
+
     /**
      * 获取当前展开的标签列表（用于测试）
      * 
@@ -200,5 +200,62 @@ public class TagMatcher {
      */
     public Set<String> getExpandedTagList() {
         return Collections.unmodifiableSet(expandedTagList);
+    }
+    
+    /**
+     * 监听标签配置事件，动态更新缓存
+     * 
+     * @param event 标签配置事件
+     */
+    @EventListener
+    public void handleTagConfigurationEvent(TagConfigurationEvent event) {
+        log.info("收到标签配置事件: {}", event);
+        
+        switch (event.getEventType()) {
+            case TAG_FILTER_ADDED:
+            case TAG_FILTER_REMOVED:
+            case TAG_FILTER_UPDATED:
+                // 标签过滤配置变更，重新加载所有标签
+                handleReloadAll("标签过滤配置变更");
+                break;
+                
+            case AUTHOR_CHANGED:
+                // 作者标签变更，重新加载所有标签
+                handleReloadAll("作者标签变更: " + event.getEntityId());
+                break;
+                
+            case CHARACTER_CHANGED:
+                // 角色标签变更，重新加载所有标签
+                handleReloadAll("角色标签变更: " + event.getEntityId());
+                break;
+                
+            case WORK_CHANGED:
+                // 作品标签变更，重新加载所有标签
+                handleReloadAll("作品标签变更: " + event.getEntityId());
+                break;
+                
+            case RELOAD_ALL:
+                // 全量重载
+                handleReloadAll("手动触发重新加载");
+                break;
+                
+            default:
+                log.warn("未知的事件类型: {}", event.getEventType());
+        }
+    }
+    
+    /**
+     * 处理重新加载所有标签配置事件
+     * 
+     * @param reason 重新加载的原因
+     */
+    private void handleReloadAll(String reason) {
+        log.info("开始重新加载标签配置，原因: {}", reason);
+        
+        int oldSize = expandedTagList.size();
+        loadTagConfiguration();
+        int newSize = expandedTagList.size();
+        
+        log.info("✓ 标签配置已重新加载，标签数量: {} -> {}", oldSize, newSize);
     }
 }

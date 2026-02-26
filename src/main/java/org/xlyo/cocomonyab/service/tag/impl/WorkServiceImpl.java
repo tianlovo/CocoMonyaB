@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,6 +26,7 @@ import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
 import org.xlyo.cocomonyab.domain.entity.tag.Work;
 import org.xlyo.cocomonyab.domain.enums.EntityType;
 import org.xlyo.cocomonyab.domain.vo.tag.WorkVO;
+import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.repository.tag.CharacterRepository;
 import org.xlyo.cocomonyab.repository.tag.TagFilterConfigRepository;
 import org.xlyo.cocomonyab.repository.tag.WorkRepository;
@@ -53,6 +55,7 @@ public class WorkServiceImpl implements WorkService {
     private final UniquenessValidationService uniquenessValidationService;
     private final MongoTemplate mongoTemplate;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Override
     @Transactional
@@ -85,6 +88,11 @@ public class WorkServiceImpl implements WorkService {
         
         // 保存
         work = workRepository.save(work);
+        
+        // 发布作品标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.workChanged(this, work.getId())
+        );
         
         log.info("创建原作成功: id={}, name={}", work.getId(), work.getName());
         
@@ -136,6 +144,11 @@ public class WorkServiceImpl implements WorkService {
         
         // 保存
         work = workRepository.save(work);
+        
+        // 发布作品标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.workChanged(this, work.getId())
+        );
         
         log.info("更新原作成功: id={}, name={}", work.getId(), work.getName());
         
@@ -196,6 +209,11 @@ public class WorkServiceImpl implements WorkService {
         
         // 删除原作
         workRepository.deleteById(id);
+        
+        // 发布作品标签变更事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.workChanged(this, id)
+        );
         
         log.info("删除原作成功: id={}, name={}", id, work.getName());
     }
@@ -305,6 +323,13 @@ public class WorkServiceImpl implements WorkService {
                     log.warn("跳过冲突的原作: name={}, reason={}", work.getName(), e.getMessage());
                 }
             }
+            
+            // 批量导入完成后，发布重新加载事件
+            eventPublisher.publishEvent(
+                TagConfigurationEvent.reloadAll(this)
+            );
+            
+            log.info("批量导入原作完成，已发布标签配置重新加载事件");
         } catch (JsonProcessingException e) {
             throw new BusinessException(
                 ResponseCode.VALIDATION_ERROR, 

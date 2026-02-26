@@ -3,6 +3,7 @@ package org.xlyo.cocomonyab.service.tag.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import org.xlyo.cocomonyab.domain.dto.tag.TagFilterConfigCreateDTO;
 import org.xlyo.cocomonyab.domain.dto.tag.TagFilterConfigUpdateDTO;
 import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
 import org.xlyo.cocomonyab.domain.vo.tag.TagFilterConfigVO;
+import org.xlyo.cocomonyab.event.TagConfigurationEvent;
 import org.xlyo.cocomonyab.repository.tag.TagFilterConfigRepository;
 import org.xlyo.cocomonyab.service.tag.TagFilterConfigService;
 
@@ -33,6 +35,7 @@ public class TagFilterConfigServiceImpl implements TagFilterConfigService {
     private static final String GLOBAL_CONFIG_ID = "global";
     
     private final TagFilterConfigRepository configRepository;
+    private final ApplicationEventPublisher eventPublisher;
     
     @Override
     @Transactional
@@ -40,6 +43,8 @@ public class TagFilterConfigServiceImpl implements TagFilterConfigService {
         // 查询是否存在全局配置
         TagFilterConfig config = configRepository.findById(GLOBAL_CONFIG_ID)
             .orElse(null);
+        
+        boolean isNew = (config == null);
         
         if (config == null) {
             // 创建新配置
@@ -63,8 +68,20 @@ public class TagFilterConfigServiceImpl implements TagFilterConfigService {
         // 保存
         config = configRepository.save(config);
         
-        log.info("全局标签过滤配置保存成功: id={}, enabled={}, matchMode={}", 
-            config.getId(), config.getEnabled(), config.getMatchMode());
+        // 发布事件
+        if (isNew) {
+            eventPublisher.publishEvent(
+                TagConfigurationEvent.tagFilterAdded(this, config.getId())
+            );
+            log.info("全局标签过滤配置创建成功，已发布 TAG_FILTER_ADDED 事件: id={}, enabled={}, matchMode={}", 
+                config.getId(), config.getEnabled(), config.getMatchMode());
+        } else {
+            eventPublisher.publishEvent(
+                TagConfigurationEvent.tagFilterUpdated(this, config.getId())
+            );
+            log.info("全局标签过滤配置更新成功，已发布 TAG_FILTER_UPDATED 事件: id={}, enabled={}, matchMode={}", 
+                config.getId(), config.getEnabled(), config.getMatchMode());
+        }
         
         return toVO(config);
     }
@@ -111,7 +128,12 @@ public class TagFilterConfigServiceImpl implements TagFilterConfigService {
         // 保存
         config = configRepository.save(config);
         
-        log.info("更新标签过滤配置成功: id={}", config.getId());
+        // 发布标签过滤配置更新事件
+        eventPublisher.publishEvent(
+            TagConfigurationEvent.tagFilterUpdated(this, config.getId())
+        );
+        
+        log.info("更新标签过滤配置成功，已发布 TAG_FILTER_UPDATED 事件: id={}", config.getId());
         
         return toVO(config);
     }
