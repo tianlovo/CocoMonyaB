@@ -2,11 +2,23 @@ package org.xlyo.cocomonyab.plugin.tagforward;
 
 import it.tdlight.client.SimpleTelegramClient;
 import it.tdlight.jni.TdApi;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
-import org.xlyo.cocomonyab.domain.entity.message.*;
+import org.xlyo.cocomonyab.domain.entity.ProcessedMessage;
+import org.xlyo.cocomonyab.domain.entity.message.AnimationMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.AudioMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.BaseMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.DocumentMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.MediaGroupMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.PhotoMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.PollMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.TelegraphMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.TextMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.VideoMessageEntity;
+import org.xlyo.cocomonyab.domain.entity.message.VoiceMessageEntity;
 import org.xlyo.cocomonyab.plugin.AbstractMessagePlugin;
 import org.xlyo.cocomonyab.plugin.PluginContext;
 import org.xlyo.cocomonyab.plugin.PluginResult;
@@ -14,10 +26,13 @@ import org.xlyo.cocomonyab.plugin.tagforward.component.ForwardScheduler;
 import org.xlyo.cocomonyab.plugin.tagforward.component.QueueManager;
 import org.xlyo.cocomonyab.plugin.tagforward.component.TagMatcher;
 import org.xlyo.cocomonyab.plugin.tagforward.config.TagBasedForwardingProperties;
+import org.xlyo.cocomonyab.repository.ProcessedMessageRepository;
 import org.xlyo.cocomonyab.service.MessageReadMarkingService;
 import org.xlyo.cocomonyab.telegram.TelegramClientManager;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 基于标签的消息转发插件
@@ -35,6 +50,7 @@ import java.util.List;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
     
     private final TagMatcher tagMatcher;
@@ -43,21 +59,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
     private final TagBasedForwardingProperties properties;
     private final TelegramClientManager clientManager;
     private final MessageReadMarkingService readMarkingService;
-    
-    public TagBasedMessageForwardingPlugin(
-            TagMatcher tagMatcher,
-            QueueManager queueManager,
-            ForwardScheduler forwardScheduler,
-            TagBasedForwardingProperties properties,
-            TelegramClientManager clientManager,
-            MessageReadMarkingService readMarkingService) {
-        this.tagMatcher = tagMatcher;
-        this.queueManager = queueManager;
-        this.forwardScheduler = forwardScheduler;
-        this.properties = properties;
-        this.clientManager = clientManager;
-        this.readMarkingService = readMarkingService;
-    }
+    private final ProcessedMessageRepository processedMessageRepository;
     
     @Override
     public String getName() {
@@ -281,8 +283,42 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             log.debug("[TagForward] 开始处理消息: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType);
             
-            // 阶段 0: 标记消息为已读（无论是否匹配标签）
-            // 使用异步方式标记，不阻塞消息处理流程
+            // 阶段 0: 检查消息是否已处理
+            Optional<ProcessedMessage> existingRecord = processedMessageRepository
+                .findByChatIdAndMessageId(chatId, messageId);
+            
+            if (existingRecord.isPresent()) {
+                ProcessedMessage record = existingRecord.get();
+                log.debug("[TagForward] 消息已处理过: chatId={}, messageId={}, isRead={}, isMatched={}", 
+                    chatId, messageId, record.getIsRead(), record.getIsMatched());
+                
+                // 如果消息存在但未读，标记为已读
+                if (Boolean.FALSE.equals(record.getIsRead())) {
+                    log.info("[TagForward] 消息未读，标记为已读: chatId={}, messageId={}", 
+                        chatId, messageId);
+                    
+                    try {
+                        readMarkingService.markAsRead(chatId, messageId);
+                        
+                        // 更新数据库记录
+                        record.setIsRead(true);
+                        record.setReadTime(LocalDateTime.now());
+                        record.setUpdateTime(LocalDateTime.now());
+                        processedMessageRepository.save(record);
+                        
+                        log.debug("[TagForward] 已更新消息已读状态: chatId={}, messageId={}", 
+                            chatId, messageId);
+                    } catch (Exception e) {
+                        log.warn("[TagForward] 标记消息为已读失败: chatId={}, messageId={}", 
+                            chatId, messageId, e);
+                    }
+                }
+                
+                // 消息已处理，跳过后续处理
+                return PluginResult.CONTINUE;
+            }
+            
+            // 阶段 1: 标记消息为已读（新消息）
             try {
                 readMarkingService.markAsRead(chatId, messageId);
                 log.debug("[TagForward] 消息已提交标记为已读: chatId={}, messageId={}", 
@@ -293,40 +329,48 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                     chatId, messageId, e);
             }
             
-            // 阶段 1: 检查标签配置是否已加载
+            // 阶段 2: 检查标签配置是否已加载
             if (!tagMatcher.isConfigurationLoaded()) {
                 log.warn("[TagForward] 标签配置尚未加载，跳过消息处理: chatId={}, messageId={}", 
                         chatId, messageId);
+                
+                // 记录为已处理但未匹配
+                saveProcessedMessage(chatId, messageId, messageType, true, false, null);
                 return PluginResult.CONTINUE;
             }
             
-            // 阶段 2: 提取文本内容（根据消息类型）
+            // 阶段 3: 提取文本内容（根据消息类型）
             String textContent = extractTextContent(entity);
             
             if (textContent == null || textContent.isEmpty()) {
                 log.debug("[TagForward] 消息无文本内容，跳过: chatId={}, messageId={}, type={}", 
                         chatId, messageId, messageType);
+                
+                // 记录为已处理但未匹配
+                saveProcessedMessage(chatId, messageId, messageType, true, false, null);
                 return PluginResult.CONTINUE;
             }
             
             log.debug("[TagForward] 提取文本内容成功: chatId={}, messageId={}, type={}, textLength={}",
                     chatId, messageId, messageType, textContent.length());
             
-            // 阶段 3: 匹配标签
+            // 阶段 4: 匹配标签
             log.debug("[TagForward] 开始标签匹配: chatId={}, messageId={}", chatId, messageId);
             List<String> matchedTags = tagMatcher.matchTags(textContent);
             
-            // 阶段 4: 处理匹配结果
+            // 阶段 5: 处理匹配结果
             if (matchedTags.isEmpty()) {
                 log.debug("[TagForward] 未匹配到标签，跳过: chatId={}, messageId={}", chatId, messageId);
+                
+                // 记录为已处理但未匹配
+                saveProcessedMessage(chatId, messageId, messageType, true, false, null);
                 return PluginResult.CONTINUE;
             }
             
             log.info("[TagForward] 匹配到 {} 个标签: chatId={}, messageId={}, type={}, tags={}", 
                     matchedTags.size(), chatId, messageId, messageType, matchedTags);
             
-            // 阶段 5: 确定要转发的消息ID（保证媒体组原子性）
-            // 对于媒体组，需要收集所有消息ID（按递增顺序）
+            // 阶段 6: 确定要转发的消息ID（保证媒体组原子性）
             Long forwardMessageId = messageId;
             List<Long> mediaGroupMessageIds = null;
             
@@ -335,43 +379,86 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                     // 收集媒体组中所有消息的ID
                     mediaGroupMessageIds = mediaGroup.getItems().stream()
                             .map(BaseMessageEntity::getMessageId)
-                            .sorted()  // 确保按递增顺序排序（TDLib要求）
+                            .sorted()
                             .toList();
                     
-                    forwardMessageId = mediaGroupMessageIds.getFirst();  // 第一条消息ID作为主ID
+                    forwardMessageId = mediaGroupMessageIds.getFirst();
                     
                     log.info("[TagForward] 媒体组消息，将转发整个媒体组: chatId={}, firstMessageId={}, messageIds={}, itemCount={}", 
                             chatId, forwardMessageId, mediaGroupMessageIds, mediaGroup.getItems().size());
                 }
             }
             
-            // 阶段 6: 加入转发队列（原子操作）
-            // 注意：enqueue方法使用唯一索引保证同一消息只入队一次
-            // 对于媒体组，使用第一条消息ID作为唯一标识，确保整个媒体组作为一个单元处理
+            // 阶段 7: 加入转发队列
             log.debug("[TagForward] 正在将消息加入转发队列: chatId={}, messageId={}", chatId, forwardMessageId);
             queueManager.enqueue(chatId, forwardMessageId, mediaGroupMessageIds, matchedTags);
             
             if (mediaGroupMessageIds != null && !mediaGroupMessageIds.isEmpty()) {
-                log.info("[TagForward] 媒体组已成功加入转发队列（原子性保证）: chatId={}, firstMessageId={}, groupSize={}, tags={}", 
+                log.info("[TagForward] 媒体组已成功加入转发队列: chatId={}, firstMessageId={}, groupSize={}, tags={}", 
                         chatId, forwardMessageId, mediaGroupMessageIds.size(), matchedTags);
             } else {
                 log.info("[TagForward] 消息已成功加入转发队列: chatId={}, messageId={}, type={}, tags={}", 
                         chatId, forwardMessageId, messageType, matchedTags);
             }
             
+            // 阶段 8: 记录为已处理且已匹配
+            saveProcessedMessage(chatId, messageId, messageType, true, true, 
+                matchedTags.toArray(new String[0]));
+            
         } catch (Exception e) {
-            // 捕获所有异常，确保不影响其他插件
-            // 对于媒体组，如果处理失败，整个媒体组都不会被加入队列（保证原子性）
             log.error("[TagForward] 处理消息时发生异常: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType, e);
             
-            if (entity instanceof MediaGroupMessageEntity) {
-                log.error("[TagForward] 媒体组处理失败，整个媒体组将被跳过（保证原子性）");
+            // 即使发生异常，也记录为已处理（避免重复处理）
+            try {
+                saveProcessedMessage(chatId, messageId, messageType, false, false, null);
+            } catch (Exception ex) {
+                log.error("[TagForward] 保存处理记录失败: chatId={}, messageId={}", 
+                    chatId, messageId, ex);
             }
         }
         
         // 始终返回CONTINUE，确保不影响其他插件
         return PluginResult.CONTINUE;
+    }
+    
+    /**
+     * 保存已处理消息记录
+     * 
+     * @param chatId 频道 ID
+     * @param messageId 消息 ID
+     * @param messageType 消息类型
+     * @param isRead 是否已读
+     * @param isMatched 是否匹配标签
+     * @param matchedTags 匹配到的标签
+     */
+    private void saveProcessedMessage(Long chatId, Long messageId, String messageType,
+                                     boolean isRead, boolean isMatched, String[] matchedTags) {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            
+            ProcessedMessage record = ProcessedMessage.builder()
+                .chatId(chatId)
+                .messageId(messageId)
+                .messageType(messageType)
+                .isRead(isRead)
+                .isMatched(isMatched)
+                .matchedTags(matchedTags)
+                .processTime(now)
+                .readTime(isRead ? now : null)
+                .createTime(now)
+                .updateTime(now)
+                .build();
+            
+            processedMessageRepository.save(record);
+            
+            log.debug("[TagForward] 已保存处理记录: chatId={}, messageId={}, isRead={}, isMatched={}", 
+                chatId, messageId, isRead, isMatched);
+            
+        } catch (Exception e) {
+            log.error("[TagForward] 保存处理记录失败: chatId={}, messageId={}", 
+                chatId, messageId, e);
+        }
     }
     
     /**
