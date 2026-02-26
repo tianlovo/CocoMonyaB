@@ -33,6 +33,11 @@ logging:
     root: INFO
     "[it.tdlight.TDLight]": WARN
     "[org.xlyo.cocomonyab.plugin.tagforward.TagBasedMessageForwardingPlugin]": DEBUG
+    # 未读消息来源生成器日志级别
+    "[org.xlyo.cocomonyab.messagesource.unread]": INFO
+    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageSourceService]": INFO
+    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageFetchService]": INFO
+    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageBufferService]": INFO
 
 # Spring Dotenv 配置
 springdotenv:
@@ -111,6 +116,49 @@ concurrent-safety:
     max-size: 10000
     # 失败消息缓存时间（秒）- 处理失败的消息短暂缓存，防止立即重试
     failed-message-ttl: 5
+
+# 消息来源配置
+message-source:
+  # 未读频道消息来源生成器配置
+  unread:
+    # 启动时自动检测未读消息（默认: true）
+    # 设置为 true 时，程序启动后会自动扫描所有监控频道的未读消息
+    auto-detect-on-startup: true
+    
+    # API 调用配置
+    # 单次 API 调用获取的最大消息数量（默认: 100）
+    # 建议值: 50-100，过大可能导致 API 超时
+    max-messages-per-fetch: 100
+    # 单个频道最大获取消息总数（默认: 1000）
+    # 用于防止历史消息过多导致处理时间过长
+    max-total-messages: 1000
+    # API 调用之间的延迟时间（毫秒）（默认: 1000）
+    # 用于避免触发 Telegram API 速率限制
+    api-call-delay: 1000
+    
+    # 重试配置
+    # 最大重试次数（默认: 3）
+    # 适用于临时性错误和速率限制错误
+    max-retries: 3
+    # 基础重试延迟（毫秒）（默认: 2000）
+    # 指数退避的起始延迟时间
+    retry-base-delay: 2000
+    # 最大重试延迟（毫秒）（默认: 60000）
+    # 指数退避的最大延迟时间，防止等待时间过长
+    retry-max-delay: 60000
+    
+    # 批处理配置
+    # 每批处理的消息数量（默认: 10）
+    # 较小的批次可以更快看到处理进度，较大的批次效率更高
+    batch-size: 10
+    # 批次之间的延迟时间（毫秒）（默认: 500）
+    # 用于避免系统过载，给其他任务留出处理时间
+    batch-delay: 500
+    
+    # 缓冲区配置
+    # 缓冲区 TTL（天）（默认: 7）
+    # 已处理的消息记录在缓冲区中保留的天数，超过后自动清理
+    buffer-ttl-days: 7
 
 # 插件配置
 plugin:

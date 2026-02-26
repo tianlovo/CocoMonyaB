@@ -1,6 +1,6 @@
 package org.xlyo.cocomonyab.source.unread.exception;
 
-import org.drinkless.tdlib.TdApi;
+import it.tdlight.jni.TdApi;
 
 /**
  * 速率限制异常

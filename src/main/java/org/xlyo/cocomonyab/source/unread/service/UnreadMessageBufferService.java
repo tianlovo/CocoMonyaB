@@ -10,6 +10,7 @@ import org.xlyo.cocomonyab.domain.enums.BufferStatus;
 import org.xlyo.cocomonyab.repository.UnreadMessageBufferRepository;
 import org.xlyo.cocomonyab.service.ChannelMonitorService;
 import org.xlyo.cocomonyab.source.unread.config.UnreadMessageSourceConfig;
+import org.xlyo.cocomonyab.source.unread.metrics.UnreadMessageMetrics;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,6 +36,7 @@ public class UnreadMessageBufferService {
     private final ChannelMonitorService channelMonitorService;
     private final UnreadMessageSourceConfig config;
     private final ObjectMapper objectMapper;
+    private final UnreadMessageMetrics metrics;
     
     /**
      * 缓冲并处理消息
@@ -144,12 +146,18 @@ public class UnreadMessageBufferService {
     ) {
         for (UnreadMessageBuffer buffer : batch) {
             try {
-                processMessage(buffer, channelUsername, channelTitle);
+                metrics.timeProcessing(() -> {
+                    processMessage(buffer, channelUsername, channelTitle);
+                    return null;
+                });
                 
                 // 标记为已处理
                 buffer.setStatus(BufferStatus.PROCESSED);
                 buffer.setUpdateTime(LocalDateTime.now());
                 bufferRepository.save(buffer);
+                
+                // 记录成功处理
+                metrics.recordMessageProcessed();
                 
             } catch (Exception e) {
                 log.error("处理消息失败: chatId={}, messageId={}, error={}", 
@@ -160,8 +168,14 @@ public class UnreadMessageBufferService {
                 buffer.setErrorMessage(truncateErrorMessage(e.getMessage()));
                 buffer.setUpdateTime(LocalDateTime.now());
                 bufferRepository.save(buffer);
+                
+                // 记录失败
+                metrics.recordMessageFailed();
             }
         }
+        
+        // 更新缓冲区大小指标
+        updateBufferMetrics();
     }
     
     /**
@@ -322,4 +336,37 @@ public class UnreadMessageBufferService {
         }
         return errorMessage.substring(0, 500);
     }
+    
+    /**
+     * 更新缓冲区大小指标
+     */
+    private void updateBufferMetrics() {
+        int pending = (int) countPendingMessages();
+        int failed = (int) countFailedMessages();
+        metrics.updateBufferSizes(pending, failed);
+    }
+
+
+    /**
+     * 清理已处理的缓冲消息
+     * <p>
+     * 删除所有状态为 PROCESSED 的缓冲消息。
+     * 注意：已处理的消息会通过 TTL 索引自动清理，此方法用于手动触发清理。
+     */
+    public void cleanupProcessedMessages() {
+        List<UnreadMessageBuffer> processedBuffers = bufferRepository
+            .findByStatus(BufferStatus.PROCESSED);
+
+        if (processedBuffers.isEmpty()) {
+            log.info("没有需要清理的已处理消息");
+            return;
+        }
+
+        log.info("清理已处理消息: 数量={}", processedBuffers.size());
+        bufferRepository.deleteAll(processedBuffers);
+
+        // 更新缓冲区大小指标
+        updateBufferMetrics();
+    }
+
 }

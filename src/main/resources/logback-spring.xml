@@ -82,6 +82,14 @@
         <appender-ref ref="FILE_ERROR"/>
     </logger>
     
+    <!-- 未读消息来源生成器日志配置 -->
+    <logger name="org.xlyo.cocomonyab.messagesource.unread" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE_INFO"/>
+        <appender-ref ref="FILE_WARN"/>
+        <appender-ref ref="FILE_ERROR"/>
+    </logger>
+    
     <!-- 根日志配置：应用程序日志保持 INFO 级别 -->
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

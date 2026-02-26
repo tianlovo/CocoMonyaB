@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.repository.ChannelRepository;
 import org.xlyo.cocomonyab.source.unread.config.UnreadMessageSourceConfig;
+import org.xlyo.cocomonyab.source.unread.metrics.UnreadMessageMetrics;
 import org.xlyo.cocomonyab.source.unread.model.UnreadMessageDetectionResult;
 import org.xlyo.cocomonyab.source.unread.model.UnreadMessageStatistics;
 
@@ -40,6 +41,7 @@ public class UnreadMessageSourceService {
     private final UnreadMessageFetchService fetchService;
     private final UnreadMessageBufferService bufferService;
     private final UnreadMessageSourceConfig config;
+    private final UnreadMessageMetrics metrics;
     
     /**
      * 并发检测标志，防止多个检测任务同时运行
@@ -83,7 +85,7 @@ public class UnreadMessageSourceService {
         }
         
         try {
-            return doDetectUnreadMessages();
+            return metrics.timeDetection(this::doDetectUnreadMessages);
         } finally {
             isDetecting.set(false);
         }
@@ -151,6 +153,9 @@ public class UnreadMessageSourceService {
         log.debug("处理频道: channelId={}, title={}", 
             channel.getChannelId(), channel.getChannelTitle());
         
+        // 记录扫描的频道
+        metrics.recordChannelScanned();
+        
         // 获取未读消息
         List<TdApi.Message> unreadMessages = fetchService.fetchUnreadMessages(
             channel.getChannelId()
@@ -164,6 +169,9 @@ public class UnreadMessageSourceService {
         
         log.info("频道发现 {} 条未读消息: channelId={}", 
             unreadMessages.size(), channel.getChannelId());
+        
+        // 记录检测到的消息数
+        metrics.recordMessagesDetected(unreadMessages.size());
         
         // 保存到缓冲区并处理
         bufferService.bufferAndProcessMessages(

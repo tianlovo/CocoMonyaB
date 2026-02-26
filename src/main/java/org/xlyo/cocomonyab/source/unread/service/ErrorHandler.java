@@ -2,7 +2,7 @@ package org.xlyo.cocomonyab.source.unread.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.drinkless.tdlib.TdApi;
+import it.tdlight.jni.TdApi;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.domain.entity.Channel;
 import org.xlyo.cocomonyab.domain.entity.UnreadMessageBuffer;

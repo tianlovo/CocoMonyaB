@@ -12,7 +12,13 @@
             style="width: 300px"
             @input="handleSearch"
           />
-          <el-button type="primary" :icon="Plus">
+          <el-button :icon="Download" @click="handleExport">
+            导出
+          </el-button>
+          <el-button :icon="Upload" @click="handleImportClick">
+            导入
+          </el-button>
+          <el-button type="primary" :icon="Plus" @click="handleCreate">
             新建作者
           </el-button>
         </div>
@@ -56,15 +62,85 @@
         </template>
       </DataTable>
     </div>
+
+    <!-- Author Dialog -->
+    <AuthorDialog
+      v-model:visible="dialogVisible"
+      :author="currentAuthor"
+      @success="handleDialogSuccess"
+    />
+
+    <!-- Hidden file input for import -->
+    <input
+      ref="fileInputRef"
+      type="file"
+      accept=".json"
+      style="display: none"
+      @change="handleFileChange"
+    />
+
+    <!-- Import Result Dialog -->
+    <el-dialog
+      v-model="importDialogVisible"
+      title="导入结果"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <div class="import-result">
+        <div class="result-summary">
+          <el-result
+            :icon="importResult.failureCount === 0 ? 'success' : 'warning'"
+            :title="importResult.failureCount === 0 ? '导入成功' : '导入完成（部分失败）'"
+          >
+            <template #sub-title>
+              <div class="result-stats">
+                <div class="stat-item success">
+                  <span class="stat-label">成功:</span>
+                  <span class="stat-value">{{ importResult.successCount }}</span>
+                </div>
+                <div class="stat-item failure">
+                  <span class="stat-label">失败:</span>
+                  <span class="stat-value">{{ importResult.failureCount }}</span>
+                </div>
+              </div>
+            </template>
+          </el-result>
+        </div>
+
+        <div v-if="importResult.errors.length > 0" class="error-details">
+          <h4>错误详情</h4>
+          <el-scrollbar max-height="300px">
+            <div
+              v-for="(error, index) in importResult.errors"
+              :key="index"
+              class="error-item"
+            >
+              <div class="error-header">
+                <el-tag type="danger" size="small">第 {{ error.index + 1 }} 条</el-tag>
+                <span class="error-name">{{ error.name }}</span>
+              </div>
+              <div class="error-message">{{ error.error }}</div>
+            </div>
+          </el-scrollbar>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button type="primary" @click="importDialogVisible = false">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Search, Plus } from '@element-plus/icons-vue'
+import { Search, Plus, Download, Upload } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import DataTable from '@/components/common/DataTable.vue'
 import type { TableColumn, TableAction } from '@/components/common/DataTable.vue'
+import AuthorDialog from '@/components/author/AuthorDialog.vue'
 import { useAuthorStore } from '@/stores/author'
 import { usePagination } from '@/composables/usePagination'
 import type { Author } from '@/types/models'
@@ -74,6 +150,19 @@ const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
 
 const searchKeyword = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+// Dialog state
+const dialogVisible = ref(false)
+const currentAuthor = ref<Author | null>(null)
+
+// Import/Export state
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const importDialogVisible = ref(false)
+const importResult = ref({
+  successCount: 0,
+  failureCount: 0,
+  errors: [] as Array<{ index: number; name: string; error: string }>
+})
 
 // Table columns configuration
 const columns: TableColumn[] = [
@@ -151,31 +240,215 @@ const handleAction = (actionName: string, row: Author) => {
   }
 }
 
-// Placeholder for edit action (will be implemented in task 8.5)
+// Handle create
+const handleCreate = () => {
+  currentAuthor.value = null
+  dialogVisible.value = true
+}
+
+// Handle edit
 const handleEdit = (author: Author) => {
-  ElMessage.info(`编辑功能将在后续任务中实现 (作者: ${author.name})`)
+  currentAuthor.value = author
+  dialogVisible.value = true
 }
 
 // Placeholder for delete action (will be implemented in task 8.7)
-const handleDelete = (author: Author) => {
-  ElMessageBox.confirm(
-    `删除功能将在后续任务中实现。确定要删除作者 "${author.name}" 吗？`,
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+const handleDelete = async (author: Author) => {
+  try {
+    // First confirmation dialog
+    await ElMessageBox.confirm(
+      `确定要删除作者 "${author.name}" 吗？此操作不可撤销。`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    // Attempt to delete
+    await authorStore.deleteAuthor(author.id, false)
+    ElMessage.success('删除成功')
+    loadAuthors()
+  } catch (error: any) {
+    // Check if it's a reference error (code -60004)
+    if (error?.code === -60004) {
+      handleReferenceError(author, error)
+    } else if (error !== 'cancel') {
+      // Other errors are already handled by the interceptor
+      // Only log if it's not a user cancellation
+      console.error('Delete failed:', error)
     }
-  ).then(() => {
-    ElMessage.info('删除功能将在后续任务中实现')
-  }).catch(() => {
-    // User cancelled
-  })
+  }
+}
+
+// Handle reference error - show details and offer force delete
+const handleReferenceError = async (author: Author, error: any) => {
+  const data = error.data || {}
+  const referencedByCharacters = data.referencedByCharacters || []
+  const referencedByConfigs = data.referencedByConfigs || []
+
+  let message = `无法删除作者 "${author.name}"，该作者被以下内容引用：\n\n`
+  
+  if (referencedByCharacters.length > 0) {
+    message += `• 角色: ${referencedByCharacters.length} 个\n`
+  }
+  
+  if (referencedByConfigs.length > 0) {
+    message += `• 标签过滤配置: ${referencedByConfigs.length} 个\n`
+  }
+  
+  message += '\n是否强制删除？（将自动清理所有引用关系）'
+
+  try {
+    await ElMessageBox.confirm(message, '引用关系检查', {
+      confirmButtonText: '强制删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+      dangerouslyUseHTMLString: false
+    })
+
+    // User confirmed force delete
+    try {
+      await authorStore.deleteAuthor(author.id, true)
+      ElMessage.success('强制删除成功')
+      loadAuthors()
+    } catch (forceError) {
+      ElMessage.error('强制删除失败')
+      console.error('Force delete failed:', forceError)
+    }
+  } catch {
+    // User cancelled force delete
+  }
 }
 
 // Handle empty action (create new author)
 const handleEmptyAction = () => {
-  ElMessage.info('新建作者功能将在后续任务中实现')
+  handleCreate()
+}
+
+// Handle dialog success (reload list)
+const handleDialogSuccess = () => {
+  loadAuthors()
+}
+
+// Handle export
+const handleExport = async () => {
+  try {
+    const data = await authorStore.exportAuthors()
+    
+    // Create JSON blob
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    
+    // Create download link
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `authors_export_${new Date().getTime()}.json`
+    
+    // Trigger download
+    document.body.appendChild(link)
+    link.click()
+    
+    // Cleanup
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    ElMessage.success('导出成功')
+  } catch (error) {
+    ElMessage.error('导出失败')
+    console.error('Export failed:', error)
+  }
+}
+
+// Handle import click (trigger file input)
+const handleImportClick = () => {
+  fileInputRef.value?.click()
+}
+
+// Handle file change (file selected)
+const handleFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  // Reset file input
+  target.value = ''
+  
+  try {
+    // Read file content
+    const content = await readFileAsText(file)
+    
+    // Validate JSON format
+    let data: any
+    try {
+      data = JSON.parse(content)
+    } catch (parseError) {
+      ElMessage.error('JSON 格式无效，请检查文件格式')
+      return
+    }
+    
+    // Validate data is an array
+    if (!Array.isArray(data)) {
+      ElMessage.error('JSON 文件格式错误：期望一个数组')
+      return
+    }
+    
+    // Validate each item has required fields
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i]
+      if (!item.name || typeof item.name !== 'string') {
+        ElMessage.error(`JSON 文件格式错误：第 ${i + 1} 条记录缺少有效的 name 字段`)
+        return
+      }
+      if (!item.aliases || !Array.isArray(item.aliases)) {
+        ElMessage.error(`JSON 文件格式错误：第 ${i + 1} 条记录缺少有效的 aliases 字段`)
+        return
+      }
+    }
+    
+    // Show loading message
+    const loadingMessage = ElMessage({
+      message: '正在导入，请稍候...',
+      type: 'info',
+      duration: 0
+    })
+    
+    try {
+      // Call import API
+      const result = await authorStore.importAuthors(data)
+      
+      // Close loading message
+      loadingMessage.close()
+      
+      // Show result dialog
+      importResult.value = result
+      importDialogVisible.value = true
+      
+      // Reload list
+      loadAuthors()
+    } catch (error) {
+      loadingMessage.close()
+      // Error already handled by interceptor
+      console.error('Import failed:', error)
+    }
+  } catch (error) {
+    ElMessage.error('读取文件失败')
+    console.error('File read failed:', error)
+  }
+}
+
+// Utility function to read file as text
+const readFileAsText = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      resolve(e.target?.result as string)
+    }
+    reader.onerror = reject
+    reader.readAsText(file)
+  })
 }
 
 // Initialize
@@ -253,6 +526,81 @@ const formatDateTime = (dateTimeStr: string) => {
   vertical-align: middle;
 }
 
+/* Import result dialog styles */
+.import-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.result-summary {
+  text-align: center;
+}
+
+.result-stats {
+  display: flex;
+  justify-content: center;
+  gap: var(--spacing-xl);
+  margin-top: var(--spacing-md);
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: var(--font-size-lg);
+}
+
+.stat-item.success .stat-value {
+  color: var(--el-color-success);
+  font-weight: 600;
+}
+
+.stat-item.failure .stat-value {
+  color: var(--el-color-danger);
+  font-weight: 600;
+}
+
+.stat-label {
+  color: var(--fluent-text-secondary);
+}
+
+.error-details {
+  border-top: 1px solid var(--fluent-border-color);
+  padding-top: var(--spacing-md);
+}
+
+.error-details h4 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  color: var(--fluent-text-primary);
+}
+
+.error-item {
+  padding: var(--spacing-md);
+  background: var(--fluent-bg-secondary);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.error-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.error-name {
+  font-weight: 500;
+  color: var(--fluent-text-primary);
+}
+
+.error-message {
+  color: var(--fluent-text-secondary);
+  font-size: var(--font-size-sm);
+  padding-left: calc(var(--spacing-sm) + 60px);
+}
+
 /* Responsive adjustments */
 @media (max-width: 767px) {
   .author-view {
@@ -278,6 +626,11 @@ const formatDateTime = (dateTimeStr: string) => {
   
   .view-content {
     padding: var(--spacing-md);
+  }
+  
+  .result-stats {
+    flex-direction: column;
+    gap: var(--spacing-sm);
   }
 }
 </style>

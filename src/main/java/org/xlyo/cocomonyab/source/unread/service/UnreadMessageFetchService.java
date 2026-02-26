@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.repository.ProcessedMessageRepository;
 import org.xlyo.cocomonyab.source.unread.config.UnreadMessageSourceConfig;
 import org.xlyo.cocomonyab.source.unread.exception.UnreadMessageFetchException;
+import org.xlyo.cocomonyab.source.unread.metrics.UnreadMessageMetrics;
 import org.xlyo.cocomonyab.telegram.TelegramClientManager;
 
 import java.util.*;
@@ -57,6 +58,7 @@ public class UnreadMessageFetchService {
     private final ProcessedMessageRepository processedMessageRepository;
     private final UnreadMessageSourceConfig config;
     private final RateLimiter rateLimiter;
+    private final UnreadMessageMetrics metrics;
     
     /**
      * 获取频道的未读消息
@@ -83,6 +85,9 @@ public class UnreadMessageFetchService {
                 // 应用速率限制
                 waitForRateLimit();
                 
+                // 记录 API 调用
+                metrics.recordApiCall();
+                
                 // 调用 getChatHistory API
                 TdApi.GetChatHistory request = new TdApi.GetChatHistory(
                     chatId,
@@ -92,7 +97,7 @@ public class UnreadMessageFetchService {
                     false // onlyLocal
                 );
                 
-                TdApi.Messages messages = sendRequest(request);
+                TdApi.Messages messages = metrics.timeApiCall(() -> sendRequest(request));
                 
                 if (messages.messages.length == 0) {
                     break; // 没有更多消息
@@ -125,6 +130,7 @@ public class UnreadMessageFetchService {
             } catch (UnreadMessageFetchException e) {
                 // 检查是否为速率限制或临时错误
                 if (isRateLimitError(e)) {
+                    metrics.recordRateLimitError();
                     retryCount = handleRateLimitError(retryCount);
                 } else if (isTemporaryError(e)) {
                     retryCount = handleTemporaryError(e, retryCount);
@@ -163,6 +169,9 @@ public class UnreadMessageFetchService {
             // 应用速率限制
             waitForRateLimit();
             
+            // 记录 API 调用
+            metrics.recordApiCall();
+            
             // 获取最新的一条消息
             TdApi.GetChatHistory request = new TdApi.GetChatHistory(
                 chatId,
@@ -172,7 +181,7 @@ public class UnreadMessageFetchService {
                 false // onlyLocal
             );
             
-            TdApi.Messages messages = sendRequest(request);
+            TdApi.Messages messages = metrics.timeApiCall(() -> sendRequest(request));
             
             if (messages.messages.length > 0) {
                 return messages.messages[0].id;

@@ -2,6 +2,19 @@ import axios, { AxiosError } from 'axios'
 import { ElMessage } from 'element-plus'
 import type { ApiResponse } from '@/types/api'
 
+// Custom API Error class to preserve error details
+export class ApiError extends Error {
+  code: number
+  data: any
+
+  constructor(code: number, message: string, data?: any) {
+    super(message)
+    this.code = code
+    this.data = data
+    this.name = 'ApiError'
+  }
+}
+
 const request = axios.create({
   baseURL: 'http://127.0.0.1:10721',
   timeout: 10000
@@ -28,9 +41,12 @@ request.interceptors.response.use(
       return data
     }
 
-    // Error response
-    ElMessage.error(msg || '请求失败')
-    return Promise.reject(new Error(msg || '请求失败'))
+    // Error response - preserve error details for special handling
+    // Don't show message for reference errors (-60004) as they need custom handling
+    if (code !== -60004) {
+      ElMessage.error(msg || '请求失败')
+    }
+    return Promise.reject(new ApiError(code, msg || '请求失败', data))
   },
   (error: AxiosError) => {
     // Network error
