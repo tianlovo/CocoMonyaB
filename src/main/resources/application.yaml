@@ -18,11 +18,6 @@ spring:
       # 远程 MongoDB 连接 URI（仅在 remote 模式下使用）
       # uri: mongodb://localhost:27017/cocomonya
 
-  security: # 关闭默认的HTTP Basic认证，因为我们只做WebSocket token认证
-    user:
-      name: none
-      password: none
-
 server:
   port: 10721
 
@@ -48,14 +43,14 @@ app:
   # - config 目录：固定为 "data/config"
   data:
     # 各子目录相对路径（可选，默认值如下）
-     database-directory: "db"
-     mongo-db-directory: "db/mongo"
-     session-directory: "session"
-     telegram-session-directory: "session/td"
-     bin-directory: "bin"
-     mongo-bin-directory: "bin/mongo"
-     tmp-directory: "tmp"
-     logs-directory: "logs"
+    database-directory: "db"
+    mongo-db-directory: "db/mongo"
+    session-directory: "session"
+    telegram-session-directory: "session/td"
+    bin-directory: "bin"
+    mongo-bin-directory: "bin/mongo"
+    tmp-directory: "tmp"
+    logs-directory: "logs"
 
 # Telegram 配置
 telegram:
@@ -74,17 +69,6 @@ env:
   tg-phone: ${TG_PHONE}
   # 两步验证密码（可选，如果未启用 2FA 则为空）
   tg-2fa: ${TG_2FA:}
-
-# Websocket配置
-websocket:
-  trusted-token: ${WS_TRUSTED_TOKEN}
-  connect-prefix: /ws
-  app-dst-prefix: /app
-  broker-prefix: /topic
-  user-dst-prefix: /user
-  heartbeat:
-    incoming: 10000
-    outgoing: 10000
 
 # 并发安全性配置
 concurrent-safety:
@@ -160,17 +144,6 @@ plugin:
   console-printer:
     # 是否启用插件
     enabled: false
-  
-  # WebSocket消息广播插件配置
-  websocket-broadcast:
-    # 是否启用插件
-    enabled: false
-    # 消息广播topic前缀
-    topic-prefix: /topic/channel/real
-    # 监控事件topic前缀
-    monitoring-topic-prefix: /topic/channel/monitoring
-    # 是否启用异步广播
-    async-broadcast: false
   
   # 基于标签的消息转发插件配置
   tag-based-forwarding:

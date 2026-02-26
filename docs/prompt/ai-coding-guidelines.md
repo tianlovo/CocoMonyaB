@@ -862,10 +862,10 @@ public String redirect() {
 }
 ```
 
-### 9.3 SSE/WebSocket
+### 9.3 SSE
 
 ```java
-// SSE 和 WebSocket 不使用统一响应格式
+// SSE 不使用统一响应格式
 @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
 public Flux<ServerSentEvent<String>> streamEvents() {
     return eventService.getEventStream();

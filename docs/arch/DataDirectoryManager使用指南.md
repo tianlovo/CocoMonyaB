@@ -132,7 +132,6 @@ app:
      - API_HASH: Telegram API Hash
      - TG_PHONE: 登录手机号（格式：+8613800138000）
      - TG_2FA: 两步验证密码（如果启用了 2FA）
-     - WS_TRUSTED_TOKEN: WebSocket 认证令牌
   3. 保存文件后重新启动应用
 
 下次启动时，.env 文件将自动移动到 data/config/ 目录

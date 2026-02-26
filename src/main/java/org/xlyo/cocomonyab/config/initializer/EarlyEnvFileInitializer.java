@@ -96,7 +96,6 @@ public class EarlyEnvFileInitializer {
             System.err.println("     - API_HASH: Telegram API Hash");
             System.err.println("     - TG_PHONE: 登录手机号（格式：+8613800138000）");
             System.err.println("     - TG_2FA: 两步验证密码（如果启用了 2FA）");
-            System.err.println("     - WS_TRUSTED_TOKEN: WebSocket 认证令牌");
             System.err.println("  3. 保存文件后重新启动应用");
             System.err.println();
             System.err.println("下次启动时，.env 文件将自动移动到 data/config/ 目录");
