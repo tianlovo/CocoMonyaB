@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    :title="isEdit ? '编辑作者' : '新建作者'"
+    :title="isEdit ? '编辑角色' : '新建角色'"
     width="600px"
     :close-on-click-modal="false"
     @close="handleClose"
@@ -17,7 +17,7 @@
       <el-form-item label="名称" prop="name">
         <el-input
           v-model="formData.name"
-          placeholder="请输入作者名称"
+          placeholder="请输入角色名称"
           maxlength="100"
           show-word-limit
         />
@@ -27,7 +27,7 @@
       <el-form-item label="别名" prop="aliases">
         <div class="dynamic-list">
           <div
-            v-for="(alias, index) in formData.aliases"
+            v-for="(_alias, index) in formData.aliases"
             :key="index"
             class="dynamic-list-item"
           >
@@ -55,48 +55,39 @@
         </div>
       </el-form-item>
 
-      <!-- 个性签名 -->
-      <el-form-item label="个性签名" prop="signature">
-        <el-input
-          v-model="formData.signature"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入个性签名"
-          maxlength="500"
-          show-word-limit
-        />
+      <!-- 所属原作 -->
+      <el-form-item label="所属原作" prop="workId">
+        <el-select
+          v-model="formData.workId"
+          placeholder="请选择所属原作"
+          filterable
+          clearable
+          style="width: 100%"
+        >
+          <el-option
+            v-for="work in workStore.works"
+            :key="work.id"
+            :label="work.name"
+            :value="work.id"
+          >
+            <div class="work-option">
+              <span class="work-name">{{ work.name }}</span>
+              <span v-if="work.aliases.length > 0" class="work-aliases">
+                ({{ work.aliases.join(', ') }})
+              </span>
+            </div>
+          </el-option>
+        </el-select>
       </el-form-item>
 
-      <!-- 网址列表 -->
-      <el-form-item label="网址" prop="urls">
-        <div class="dynamic-list">
-          <div
-            v-for="(url, index) in formData.urls"
-            :key="index"
-            class="dynamic-list-item"
-          >
-            <el-input
-              v-model="formData.urls[index]"
-              placeholder="请输入网址"
-              maxlength="500"
-              show-word-limit
-            />
-            <el-button
-              type="danger"
-              :icon="Delete"
-              circle
-              @click="removeUrl(index)"
-            />
-          </div>
-          <el-button
-            type="primary"
-            :icon="Plus"
-            plain
-            @click="addUrl"
-          >
-            添加网址
-          </el-button>
-        </div>
+      <!-- 种族 -->
+      <el-form-item label="种族" prop="species">
+        <el-input
+          v-model="formData.species"
+          placeholder="请输入种族"
+          maxlength="100"
+          show-word-limit
+        />
       </el-form-item>
 
       <!-- 头像 -->
@@ -163,16 +154,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch, computed } from 'vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type UploadFile } from 'element-plus'
 import { Plus, Delete, Upload } from '@element-plus/icons-vue'
-import { authorApi } from '@/api/author'
-import type { Author, AuthorCreateDTO, AuthorUpdateDTO } from '@/types/models'
+import { characterApi } from '@/api/character'
+import { useWorkStore } from '@/stores/work'
+import type { Character, CharacterCreateDTO, CharacterUpdateDTO } from '@/types/models'
 import {
-  authorNameRules,
+  characterNameRules,
   aliasListRules,
-  signatureRules,
-  urlListRules,
+  speciesRules,
   remarkRules
 } from '@/utils/validators'
 import { ApiError } from '@/utils/request'
@@ -180,7 +171,7 @@ import { handleConflictError, showSuccessMessage } from '@/utils/errorHandler'
 
 interface Props {
   visible: boolean
-  author?: Author | null
+  character?: Character | null
 }
 
 interface Emits {
@@ -190,16 +181,17 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   visible: false,
-  author: null
+  character: null
 })
 
 const emit = defineEmits<Emits>()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const workStore = useWorkStore()
 
 // Computed property to determine if in edit mode
-const isEdit = computed(() => !!props.author)
+const isEdit = computed(() => !!props.character)
 
 // Dialog visibility (two-way binding)
 const dialogVisible = computed({
@@ -212,8 +204,8 @@ interface FormData {
   id?: string
   name: string
   aliases: string[]
-  signature: string | null
-  urls: string[]
+  workId: string | null
+  species: string
   avatarBase64: string | null
   remark: string | null
 }
@@ -221,19 +213,30 @@ interface FormData {
 const formData = reactive<FormData>({
   name: '',
   aliases: [],
-  signature: null,
-  urls: [],
+  workId: null,
+  species: '',
   avatarBase64: null,
   remark: null
 })
 
 // Form validation rules
 const rules = {
-  name: authorNameRules,
+  name: characterNameRules,
   aliases: aliasListRules,
-  signature: signatureRules,
-  urls: urlListRules,
+  species: speciesRules,
   remark: remarkRules
+}
+
+// Load works for selector
+const loadWorks = async () => {
+  try {
+    await workStore.fetchPage({
+      current: 1,
+      size: 1000 // Load all works for selector
+    })
+  } catch (error) {
+    console.error('Failed to load works:', error)
+  }
 }
 
 // Reset form
@@ -241,25 +244,25 @@ const resetForm = () => {
   formData.id = undefined
   formData.name = ''
   formData.aliases = []
-  formData.signature = null
-  formData.urls = []
+  formData.workId = null
+  formData.species = ''
   formData.avatarBase64 = null
   formData.remark = null
   formRef.value?.clearValidate()
 }
 
-// Watch for author prop changes to populate form
+// Watch for character prop changes to populate form
 watch(
-  () => props.author,
-  (author) => {
-    if (author) {
-      formData.id = author.id
-      formData.name = author.name
-      formData.aliases = [...author.aliases]
-      formData.signature = author.signature
-      formData.urls = [...author.urls]
-      formData.avatarBase64 = author.avatarBase64
-      formData.remark = author.remark
+  () => props.character,
+  (character) => {
+    if (character) {
+      formData.id = character.id
+      formData.name = character.name
+      formData.aliases = [...character.aliases]
+      formData.workId = character.workId
+      formData.species = character.species
+      formData.avatarBase64 = character.avatarBase64
+      formData.remark = character.remark
     } else {
       resetForm()
     }
@@ -275,16 +278,6 @@ const addAlias = () => {
 // Remove alias
 const removeAlias = (index: number) => {
   formData.aliases.splice(index, 1)
-}
-
-// Add URL
-const addUrl = () => {
-  formData.urls.push('')
-}
-
-// Remove URL
-const removeUrl = (index: number) => {
-  formData.urls.splice(index, 1)
 }
 
 // Handle avatar upload
@@ -319,24 +312,24 @@ const handleSubmit = async () => {
 
     loading.value = true
 
-    // Filter out empty aliases and URLs
-    const submitData: AuthorCreateDTO | AuthorUpdateDTO = {
+    // Filter out empty aliases
+    const submitData: CharacterCreateDTO | CharacterUpdateDTO = {
       name: formData.name,
       aliases: formData.aliases.filter(alias => alias.trim() !== ''),
-      signature: formData.signature || null,
-      urls: formData.urls.filter(url => url.trim() !== ''),
+      workId: formData.workId || null,
+      species: formData.species,
       avatarBase64: formData.avatarBase64 || null,
       remark: formData.remark || null
     }
 
     if (isEdit.value && formData.id) {
-      // Update existing author
-      await authorApi.update(formData.id, submitData)
-      showSuccessMessage('作者更新成功')
+      // Update existing character
+      await characterApi.update(formData.id, submitData)
+      showSuccessMessage('角色更新成功')
     } else {
-      // Create new author
-      await authorApi.create(submitData as AuthorCreateDTO)
-      showSuccessMessage('作者创建成功')
+      // Create new character
+      await characterApi.create(submitData as CharacterCreateDTO)
+      showSuccessMessage('角色创建成功')
     }
 
     emit('success')
@@ -345,6 +338,13 @@ const handleSubmit = async () => {
     // Handle uniqueness conflict error
     if (error instanceof ApiError && error.code === -60003) {
       handleConflictError(error)
+    }
+    // Handle work not found error
+    else if (error instanceof ApiError && error.code === -60002 && error.message?.includes('原作')) {
+      ElMessage.error({
+        message: '所属原作不存在，请重新选择',
+        duration: 5000
+      })
     } else {
       // Error message already shown by axios interceptor
       console.error('Submit failed:', error)
@@ -354,15 +354,17 @@ const handleSubmit = async () => {
   }
 }
 
-// Get entity type name in Chinese
-const getEntityTypeName = (entityType: string): string => {
-  const typeMap: Record<string, string> = {
-    'AUTHOR': '作者',
-    'WORK': '原作',
-    'CHARACTER': '角色'
+    ElMessage.error({
+      message: message || '名称或别名已存在',
+      duration: 5000
+    })
   }
-  return typeMap[entityType] || '实体'
 }
+
+// Initialize
+onMounted(() => {
+  loadWorks()
+})
 </script>
 
 <style scoped>
@@ -381,6 +383,21 @@ const getEntityTypeName = (entityType: string): string => {
 
 .dynamic-list-item .el-input {
   flex: 1;
+}
+
+.work-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.work-name {
+  font-weight: 500;
+}
+
+.work-aliases {
+  color: var(--fluent-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .avatar-upload {

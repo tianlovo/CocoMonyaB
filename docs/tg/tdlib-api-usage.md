@@ -83,7 +83,59 @@ client.send(request, result -> {
 
 使用 `ViewMessages` API 来通知 TDLib 用户正在查看消息，这会自动将消息标记为已读。
 
-### API 类
+### ⚠️ 重要：频道消息的正确标记方式
+
+**对于频道（channels）和超级群组（supergroups），必须先调用 `OpenChat` 打开聊天，然后再调用 `ViewMessages` 标记消息为已读。**
+
+这是因为：
+1. TDLib 的许多活动（包括已读状态同步）依赖于聊天是否被打开
+2. 如果不先打开聊天，即使 `forceRead=true`，最后一条消息可能无法在客户端正确显示为已读
+3. 根据 TDLib 官方文档："in supergroups and channels all updates are received only for opened chats"
+
+### 正确的使用流程
+
+```java
+// 步骤 1: 先打开聊天
+TdApi.OpenChat openChat = new TdApi.OpenChat(chatId);
+
+client.send(openChat).thenCompose(openResult -> {
+    // 步骤 2: 聊天打开后，标记消息为已读
+    TdApi.ViewMessages viewMessages = new TdApi.ViewMessages(
+        chatId,
+        messageIds,
+        null,  // 现在聊天已打开，可以安全使用 null
+        true   // 保持 forceRead=true 作为额外保险
+    );
+    return client.send(viewMessages);
+}).whenComplete((result, error) -> {
+    if (error != null) {
+        log.error("标记消息为已读失败", error);
+    } else {
+        log.info("消息已成功标记为已读");
+    }
+});
+```
+
+### OpenChat API
+
+```java
+TdApi.OpenChat
+```
+
+#### 构造方法
+
+```java
+public OpenChat(long chatId)  // 聊天ID
+```
+
+#### 说明
+
+- 通知 TDLib 用户已打开该聊天
+- 对于频道和超级群组，这是接收所有更新的必要条件
+- 重复调用是安全的，TDLib 会处理好状态管理
+- 这是一个轻量级操作，不会有明显的性能影响
+
+### ViewMessages API
 
 ```java
 TdApi.ViewMessages

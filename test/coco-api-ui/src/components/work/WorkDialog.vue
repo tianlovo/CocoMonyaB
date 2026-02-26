@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
-    :title="isEdit ? '编辑作者' : '新建作者'"
+    :title="isEdit ? '编辑原作' : '新建原作'"
     width="600px"
     :close-on-click-modal="false"
     @close="handleClose"
@@ -17,7 +17,7 @@
       <el-form-item label="名称" prop="name">
         <el-input
           v-model="formData.name"
-          placeholder="请输入作者名称"
+          placeholder="请输入原作名称"
           maxlength="100"
           show-word-limit
         />
@@ -53,18 +53,6 @@
             添加别名
           </el-button>
         </div>
-      </el-form-item>
-
-      <!-- 个性签名 -->
-      <el-form-item label="个性签名" prop="signature">
-        <el-input
-          v-model="formData.signature"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入个性签名"
-          maxlength="500"
-          show-word-limit
-        />
       </el-form-item>
 
       <!-- 网址列表 -->
@@ -166,12 +154,11 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { ElMessage, type FormInstance, type UploadFile } from 'element-plus'
 import { Plus, Delete, Upload } from '@element-plus/icons-vue'
-import { authorApi } from '@/api/author'
-import type { Author, AuthorCreateDTO, AuthorUpdateDTO } from '@/types/models'
+import { workApi } from '@/api/work'
+import type { Work, WorkCreateDTO, WorkUpdateDTO } from '@/types/models'
 import {
-  authorNameRules,
+  workNameRules,
   aliasListRules,
-  signatureRules,
   urlListRules,
   remarkRules
 } from '@/utils/validators'
@@ -180,7 +167,7 @@ import { handleConflictError, showSuccessMessage } from '@/utils/errorHandler'
 
 interface Props {
   visible: boolean
-  author?: Author | null
+  work?: Work | null
 }
 
 interface Emits {
@@ -190,7 +177,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   visible: false,
-  author: null
+  work: null
 })
 
 const emit = defineEmits<Emits>()
@@ -199,7 +186,7 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 
 // Computed property to determine if in edit mode
-const isEdit = computed(() => !!props.author)
+const isEdit = computed(() => !!props.work)
 
 // Dialog visibility (two-way binding)
 const dialogVisible = computed({
@@ -212,7 +199,6 @@ interface FormData {
   id?: string
   name: string
   aliases: string[]
-  signature: string | null
   urls: string[]
   avatarBase64: string | null
   remark: string | null
@@ -221,7 +207,6 @@ interface FormData {
 const formData = reactive<FormData>({
   name: '',
   aliases: [],
-  signature: null,
   urls: [],
   avatarBase64: null,
   remark: null
@@ -229,9 +214,8 @@ const formData = reactive<FormData>({
 
 // Form validation rules
 const rules = {
-  name: authorNameRules,
+  name: workNameRules,
   aliases: aliasListRules,
-  signature: signatureRules,
   urls: urlListRules,
   remark: remarkRules
 }
@@ -241,25 +225,23 @@ const resetForm = () => {
   formData.id = undefined
   formData.name = ''
   formData.aliases = []
-  formData.signature = null
   formData.urls = []
   formData.avatarBase64 = null
   formData.remark = null
   formRef.value?.clearValidate()
 }
 
-// Watch for author prop changes to populate form
+// Watch for work prop changes to populate form
 watch(
-  () => props.author,
-  (author) => {
-    if (author) {
-      formData.id = author.id
-      formData.name = author.name
-      formData.aliases = [...author.aliases]
-      formData.signature = author.signature
-      formData.urls = [...author.urls]
-      formData.avatarBase64 = author.avatarBase64
-      formData.remark = author.remark
+  () => props.work,
+  (work) => {
+    if (work) {
+      formData.id = work.id
+      formData.name = work.name
+      formData.aliases = [...work.aliases]
+      formData.urls = [...work.urls]
+      formData.avatarBase64 = work.avatarBase64
+      formData.remark = work.remark
     } else {
       resetForm()
     }
@@ -320,23 +302,22 @@ const handleSubmit = async () => {
     loading.value = true
 
     // Filter out empty aliases and URLs
-    const submitData: AuthorCreateDTO | AuthorUpdateDTO = {
+    const submitData: WorkCreateDTO | WorkUpdateDTO = {
       name: formData.name,
       aliases: formData.aliases.filter(alias => alias.trim() !== ''),
-      signature: formData.signature || null,
       urls: formData.urls.filter(url => url.trim() !== ''),
       avatarBase64: formData.avatarBase64 || null,
       remark: formData.remark || null
     }
 
     if (isEdit.value && formData.id) {
-      // Update existing author
-      await authorApi.update(formData.id, submitData)
-      showSuccessMessage('作者更新成功')
+      // Update existing work
+      await workApi.update(formData.id, submitData)
+      showSuccessMessage('原作更新成功')
     } else {
-      // Create new author
-      await authorApi.create(submitData as AuthorCreateDTO)
-      showSuccessMessage('作者创建成功')
+      // Create new work
+      await workApi.create(submitData as WorkCreateDTO)
+      showSuccessMessage('原作创建成功')
     }
 
     emit('success')
@@ -354,15 +335,6 @@ const handleSubmit = async () => {
   }
 }
 
-// Get entity type name in Chinese
-const getEntityTypeName = (entityType: string): string => {
-  const typeMap: Record<string, string> = {
-    'AUTHOR': '作者',
-    'WORK': '原作',
-    'CHARACTER': '角色'
-  }
-  return typeMap[entityType] || '实体'
-}
 </script>
 
 <style scoped>

@@ -52,13 +52,18 @@ public class UnreadMessageBufferService {
         String channelUsername,
         String channelTitle
     ) {
+        log.info("📥 [未读消息] 开始缓冲消息: chatId={}, channel={}, 消息数量={}", 
+            chatId, channelTitle != null ? channelTitle : "未知频道", messages.size());
+        
         // 保存到缓冲区
         List<UnreadMessageBuffer> buffers = saveToBuffer(chatId, messages);
         
-        log.info("已保存 {} 条消息到缓冲区: chatId={}", buffers.size(), chatId);
+        log.info("💾 [未读消息] 已保存到缓冲区: chatId={}, 保存数量={}", chatId, buffers.size());
         
         // 分批处理
         processBatches(buffers, channelUsername, channelTitle);
+        
+        log.info("✅ [未读消息] 消息处理完成: chatId={}, 处理数量={}", chatId, buffers.size());
     }
     
     /**
@@ -233,40 +238,12 @@ public class UnreadMessageBufferService {
     }
     
     /**
-     * 重试失败的消息
-     */
-    public void retryFailedMessages() {
-        List<UnreadMessageBuffer> failedBuffers = bufferRepository
-            .findByStatus(BufferStatus.FAILED);
-        
-        log.info("重试失败的消息: 数量={}", failedBuffers.size());
-        
-        for (UnreadMessageBuffer buffer : failedBuffers) {
-            buffer.setStatus(BufferStatus.PENDING);
-            buffer.setErrorMessage(null);
-            buffer.setUpdateTime(LocalDateTime.now());
-            bufferRepository.save(buffer);
-        }
-        
-        processPendingMessages();
-    }
-    
-    /**
      * 统计待处理消息数量
      * 
      * @return 待处理消息数量
      */
     public long countPendingMessages() {
         return bufferRepository.countByStatus(BufferStatus.PENDING);
-    }
-    
-    /**
-     * 统计已处理消息数量
-     * 
-     * @return 已处理消息数量
-     */
-    public long countProcessedMessages() {
-        return bufferRepository.countByStatus(BufferStatus.PROCESSED);
     }
     
     /**
@@ -345,28 +322,4 @@ public class UnreadMessageBufferService {
         int failed = (int) countFailedMessages();
         metrics.updateBufferSizes(pending, failed);
     }
-
-
-    /**
-     * 清理已处理的缓冲消息
-     * <p>
-     * 删除所有状态为 PROCESSED 的缓冲消息。
-     * 注意：已处理的消息会通过 TTL 索引自动清理，此方法用于手动触发清理。
-     */
-    public void cleanupProcessedMessages() {
-        List<UnreadMessageBuffer> processedBuffers = bufferRepository
-            .findByStatus(BufferStatus.PROCESSED);
-
-        if (processedBuffers.isEmpty()) {
-            log.info("没有需要清理的已处理消息");
-            return;
-        }
-
-        log.info("清理已处理消息: 数量={}", processedBuffers.size());
-        bufferRepository.deleteAll(processedBuffers);
-
-        // 更新缓冲区大小指标
-        updateBufferMetrics();
-    }
-
 }

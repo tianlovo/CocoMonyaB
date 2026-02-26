@@ -280,7 +280,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
         String messageType = entity.getType().name();
         
         try {
-            log.debug("[TagForward] 开始处理消息: chatId={}, messageId={}, type={}", 
+            log.info("🏷️ [标签转发] 开始处理消息: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType);
             
             // 阶段 0: 检查消息是否已处理
@@ -289,12 +289,12 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             
             if (existingRecord.isPresent()) {
                 ProcessedMessage record = existingRecord.get();
-                log.debug("[TagForward] 消息已处理过: chatId={}, messageId={}, isRead={}, isMatched={}", 
+                log.info("ℹ️ [标签转发] 消息已处理过: chatId={}, messageId={}, isRead={}, isMatched={}", 
                     chatId, messageId, record.getIsRead(), record.getIsMatched());
                 
                 // 如果消息存在但未读，标记为已读
                 if (Boolean.FALSE.equals(record.getIsRead())) {
-                    log.info("[TagForward] 消息未读，标记为已读: chatId={}, messageId={}", 
+                    log.info("📖 [标签转发] 消息未读，标记为已读: chatId={}, messageId={}", 
                         chatId, messageId);
                     
                     try {
@@ -306,10 +306,10 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                         record.setUpdateTime(LocalDateTime.now());
                         processedMessageRepository.save(record);
                         
-                        log.debug("[TagForward] 已更新消息已读状态: chatId={}, messageId={}", 
+                        log.info("✅ [标签转发] 已更新消息已读状态: chatId={}, messageId={}", 
                             chatId, messageId);
                     } catch (Exception e) {
-                        log.warn("[TagForward] 标记消息为已读失败: chatId={}, messageId={}", 
+                        log.warn("⚠️ [标签转发] 标记消息为已读失败: chatId={}, messageId={}", 
                             chatId, messageId, e);
                     }
                 }
@@ -320,18 +320,20 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             
             // 阶段 1: 标记消息为已读（新消息）
             try {
+                log.info("📖 [标签转发] 标记新消息为已读: chatId={}, messageId={}", 
+                    chatId, messageId);
                 readMarkingService.markAsRead(chatId, messageId);
-                log.debug("[TagForward] 消息已提交标记为已读: chatId={}, messageId={}", 
+                log.debug("✅ [标签转发] 消息已提交标记为已读: chatId={}, messageId={}", 
                     chatId, messageId);
             } catch (Exception e) {
                 // 标记失败不影响后续处理
-                log.warn("[TagForward] 标记消息为已读失败: chatId={}, messageId={}", 
+                log.warn("⚠️ [标签转发] 标记消息为已读失败: chatId={}, messageId={}", 
                     chatId, messageId, e);
             }
             
             // 阶段 2: 检查标签配置是否已加载
             if (!tagMatcher.isConfigurationLoaded()) {
-                log.warn("[TagForward] 标签配置尚未加载，跳过消息处理: chatId={}, messageId={}", 
+                log.warn("⚠️ [标签转发] 标签配置尚未加载，跳过消息处理: chatId={}, messageId={}", 
                         chatId, messageId);
                 
                 // 记录为已处理但未匹配
@@ -343,7 +345,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             String textContent = extractTextContent(entity);
             
             if (textContent == null || textContent.isEmpty()) {
-                log.debug("[TagForward] 消息无文本内容，跳过: chatId={}, messageId={}, type={}", 
+                log.info("ℹ️ [标签转发] 消息无文本内容，跳过: chatId={}, messageId={}, type={}", 
                         chatId, messageId, messageType);
                 
                 // 记录为已处理但未匹配
@@ -351,23 +353,23 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                 return PluginResult.CONTINUE;
             }
             
-            log.debug("[TagForward] 提取文本内容成功: chatId={}, messageId={}, type={}, textLength={}",
+            log.info("📝 [标签转发] 提取文本内容成功: chatId={}, messageId={}, type={}, textLength={}",
                     chatId, messageId, messageType, textContent.length());
             
             // 阶段 4: 匹配标签
-            log.debug("[TagForward] 开始标签匹配: chatId={}, messageId={}", chatId, messageId);
+            log.info("🔍 [标签转发] 开始标签匹配: chatId={}, messageId={}", chatId, messageId);
             List<String> matchedTags = tagMatcher.matchTags(textContent);
             
             // 阶段 5: 处理匹配结果
             if (matchedTags.isEmpty()) {
-                log.debug("[TagForward] 未匹配到标签，跳过: chatId={}, messageId={}", chatId, messageId);
+                log.info("ℹ️ [标签转发] 未匹配到标签，跳过: chatId={}, messageId={}", chatId, messageId);
                 
                 // 记录为已处理但未匹配
                 saveProcessedMessage(chatId, messageId, messageType, true, false, null);
                 return PluginResult.CONTINUE;
             }
             
-            log.info("[TagForward] 匹配到 {} 个标签: chatId={}, messageId={}, type={}, tags={}", 
+            log.info("✅ [标签转发] 匹配到标签: chatId={}, messageId={}, type={}, 标签数量={}, tags={}", 
                     matchedTags.size(), chatId, messageId, messageType, matchedTags);
             
             // 阶段 6: 确定要转发的消息ID（保证媒体组原子性）
@@ -384,20 +386,20 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                     
                     forwardMessageId = mediaGroupMessageIds.getFirst();
                     
-                    log.info("[TagForward] 媒体组消息，将转发整个媒体组: chatId={}, firstMessageId={}, messageIds={}, itemCount={}", 
+                    log.info("📦 [标签转发] 媒体组消息，将转发整个媒体组: chatId={}, firstMessageId={}, messageIds={}, itemCount={}", 
                             chatId, forwardMessageId, mediaGroupMessageIds, mediaGroup.getItems().size());
                 }
             }
             
             // 阶段 7: 加入转发队列
-            log.debug("[TagForward] 正在将消息加入转发队列: chatId={}, messageId={}", chatId, forwardMessageId);
+            log.info("📤 [标签转发] 将消息加入转发队列: chatId={}, messageId={}", chatId, forwardMessageId);
             queueManager.enqueue(chatId, forwardMessageId, mediaGroupMessageIds, matchedTags);
             
             if (mediaGroupMessageIds != null && !mediaGroupMessageIds.isEmpty()) {
-                log.info("[TagForward] 媒体组已成功加入转发队列: chatId={}, firstMessageId={}, groupSize={}, tags={}", 
+                log.info("✅ [标签转发] 媒体组已加入转发队列: chatId={}, firstMessageId={}, groupSize={}, tags={}", 
                         chatId, forwardMessageId, mediaGroupMessageIds.size(), matchedTags);
             } else {
-                log.info("[TagForward] 消息已成功加入转发队列: chatId={}, messageId={}, type={}, tags={}", 
+                log.info("✅ [标签转发] 消息已加入转发队列: chatId={}, messageId={}, type={}, tags={}", 
                         chatId, forwardMessageId, messageType, matchedTags);
             }
             
@@ -405,15 +407,17 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             saveProcessedMessage(chatId, messageId, messageType, true, true, 
                 matchedTags.toArray(new String[0]));
             
+            log.info("✅ [标签转发] 消息处理完成: chatId={}, messageId={}", chatId, messageId);
+            
         } catch (Exception e) {
-            log.error("[TagForward] 处理消息时发生异常: chatId={}, messageId={}, type={}", 
+            log.error("❌ [标签转发] 处理消息时发生异常: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType, e);
             
             // 即使发生异常，也记录为已处理（避免重复处理）
             try {
                 saveProcessedMessage(chatId, messageId, messageType, false, false, null);
             } catch (Exception ex) {
-                log.error("[TagForward] 保存处理记录失败: chatId={}, messageId={}", 
+                log.error("❌ [标签转发] 保存处理记录失败: chatId={}, messageId={}", 
                     chatId, messageId, ex);
             }
         }

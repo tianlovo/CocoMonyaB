@@ -32,12 +32,6 @@ logging:
   level:
     root: INFO
     "[it.tdlight.TDLight]": WARN
-    "[org.xlyo.cocomonyab.plugin.tagforward.TagBasedMessageForwardingPlugin]": DEBUG
-    # 未读消息来源生成器日志级别
-    "[org.xlyo.cocomonyab.messagesource.unread]": INFO
-    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageSourceService]": INFO
-    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageFetchService]": INFO
-    "[org.xlyo.cocomonyab.messagesource.unread.UnreadMessageBufferService]": INFO
 
 # Spring Dotenv 配置
 springdotenv:

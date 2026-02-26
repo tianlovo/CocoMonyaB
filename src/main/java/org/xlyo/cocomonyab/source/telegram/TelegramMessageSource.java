@@ -89,10 +89,17 @@ public class TelegramMessageSource extends AbstractMessageSource {
             // 记录接收到消息
             recordMessageReceived();
             
+            log.info("📡 [Telegram来源] 接收到Telegram消息: chatId={}, messageId={}, isChannelPost={}", 
+                message.chatId, message.id, message.isChannelPost);
+            
             // 只处理频道消息
             if (!message.isChannelPost) {
+                log.debug("跳过非频道消息: chatId={}, messageId={}", message.chatId, message.id);
                 return;
             }
+            
+            log.info("➡️ [转发处理] 转发消息到处理服务: chatId={}, messageId={}", 
+                message.chatId, message.id);
             
             // 转发给消息处理服务
             channelMonitorService.handleNewMessage(message);
@@ -100,8 +107,11 @@ public class TelegramMessageSource extends AbstractMessageSource {
             // 记录处理成功
             recordMessageProcessed();
             
+            log.info("✅ [Telegram来源] 消息处理成功: chatId={}, messageId={}", 
+                message.chatId, message.id);
+            
         } catch (Exception e) {
-            log.error("处理 Telegram 消息失败: chatId={}, messageId={}", 
+            log.error("❌ [Telegram来源] 处理Telegram消息失败: chatId={}, messageId={}", 
                 message.chatId, message.id, e);
             recordMessageFailed("处理消息失败: " + e.getMessage());
         }

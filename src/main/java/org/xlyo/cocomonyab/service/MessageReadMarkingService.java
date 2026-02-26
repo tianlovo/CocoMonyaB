@@ -28,6 +28,13 @@ import java.util.concurrent.*;
  *   <li>优雅关闭</li>
  * </ul>
  * 
+ * <p>重要说明：
+ * <ul>
+ *   <li>对于频道消息，必须先调用 OpenChat API 打开聊天，然后再调用 ViewMessages</li>
+ *   <li>这是因为 TDLib 的许多活动（包括已读状态同步）依赖于聊天是否被打开</li>
+ *   <li>如果不先打开聊天，最后一条消息可能无法在客户端正确显示为已读</li>
+ * </ul>
+ * 
  * @author CocoMonya Team
  * @since 1.0
  */
@@ -172,6 +179,10 @@ public class MessageReadMarkingService {
     
     /**
      * 执行标记为已读的操作
+     * <p>
+     * 修复说明：对于频道消息，TDLib 的许多活动（包括正确的已读标记同步）
+     * 依赖于聊天是否被打开。因此需要先调用 OpenChat，然后再调用 ViewMessages。
+     * 这样可以确保已读状态正确同步到 Telegram 服务器和所有客户端。
      * 
      * @param request 标记请求
      */
@@ -186,24 +197,26 @@ public class MessageReadMarkingService {
             
             SimpleTelegramClient client = clientManager.getClient();
             
-            // 构造 ViewMessages 请求
-            TdApi.ViewMessages viewMessages = new TdApi.ViewMessages(
-                request.chatId,
-                request.messageIds,
-                null,  // source: null 表示根据聊天打开状态自动判断
-                true   // forceRead: true 表示即使聊天关闭也标记为已读
-            );
+            // 步骤 1: 先打开聊天
+            // 对于频道，这是必需的，以确保已读状态能正确同步到客户端
+            TdApi.OpenChat openChat = new TdApi.OpenChat(request.chatId);
             
-            // 发送请求
-            client.send(viewMessages).whenCompleteAsync((result, error) -> {
+            client.send(openChat).thenCompose(openResult -> {
+                // 步骤 2: 聊天打开后，标记消息为已读
+                TdApi.ViewMessages viewMessages = new TdApi.ViewMessages(
+                    request.chatId,
+                    request.messageIds,
+                    null,  // source: null，现在聊天已打开，TDLib 会正确判断
+                    true   // forceRead: true，作为额外保险
+                );
+                return client.send(viewMessages);
+            }).whenCompleteAsync((result, error) -> {
                 if (error != null) {
                     log.error("标记消息为已读失败: chatId={}, messageIds={}", 
                         request.chatId, request.messageIds, error);
-                    
-                    // 如果失败，可以考虑重试（这里简化处理，只记录日志）
                     handleMarkFailure(request, error);
                 } else {
-                    log.debug("消息已标记为已读: chatId={}, messageIds={}", 
+                    log.debug("消息已成功标记为已读: chatId={}, messageIds={}", 
                         request.chatId, request.messageIds);
                 }
             });

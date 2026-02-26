@@ -81,13 +81,17 @@ public class UnreadMessageSourceService {
     public UnreadMessageDetectionResult detectUnreadMessages() {
         // 防止并发执行
         if (!isDetecting.compareAndSet(false, true)) {
+            log.warn("⚠️ [未读消息检测] 检测任务已在运行中，拒绝新的检测请求");
             throw new IllegalStateException("未读消息检测正在进行中");
         }
+        
+        log.info("🚀 [未读消息检测] 开始检测未读消息");
         
         try {
             return metrics.timeDetection(this::doDetectUnreadMessages);
         } finally {
             isDetecting.set(false);
+            log.info("🏁 [未读消息检测] 检测任务结束");
         }
     }
     
@@ -101,13 +105,13 @@ public class UnreadMessageSourceService {
      */
     private UnreadMessageDetectionResult doDetectUnreadMessages() {
         LocalDateTime startTime = LocalDateTime.now();
-        log.info("开始检测未读消息");
+        log.info("📊 [未读消息检测] 开始检测，时间: {}", startTime);
         
         // 获取所有启用监控的频道
         List<Channel> monitoringChannels = channelRepository
             .findByMonitoringStatus(true);
         
-        log.info("找到 {} 个监控频道", monitoringChannels.size());
+        log.info("📡 [未读消息检测] 找到监控频道: 数量={}", monitoringChannels.size());
         
         UnreadMessageDetectionResult result = new UnreadMessageDetectionResult();
         result.setStartTime(startTime);
@@ -116,11 +120,13 @@ public class UnreadMessageSourceService {
         // 对每个频道获取未读消息
         for (Channel channel : monitoringChannels) {
             try {
+                log.info("🔍 [未读消息检测] 处理频道: chatId={}, title={}", 
+                    channel.getChannelId(), channel.getChannelTitle());
                 processChannel(channel, result);
             } catch (Exception e) {
                 // 单个频道的错误不影响其他频道
-                log.error("处理频道失败: channelId={}, error={}", 
-                    channel.getChannelId(), e.getMessage(), e);
+                log.error("❌ [未读消息检测] 处理频道失败: chatId={}, title={}, error={}", 
+                    channel.getChannelId(), channel.getChannelTitle(), e.getMessage(), e);
                 result.incrementFailedChannels();
             }
         }
@@ -131,7 +137,7 @@ public class UnreadMessageSourceService {
         // 更新统计信息
         updateStatistics(result);
         
-        log.info("未读消息检测完成: 总频道={}, 成功={}, 失败={}, 未读消息={}, 耗时={}ms",
+        log.info("✅ [未读消息检测] 检测完成: 总频道={}, 成功={}, 失败={}, 未读消息={}, 耗时={}ms",
             result.getTotalChannels(),
             result.getSuccessChannels(),
             result.getFailedChannels(),

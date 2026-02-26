@@ -66,9 +66,12 @@ public class PluginManager {
      */
     public void process(BaseMessageEntity entity, TdApi.Message originalMessage) {
         if (plugins.isEmpty()) {
-            log.warn("未注册插件，消息将不会被处理");
+            log.warn("⚠️ [插件管理器] 未注册插件，消息将不会被处理");
             return;
         }
+        
+        log.info("🔌 [插件管理器] 开始执行插件链: chatId={}, messageId={}, 插件数量={}", 
+            entity.getChatId(), entity.getMessageId(), plugins.size());
         
         PluginContext context = new PluginContext(originalMessage);
         
@@ -76,24 +79,33 @@ public class PluginManager {
             long startTime = System.currentTimeMillis();
             
             try {
+                log.info("▶️ [插件执行] 执行插件: {}, chatId={}, messageId={}", 
+                    plugin.getName(), entity.getChatId(), entity.getMessageId());
+                
                 PluginResult result = plugin.handle(entity, context);
                 
                 long executionTime = System.currentTimeMillis() - startTime;
                 recordExecutionTime(plugin.getName(), executionTime);
                 
-                log.debug("插件 {} 执行耗时 {}ms，结果: {}", 
-                    plugin.getName(), executionTime, result);
+                log.info("✅ [插件完成] 插件执行完成: {}, chatId={}, messageId={}, 耗时={}ms, 结果={}", 
+                    plugin.getName(), entity.getChatId(), entity.getMessageId(), 
+                    executionTime, result);
                 
                 if (result == PluginResult.STOP) {
-                    log.debug("插件 {} 停止了处理链", plugin.getName());
+                    log.info("⏹️ [插件停止] 插件停止了处理链: {}, chatId={}, messageId={}", 
+                        plugin.getName(), entity.getChatId(), entity.getMessageId());
                     break;
                 }
             } catch (Exception e) {
-                log.error("执行插件 {} 时出错: {}", 
-                    plugin.getName(), e.getMessage(), e);
+                log.error("❌ [插件错误] 执行插件时出错: {}, chatId={}, messageId={}, error={}", 
+                    plugin.getName(), entity.getChatId(), entity.getMessageId(), 
+                    e.getMessage(), e);
                 // 继续执行下一个插件
             }
         }
+        
+        log.info("✅ [插件管理器] 插件链执行完成: chatId={}, messageId={}", 
+            entity.getChatId(), entity.getMessageId());
     }
     
     /**

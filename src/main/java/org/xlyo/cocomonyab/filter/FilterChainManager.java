@@ -67,18 +67,24 @@ public class FilterChainManager {
             return true;
         }
         
+        log.info("🔍 [过滤器链] 开始执行过滤器链: chatId={}, messageId={}, 过滤器数量={}", 
+            message.chatId, message.id, filters.size());
+        
         FilterContext context = new FilterContext();
         
         for (MessageFilter filter : filters) {
             long startTime = System.currentTimeMillis();
             
             try {
+                log.debug("▶️ [过滤器] 执行过滤器: {}, chatId={}, messageId={}", 
+                    filter.getName(), message.chatId, message.id);
+                
                 FilterResult result = filter.filter(message, context);
                 
                 long executionTime = System.currentTimeMillis() - startTime;
                 recordExecutionTime(filter.getName(), executionTime);
                 
-                log.debug("过滤器 {} 执行耗时 {}ms，结果: {}", 
+                log.debug("✅ [过滤器] 过滤器执行完成: {}, 耗时={}ms, 结果={}", 
                     filter.getName(), executionTime, result);
                 
                 if (result == FilterResult.REJECT) {
@@ -86,18 +92,20 @@ public class FilterChainManager {
                     String reason = context.getRejectReason() != null 
                         ? context.getRejectReason() 
                         : "未提供原因";
-                    log.info("消息被过滤器 {} 拒绝: chatId={}, messageId={}, 原因: {}", 
+                    log.info("❌ [过滤器拒绝] 消息被过滤器拒绝: 过滤器={}, chatId={}, messageId={}, 原因={}", 
                         filter.getName(), message.chatId, message.id, reason);
                     return false;
                 }
             } catch (Exception e) {
-                log.error("执行过滤器 {} 时出错: {}", 
-                    filter.getName(), e.getMessage(), e);
+                log.error("❌ [过滤器错误] 执行过滤器时出错: {}, chatId={}, messageId={}, error={}", 
+                    filter.getName(), message.chatId, message.id, e.getMessage(), e);
                 // 继续执行下一个过滤器
             }
         }
         
         // 所有过滤器都接受，消息通过
+        log.info("✅ [过滤器链] 消息通过所有过滤器: chatId={}, messageId={}", 
+            message.chatId, message.id);
         return true;
     }
     

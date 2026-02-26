@@ -144,6 +144,14 @@ import AuthorDialog from '@/components/author/AuthorDialog.vue'
 import { useAuthorStore } from '@/stores/author'
 import { usePagination } from '@/composables/usePagination'
 import type { Author } from '@/types/models'
+import { ApiError } from '@/utils/request'
+import {
+  handleConflictError,
+  handleReferenceError,
+  showSuccessMessage,
+  showErrorMessage,
+  confirmDangerousOperation
+} from '@/utils/errorHandler'
 
 const authorStore = useAuthorStore()
 const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
@@ -256,69 +264,31 @@ const handleEdit = (author: Author) => {
 const handleDelete = async (author: Author) => {
   try {
     // First confirmation dialog
-    await ElMessageBox.confirm(
+    const confirmed = await confirmDangerousOperation(
       `确定要删除作者 "${author.name}" 吗？此操作不可撤销。`,
-      '删除确认',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+      '删除确认'
     )
+    
+    if (!confirmed) return
 
     // Attempt to delete
     await authorStore.deleteAuthor(author.id, false)
-    ElMessage.success('删除成功')
+    showSuccessMessage('删除成功')
     loadAuthors()
   } catch (error: any) {
     // Check if it's a reference error (code -60004)
-    if (error?.code === -60004) {
-      handleReferenceError(author, error)
+    if (error instanceof ApiError && error.code === -60004) {
+      await handleReferenceError(error, author.name, async () => {
+        await authorStore.deleteAuthor(author.id, true)
+      })
+      loadAuthors()
+    } else if (error instanceof ApiError && error.code === -60003) {
+      // Handle uniqueness conflict (shouldn't happen in delete, but just in case)
+      handleConflictError(error)
     } else if (error !== 'cancel') {
       // Other errors are already handled by the interceptor
-      // Only log if it's not a user cancellation
       console.error('Delete failed:', error)
     }
-  }
-}
-
-// Handle reference error - show details and offer force delete
-const handleReferenceError = async (author: Author, error: any) => {
-  const data = error.data || {}
-  const referencedByCharacters = data.referencedByCharacters || []
-  const referencedByConfigs = data.referencedByConfigs || []
-
-  let message = `无法删除作者 "${author.name}"，该作者被以下内容引用：\n\n`
-  
-  if (referencedByCharacters.length > 0) {
-    message += `• 角色: ${referencedByCharacters.length} 个\n`
-  }
-  
-  if (referencedByConfigs.length > 0) {
-    message += `• 标签过滤配置: ${referencedByConfigs.length} 个\n`
-  }
-  
-  message += '\n是否强制删除？（将自动清理所有引用关系）'
-
-  try {
-    await ElMessageBox.confirm(message, '引用关系检查', {
-      confirmButtonText: '强制删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-      dangerouslyUseHTMLString: false
-    })
-
-    // User confirmed force delete
-    try {
-      await authorStore.deleteAuthor(author.id, true)
-      ElMessage.success('强制删除成功')
-      loadAuthors()
-    } catch (forceError) {
-      ElMessage.error('强制删除失败')
-      console.error('Force delete failed:', forceError)
-    }
-  } catch {
-    // User cancelled force delete
   }
 }
 
@@ -354,9 +324,9 @@ const handleExport = async () => {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     
-    ElMessage.success('导出成功')
+    showSuccessMessage('导出成功')
   } catch (error) {
-    ElMessage.error('导出失败')
+    showErrorMessage('导出失败')
     console.error('Export failed:', error)
   }
 }

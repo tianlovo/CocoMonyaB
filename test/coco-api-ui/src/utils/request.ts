@@ -42,8 +42,9 @@ request.interceptors.response.use(
     }
 
     // Error response - preserve error details for special handling
-    // Don't show message for reference errors (-60004) as they need custom handling
-    if (code !== -60004) {
+    // Don't show message for reference errors (-60004) and uniqueness conflicts (-60003)
+    // as they need custom handling in the UI
+    if (code !== -60004 && code !== -60003) {
       ElMessage.error(msg || '请求失败')
     }
     return Promise.reject(new ApiError(code, msg || '请求失败', data))

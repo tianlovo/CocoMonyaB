@@ -105,22 +105,34 @@ public class ChannelMonitorService implements MediaGroupProcessor {
      */
     public void handleNewMessage(TdApi.Message message) {
         try {
+            log.info("📨 [消息接收] chatId={}, messageId={}, isChannelPost={}, mediaAlbumId={}", 
+                message.chatId, message.id, message.isChannelPost, message.mediaAlbumId);
+            
             // 先执行过滤器链
             if (!filterChainManager.executeChain(message)) {
-                log.debug("消息被过滤: chatId={}, messageId={}", message.chatId, message.id);
+                log.info("❌ [消息过滤] 消息被过滤器拒绝: chatId={}, messageId={}", 
+                    message.chatId, message.id);
                 return; // 消息被过滤，不保存也不处理
             }
             
+            log.info("✅ [过滤通过] 消息通过过滤器链: chatId={}, messageId={}", 
+                message.chatId, message.id);
+            
             // 检查是否为媒体组消息
             if (message.mediaAlbumId != 0) {
+                log.info("📦 [媒体组] 检测到媒体组消息: chatId={}, messageId={}, mediaAlbumId={}", 
+                    message.chatId, message.id, message.mediaAlbumId);
                 handleMediaGroupMessage(message);
             } else {
                 // 普通消息，直接处理
+                log.info("📄 [单条消息] 处理单条消息: chatId={}, messageId={}", 
+                    message.chatId, message.id);
                 processSingleMessage(message);
             }
             
         } catch (Exception e) {
-            log.error("处理频道消息失败: chatId={}, messageId={}", message.chatId, message.id, e);
+            log.error("❌ [处理失败] 处理频道消息失败: chatId={}, messageId={}", 
+                message.chatId, message.id, e);
         }
     }
     
@@ -451,18 +463,31 @@ public class ChannelMonitorService implements MediaGroupProcessor {
         String channelUsername = channel != null ? channel.getChannelUsername() : null;
         String channelTitle = channel != null ? channel.getChannelTitle() : null;
         
+        log.info("💾 [保存消息] 保存原始消息到数据库: chatId={}, messageId={}, channel={}", 
+            message.chatId, message.id, channelTitle != null ? channelTitle : "未知频道");
+        
         // 1. 保存原始消息到数据库
         messageStorageService.saveMessage(message);
         
         // 2. 解析消息为实体类
         try {
+            log.info("🔄 [解析消息] 开始解析消息: chatId={}, messageId={}", 
+                message.chatId, message.id);
+            
             BaseMessageEntity entity = messageParser.parse(message, channelUsername, channelTitle);
+            
+            log.info("🔌 [插件处理] 开始执行插件链: chatId={}, messageId={}, messageType={}", 
+                message.chatId, message.id, entity.getType());
             
             // 3. 使用插件管理器处理（包括控制台打印）
             pluginManager.process(entity, message);
             
+            log.info("✅ [处理完成] 消息处理完成: chatId={}, messageId={}", 
+                message.chatId, message.id);
+            
         } catch (Exception e) {
-            log.error("解析消息失败: chatId={}, messageId={}", message.chatId, message.id, e);
+            log.error("❌ [解析失败] 解析消息失败: chatId={}, messageId={}", 
+                message.chatId, message.id, e);
         }
     }
     
