@@ -14,6 +14,7 @@ import org.xlyo.cocomonyab.plugin.tagforward.component.ForwardScheduler;
 import org.xlyo.cocomonyab.plugin.tagforward.component.QueueManager;
 import org.xlyo.cocomonyab.plugin.tagforward.component.TagMatcher;
 import org.xlyo.cocomonyab.plugin.tagforward.config.TagBasedForwardingProperties;
+import org.xlyo.cocomonyab.service.MessageReadMarkingService;
 import org.xlyo.cocomonyab.telegram.TelegramClientManager;
 
 import java.util.List;
@@ -41,18 +42,21 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
     private final ForwardScheduler forwardScheduler;
     private final TagBasedForwardingProperties properties;
     private final TelegramClientManager clientManager;
+    private final MessageReadMarkingService readMarkingService;
     
     public TagBasedMessageForwardingPlugin(
             TagMatcher tagMatcher,
             QueueManager queueManager,
             ForwardScheduler forwardScheduler,
             TagBasedForwardingProperties properties,
-            TelegramClientManager clientManager) {
+            TelegramClientManager clientManager,
+            MessageReadMarkingService readMarkingService) {
         this.tagMatcher = tagMatcher;
         this.queueManager = queueManager;
         this.forwardScheduler = forwardScheduler;
         this.properties = properties;
         this.clientManager = clientManager;
+        this.readMarkingService = readMarkingService;
     }
     
     @Override
@@ -276,6 +280,18 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
         try {
             log.debug("[TagForward] 开始处理消息: chatId={}, messageId={}, type={}", 
                     chatId, messageId, messageType);
+            
+            // 阶段 0: 标记消息为已读（无论是否匹配标签）
+            // 使用异步方式标记，不阻塞消息处理流程
+            try {
+                readMarkingService.markAsRead(chatId, messageId);
+                log.debug("[TagForward] 消息已提交标记为已读: chatId={}, messageId={}", 
+                    chatId, messageId);
+            } catch (Exception e) {
+                // 标记失败不影响后续处理
+                log.warn("[TagForward] 标记消息为已读失败: chatId={}, messageId={}", 
+                    chatId, messageId, e);
+            }
             
             // 阶段 1: 检查标签配置是否已加载
             if (!tagMatcher.isConfigurationLoaded()) {

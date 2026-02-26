@@ -50,13 +50,13 @@ public class TagDatabaseIndexConfiguration {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_name_unique");
-        indexOps.ensureIndex(nameIndex);
+        indexOps.createIndex(nameIndex);
         
         // 别名多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_aliases");
-        indexOps.ensureIndex(aliasesIndex);
+        indexOps.createIndex(aliasesIndex);
         
         log.debug("作者库索引创建完成");
     }
@@ -72,13 +72,13 @@ public class TagDatabaseIndexConfiguration {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_name_unique");
-        indexOps.ensureIndex(nameIndex);
+        indexOps.createIndex(nameIndex);
         
         // 别名多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_aliases");
-        indexOps.ensureIndex(aliasesIndex);
+        indexOps.createIndex(aliasesIndex);
         
         log.debug("原作库索引创建完成");
     }
@@ -94,19 +94,19 @@ public class TagDatabaseIndexConfiguration {
                 .on("name", Sort.Direction.ASC)
                 .unique()
                 .named("idx_name_unique");
-        indexOps.ensureIndex(nameIndex);
+        indexOps.createIndex(nameIndex);
         
         // 别名多键索引
         Index aliasesIndex = new Index()
                 .on("aliases", Sort.Direction.ASC)
                 .named("idx_aliases");
-        indexOps.ensureIndex(aliasesIndex);
+        indexOps.createIndex(aliasesIndex);
         
         // 原作ID索引
         Index workIdIndex = new Index()
                 .on("workId", Sort.Direction.ASC)
                 .named("idx_work_id");
-        indexOps.ensureIndex(workIdIndex);
+        indexOps.createIndex(workIdIndex);
         
         log.debug("角色库索引创建完成");
     }
