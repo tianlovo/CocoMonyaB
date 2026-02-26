@@ -49,6 +49,9 @@ dependencies {
     // Guava for Striped Lock
     implementation("com.google.guava:guava:33.0.0-jre")
     
+    // Resilience4j for Rate Limiting
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:2.2.0")
+    
     // Caffeine for Caching
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
     
@@ -62,6 +65,7 @@ dependencies {
     // 测试依赖
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     
     // Property-based testing
@@ -71,6 +75,9 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers:1.20.4")
     testImplementation("org.testcontainers:mongodb:1.20.4")
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+    
+    // Awaitility for async testing
+    testImplementation("org.awaitility:awaitility:4.2.0")
 
     // TDLight 依赖
     implementation(platform("it.tdlight:tdlight-java-bom:3.4.0+td.1.8.26"))

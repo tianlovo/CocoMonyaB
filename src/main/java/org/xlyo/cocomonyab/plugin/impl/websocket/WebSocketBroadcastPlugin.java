@@ -103,6 +103,16 @@ public class WebSocketBroadcastPlugin extends AbstractMessagePlugin {
     }
     
     /**
+     * 检查插件是否启用
+     * 
+     * @return 如果插件启用则返回true，否则返回false
+     */
+    @Override
+    public boolean isEnabled() {
+        return properties.isEnabled();
+    }
+    
+    /**
      * 处理消息的核心方法
      * 
      * <p>该方法执行以下步骤：</p>
@@ -130,7 +140,7 @@ public class WebSocketBroadcastPlugin extends AbstractMessagePlugin {
         try {
             // 验证输入
             if (entity == null) {
-                log.warn("消息实体为null，跳过处理");
+                log.warn("消息实体为 null，跳过处理");
                 return PluginResult.CONTINUE;
             }
             
@@ -139,7 +149,7 @@ public class WebSocketBroadcastPlugin extends AbstractMessagePlugin {
             try {
                 dto = convertToDTO(entity);
             } catch (Exception e) {
-                log.error("DTO转换失败: chatId={}, messageId={}", 
+                log.error("DTO 转换失败: chatId={}, messageId={}", 
                         entity.getChatId(), entity.getMessageId(), e);
                 return PluginResult.CONTINUE;
             }
@@ -344,7 +354,7 @@ public class WebSocketBroadcastPlugin extends AbstractMessagePlugin {
             return builder.build();
             
         } catch (Exception e) {
-            log.error("DTO转换失败: chatId={}, messageId={}", 
+            log.error("DTO 转换失败: chatId={}, messageId={}", 
                     entity.getChatId(), entity.getMessageId(), e);
             throw e;
         }

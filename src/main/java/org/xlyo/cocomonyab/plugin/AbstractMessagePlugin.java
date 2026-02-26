@@ -31,12 +31,12 @@ public abstract class AbstractMessagePlugin implements MessagePlugin {
     
     @Override
     public void initialize() {
-        log.info("Initializing plugin: {}", getName());
+        log.info("正在初始化插件: {}", getName());
     }
     
     @Override
     public void destroy() {
-        log.info("Destroying plugin: {}", getName());
+        log.info("正在销毁插件: {}", getName());
     }
     
     /**
@@ -54,13 +54,13 @@ public abstract class AbstractMessagePlugin implements MessagePlugin {
     public PluginResult handle(BaseMessageEntity entity, PluginContext context) {
         // 检查插件是否启用
         if (!isEnabled()) {
-            log.debug("Plugin {} is disabled, skipping", getName());
+            log.debug("插件 {} 已禁用，跳过处理", getName());
             return PluginResult.CONTINUE;
         }
         
         // 检查是否支持该消息类型
         if (!supports(entity)) {
-            log.debug("Plugin {} does not support message type {}", 
+            log.debug("插件 {} 不支持消息类型 {}", 
                 getName(), entity.getType());
             return PluginResult.CONTINUE;
         }
@@ -69,7 +69,7 @@ public abstract class AbstractMessagePlugin implements MessagePlugin {
         try {
             return doHandle(entity, context);
         } catch (Exception e) {
-            log.error("Error in plugin {}: {}", getName(), e.getMessage(), e);
+            log.error("插件 {} 执行出错: {}", getName(), e.getMessage(), e);
             return PluginResult.CONTINUE;  // 出错继续执行下一个插件
         }
     }

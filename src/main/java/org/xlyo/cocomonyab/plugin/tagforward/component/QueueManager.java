@@ -17,7 +17,7 @@ import java.util.List;
 
 /**
  * 队列管理器
- * 
+ * <p>
  * 负责管理转发队列，包括消息入队、状态更新、重试计数等操作
  */
 @Component
@@ -46,10 +46,10 @@ public class QueueManager {
         
         try {
             mongoTemplate.insert(item, "forward_queue");
-            log.debug("Enqueued message: chatId={}, messageId={}, tags={}", 
+            log.debug("消息已加入队列: chatId={}, messageId={}, tags={}", 
                     sourceChatId, sourceMessageId, matchedTags);
         } catch (DuplicateKeyException e) {
-            log.debug("Message already in queue: chatId={}, messageId={}", 
+            log.debug("消息已在队列中: chatId={}, messageId={}", 
                     sourceChatId, sourceMessageId);
         }
     }
@@ -66,7 +66,7 @@ public class QueueManager {
                 .limit(limit);
         
         List<ForwardQueueItem> items = mongoTemplate.find(query, ForwardQueueItem.class, "forward_queue");
-        log.debug("Retrieved {} pending items from queue", items.size());
+        log.debug("从队列中获取了 {} 个待处理项", items.size());
         
         return items;
     }
@@ -97,7 +97,7 @@ public class QueueManager {
                 "forward_queue"
         );
         
-        log.debug("Updated queue item status: id={}, status={}", itemId, status);
+        log.debug("队列项状态已更新: id={}, status={}", itemId, status);
     }
     
     /**
@@ -116,6 +116,6 @@ public class QueueManager {
                 "forward_queue"
         );
         
-        log.debug("Incremented retry count for queue item: id={}", itemId);
+        log.debug("队列项重试次数已递增: id={}", itemId);
     }
 }

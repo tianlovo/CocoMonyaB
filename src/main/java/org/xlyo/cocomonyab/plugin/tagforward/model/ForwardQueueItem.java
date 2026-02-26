@@ -14,9 +14,9 @@ import java.util.List;
 
 /**
  * 转发队列项数据模型
- * 
+ * <p>
  * 存储待转发消息的信息，包括源频道、消息ID、匹配的标签、状态等
- * 
+ * <p>
  * 注意：TTL索引需要在MongoDB初始化时单独创建（30天过期）
  */
 @Document(collection = "forward_queue")

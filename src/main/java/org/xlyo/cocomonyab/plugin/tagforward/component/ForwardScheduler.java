@@ -1,6 +1,7 @@
 package org.xlyo.cocomonyab.plugin.tagforward.component;
 
-import com.google.common.util.concurrent.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
 import it.tdlight.client.SimpleTelegramClient;
 import it.tdlight.jni.TdApi;
 import jakarta.annotation.PostConstruct;
@@ -12,6 +13,7 @@ import org.xlyo.cocomonyab.plugin.tagforward.model.ForwardQueueItem;
 import org.xlyo.cocomonyab.plugin.tagforward.model.ForwardStatus;
 import org.xlyo.cocomonyab.telegram.TelegramClientManager;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -19,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 转发调度器
- * 
+ * <p>
  * 负责定时处理转发队列，使用频率限制器控制转发速率，
  * 并通过TelegramClient执行实际的消息转发操作
  */
@@ -37,25 +39,30 @@ public class ForwardScheduler {
     
     /**
      * 初始化频率限制器
-     * 
+     * <p>
      * 根据配置的每分钟转发速率创建RateLimiter实例
      */
     @PostConstruct
     public void initialize() {
-        // 将每分钟的速率转换为每秒的速率
-        double permitsPerSecond = properties.getRateLimitPerMinute() / 60.0;
-        this.rateLimiter = RateLimiter.create(permitsPerSecond);
-        log.info("Initialized rate limiter: {} permits per minute", properties.getRateLimitPerMinute());
+        // 配置频率限制器：每分钟允许的请求数
+        RateLimiterConfig config = RateLimiterConfig.custom()
+                .limitForPeriod(properties.getRateLimitPerMinute())
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .timeoutDuration(Duration.ZERO) // 不等待，立即返回
+                .build();
+        
+        this.rateLimiter = RateLimiter.of("forward-rate-limiter", config);
+        log.info("频率限制器初始化完成: 每分钟 {} 次", properties.getRateLimitPerMinute());
     }
     
     /**
      * 启动转发调度器
-     * 
+     * <p>
      * 创建定时任务，按配置的间隔定期处理转发队列
      */
     public void start() {
         if (scheduler != null && !scheduler.isShutdown()) {
-            log.warn("Forward scheduler is already running");
+            log.warn("转发调度器已在运行中");
             return;
         }
         
@@ -72,30 +79,30 @@ public class ForwardScheduler {
                 TimeUnit.SECONDS
         );
         
-        log.info("Forward scheduler started with interval: {} seconds", 
+        log.info("转发调度器已启动，间隔: {} 秒", 
                 properties.getScheduleIntervalSeconds());
     }
     
     /**
      * 停止转发调度器
-     * 
+     * <p>
      * 优雅地关闭调度器，等待当前任务完成
      */
     public void stop() {
         if (scheduler == null || scheduler.isShutdown()) {
-            log.debug("Forward scheduler is not running");
+            log.debug("转发调度器未在运行");
             return;
         }
         
         scheduler.shutdown();
         try {
             if (!scheduler.awaitTermination(30, TimeUnit.SECONDS)) {
-                log.warn("Forward scheduler did not terminate gracefully, forcing shutdown");
+                log.warn("转发调度器未能优雅关闭，强制停止");
                 scheduler.shutdownNow();
             }
-            log.info("Forward scheduler stopped");
+            log.info("转发调度器已停止");
         } catch (InterruptedException e) {
-            log.error("Interrupted while waiting for scheduler to terminate", e);
+            log.error("等待调度器终止时被中断", e);
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
@@ -103,7 +110,7 @@ public class ForwardScheduler {
     
     /**
      * 处理转发队列
-     * 
+     * <p>
      * 从队列中获取待处理消息，应用频率限制，并执行转发操作
      */
     private void processQueue() {
@@ -111,23 +118,23 @@ public class ForwardScheduler {
             List<ForwardQueueItem> items = queueManager.getPendingItems(properties.getBatchSize());
             
             if (items.isEmpty()) {
-                log.trace("No pending items in forward queue");
+                log.trace("转发队列中无待处理项");
                 return;
             }
             
-            log.debug("Processing {} pending items from forward queue", items.size());
+            log.debug("正在处理转发队列中的 {} 个待处理项", items.size());
             
             for (ForwardQueueItem item : items) {
                 // 检查频率限制
-                if (!rateLimiter.tryAcquire()) {
-                    log.debug("Rate limit reached, skipping remaining messages in this batch");
+                if (!rateLimiter.acquirePermission()) {
+                    log.debug("已达到频率限制，跳过本批次剩余消息");
                     break;
                 }
                 
                 forwardMessage(item);
             }
         } catch (Exception e) {
-            log.error("Error processing forward queue", e);
+            log.error("处理转发队列时出错", e);
         }
     }
     
@@ -140,7 +147,7 @@ public class ForwardScheduler {
         try {
             // 检查客户端是否就绪
             if (!clientManager.isReady()) {
-                log.warn("Telegram client is not ready, skipping message: chatId={}, messageId={}", 
+                log.warn("Telegram 客户端未就绪，跳过消息: chatId={}, messageId={}", 
                         item.getSourceChatId(), item.getSourceMessageId());
                 return;
             }
@@ -163,16 +170,16 @@ public class ForwardScheduler {
                     handleForwardSuccess(item);
                 } else {
                     // 处理意外的结果类型（包括TdApi.Error）
-                    String errorMsg = "Unexpected result type: " + 
+                    String errorMsg = "意外的结果类型: " + 
                             (result != null ? result.getClass().getName() : "null");
-                    log.warn("Forward request returned unexpected result: chatId={}, messageId={}, result={}", 
+                    log.warn("转发请求返回意外结果: chatId={}, messageId={}, result={}", 
                             item.getSourceChatId(), item.getSourceMessageId(), errorMsg);
                     handleForwardError(item, new RuntimeException(errorMsg));
                 }
             });
             
         } catch (Exception e) {
-            log.error("Error forwarding message: chatId={}, messageId={}", 
+            log.error("转发消息时出错: chatId={}, messageId={}", 
                     item.getSourceChatId(), item.getSourceMessageId(), e);
             handleForwardError(item, e);
         }
@@ -186,10 +193,10 @@ public class ForwardScheduler {
     private void handleForwardSuccess(ForwardQueueItem item) {
         try {
             queueManager.updateStatus(item.getId(), ForwardStatus.SUCCESS, null);
-            log.info("Message forwarded successfully: chatId={}, messageId={}, tags={}", 
+            log.info("消息转发成功: chatId={}, messageId={}, tags={}", 
                     item.getSourceChatId(), item.getSourceMessageId(), item.getMatchedTags());
         } catch (Exception e) {
-            log.error("Error updating status after successful forward: itemId={}", item.getId(), e);
+            log.error("转发成功后更新状态时出错: itemId={}", item.getId(), e);
         }
     }
     
@@ -209,13 +216,13 @@ public class ForwardScheduler {
             // 检查是否达到最大重试次数
             if (newRetryCount >= properties.getMaxRetryCount()) {
                 queueManager.updateStatus(item.getId(), ForwardStatus.FAILED, error.getMessage());
-                log.error("Message forward failed after {} retries: chatId={}, messageId={}, error={}", 
+                log.error("消息转发失败，已重试 {} 次: chatId={}, messageId={}, error={}", 
                         properties.getMaxRetryCount(), 
                         item.getSourceChatId(), 
                         item.getSourceMessageId(), 
                         error.getMessage());
             } else {
-                log.warn("Message forward failed, will retry (attempt {}/{}): chatId={}, messageId={}, error={}", 
+                log.warn("消息转发失败，将重试（第 {}/{} 次尝试）: chatId={}, messageId={}, error={}", 
                         newRetryCount, 
                         properties.getMaxRetryCount(),
                         item.getSourceChatId(), 
@@ -223,7 +230,7 @@ public class ForwardScheduler {
                         error.getMessage());
             }
         } catch (Exception e) {
-            log.error("Error handling forward error for itemId={}", item.getId(), e);
+            log.error("处理转发错误时出错: itemId={}", item.getId(), e);
         }
     }
 }

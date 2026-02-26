@@ -32,6 +32,7 @@ logging:
   level:
     root: INFO
     "[it.tdlight.TDLight]": WARN
+    "[org.xlyo.cocomonyab.plugin.tagforward.TagBasedMessageForwardingPlugin]": DEBUG
 
 # Spring Dotenv 配置
 springdotenv:
@@ -113,13 +114,38 @@ concurrent-safety:
 
 # 插件配置
 plugin:
+  # 控制台打印插件配置
+  console-printer:
+    # 是否启用插件
+    enabled: false
+  
   # WebSocket消息广播插件配置
   websocket-broadcast:
     # 是否启用插件
-    enabled: true
+    enabled: false
     # 消息广播topic前缀
     topic-prefix: /topic/channel/real
     # 监控事件topic前缀
     monitoring-topic-prefix: /topic/channel/monitoring
     # 是否启用异步广播
     async-broadcast: false
+  
+  # 基于标签的消息转发插件配置
+  tag-based-forwarding:
+    # 是否启用插件（默认: true）
+    enabled: true
+    # 目标频道ID（必填，必须为负数，Telegram频道ID格式）
+    # 示例: -1001234567890
+    # 请替换为实际的目标频道ID
+    target-channel-id: -1003808612339
+    # 标签前缀（默认: "#"）
+    tag-prefix: "#"
+    # 每分钟转发速率限制（默认: 20）
+    # 用于避免触发Telegram API速率限制
+    rate-limit-per-minute: 18
+    # 每批次处理的消息数量（默认: 10）
+    batch-size: 10
+    # 定时任务执行间隔（秒）（默认: 30）
+    schedule-interval-seconds: 30
+    # 最大重试次数（默认: 3）
+    max-retry-count: 3

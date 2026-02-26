@@ -31,6 +31,11 @@ public class TagMatcher {
      */
     private volatile Set<String> expandedTagList = new HashSet<>();
     
+    /**
+     * 标签配置是否已加载
+     */
+    private volatile boolean configurationLoaded = false;
+    
     public TagMatcher(MongoTemplate mongoTemplate, TagBasedForwardingProperties properties) {
         this.mongoTemplate = mongoTemplate;
         this.properties = properties;
@@ -45,13 +50,13 @@ public class TagMatcher {
      */
     public void loadTagConfiguration() {
         try {
-            log.info("Loading tag configuration...");
+            log.info("正在加载标签配置...");
             
             // 查询启用的标签配置
             Query query = Query.query(Criteria.where("enabled").is(true));
             List<TagFilterConfig> configs = mongoTemplate.find(query, TagFilterConfig.class, "tag_filter_configs_v2");
             
-            log.debug("Found {} enabled tag filter configs", configs.size());
+            log.debug("找到 {} 个已启用的标签过滤配置", configs.size());
             
             Set<String> tags = new HashSet<>();
             
@@ -60,28 +65,28 @@ public class TagMatcher {
                 if (config.getAuthorIds() != null && !config.getAuthorIds().isEmpty()) {
                     Set<String> authorTags = loadTagEntities("tag_authors", config.getAuthorIds());
                     tags.addAll(authorTags);
-                    log.debug("Loaded {} author tags from config {}", authorTags.size(), config.getId());
+                    log.debug("从配置 {} 加载了 {} 个作者标签", config.getId(), authorTags.size());
                 }
                 
                 // 加载角色标签
                 if (config.getCharacterIds() != null && !config.getCharacterIds().isEmpty()) {
                     Set<String> characterTags = loadTagEntities("tag_characters", config.getCharacterIds());
                     tags.addAll(characterTags);
-                    log.debug("Loaded {} character tags from config {}", characterTags.size(), config.getId());
+                    log.debug("从配置 {} 加载了 {} 个角色标签", config.getId(), characterTags.size());
                 }
                 
                 // 加载原作标签
                 if (config.getWorkIds() != null && !config.getWorkIds().isEmpty()) {
                     Set<String> workTags = loadTagEntities("tag_works", config.getWorkIds());
                     tags.addAll(workTags);
-                    log.debug("Loaded {} work tags from config {}", workTags.size(), config.getId());
+                    log.debug("从配置 {} 加载了 {} 个原作标签", config.getId(), workTags.size());
                 }
                 
                 // 加载自定义标签
                 if (config.getCustomTags() != null && !config.getCustomTags().isEmpty()) {
                     Set<String> customTags = new HashSet<>(config.getCustomTags().values());
                     tags.addAll(customTags);
-                    log.debug("Loaded {} custom tags from config {}", customTags.size(), config.getId());
+                    log.debug("从配置 {} 加载了 {} 个自定义标签", config.getId(), customTags.size());
                 }
             }
             
@@ -93,12 +98,15 @@ public class TagMatcher {
                 .map(tag -> prefix + tag)
                 .collect(Collectors.toSet());
             
-            log.info("Loaded {} tags with prefix '{}'", expandedTagList.size(), prefix);
+            this.configurationLoaded = true;
+            
+            log.info("已加载 {} 个标签，前缀为 '{}'", expandedTagList.size(), prefix);
             
         } catch (Exception e) {
-            log.error("Failed to load tag configuration", e);
+            log.error("加载标签配置失败", e);
             // 使用空标签列表继续运行
             this.expandedTagList = new HashSet<>();
+            this.configurationLoaded = false;
         }
     }
     
@@ -134,7 +142,7 @@ public class TagMatcher {
             return tags;
             
         } catch (Exception e) {
-            log.error("Failed to load tag entities from collection {}", collection, e);
+            log.error("从集合 {} 加载标签实体失败", collection, e);
             return new HashSet<>();
         }
     }
@@ -149,9 +157,15 @@ public class TagMatcher {
      * @return 匹配到的标签列表（如果没有匹配则返回空列表）
      */
     public List<String> matchTags(String textContent) {
+        // 如果配置尚未加载，返回空列表
+        if (!configurationLoaded) {
+            log.debug("标签配置尚未加载，跳过匹配");
+            return Collections.emptyList();
+        }
+        
         // 处理null和空字符串的边缘情况
         if (textContent == null || textContent.isEmpty()) {
-            log.debug("Text content is null or empty, no tags matched");
+            log.debug("文本内容为 null 或空，未匹配到标签");
             return Collections.emptyList();
         }
         
@@ -164,10 +178,19 @@ public class TagMatcher {
             .collect(Collectors.toList());
         
         if (!matchedTags.isEmpty()) {
-            log.debug("Matched {} tags in text content", matchedTags.size());
+            log.debug("在文本内容中匹配到 {} 个标签", matchedTags.size());
         }
         
         return matchedTags;
+    }
+    
+    /**
+     * 检查标签配置是否已加载
+     * 
+     * @return 如果配置已加载返回true，否则返回false
+     */
+    public boolean isConfigurationLoaded() {
+        return configurationLoaded;
     }
     
     /**

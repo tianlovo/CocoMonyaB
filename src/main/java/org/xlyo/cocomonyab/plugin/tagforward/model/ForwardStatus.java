@@ -2,7 +2,7 @@ package org.xlyo.cocomonyab.plugin.tagforward.model;
 
 /**
  * 转发状态枚举
- * 
+ * <p>
  * 表示消息在转发队列中的处理状态
  */
 public enum ForwardStatus {

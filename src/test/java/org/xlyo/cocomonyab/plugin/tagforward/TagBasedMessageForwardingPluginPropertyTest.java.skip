@@ -1,0 +1,313 @@
+package org.xlyo.cocomonyab.plugin.tagforward;
+
+import net.jqwik.api.*;
+import net.jqwik.api.constraints.LongRange;
+import net.jqwik.api.constraints.Size;
+import org.xlyo.cocomonyab.domain.entity.message.TextMessageEntity;
+import org.xlyo.cocomonyab.plugin.PluginContext;
+import org.xlyo.cocomonyab.plugin.PluginResult;
+import org.xlyo.cocomonyab.plugin.tagforward.component.ForwardScheduler;
+import org.xlyo.cocomonyab.plugin.tagforward.component.QueueManager;
+import org.xlyo.cocomonyab.plugin.tagforward.component.TagMatcher;
+import org.xlyo.cocomonyab.plugin.tagforward.config.TagBasedForwardingProperties;
+import org.xlyo.cocomonyab.telegram.TelegramClientManager;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * 属性测试：TagBasedMessageForwardingPlugin
+ * 
+ * <p>使用基于属性的测试验证插件在各种输入下的通用正确性属�?
+ */
+class TagBasedMessageForwardingPluginPropertyTest {
+    
+    /**
+     * 属�?12: 异常不中断处�?
+     * 
+     * <p>对于任何处理过程中抛出的异常，插件应该捕获异常并继续处理�?
+     * 不应该导致插件崩溃或停止工作�?
+     * 
+     * <p>验证需�? Requirements 10.1
+     */
+    @Property
+    @Label("Feature: tag-based-message-forwarding, Property 12: 异常不中断处�?)
+    void exceptionDoesNotInterruptProcessing(
+            @ForAll @LongRange(min = -9999999999L, max = -1L) Long chatId,
+            @ForAll @LongRange(min = 1L, max = 9999999999L) Long messageId,
+            @ForAll String textContent,
+            @ForAll("exceptionTypes") Exception exception) {
+        
+        // Given: 创建插件和模拟依�?
+        TagMatcher tagMatcher = mock(TagMatcher.class);
+        QueueManager queueManager = mock(QueueManager.class);
+        ForwardScheduler forwardScheduler = mock(ForwardScheduler.class);
+        TelegramClientManager clientManager = mock(TelegramClientManager.class);
+        
+        TagBasedForwardingProperties properties = new TagBasedForwardingProperties();
+        properties.setEnabled(true);
+        properties.setTargetChannelId(-1001234567890L);
+        
+        TagBasedMessageForwardingPlugin plugin = new TagBasedMessageForwardingPlugin(
+                tagMatcher,
+                queueManager,
+                forwardScheduler,
+                properties,
+                clientManager
+        );
+        
+        // 模拟TagMatcher抛出异常
+        when(tagMatcher.matchTags(anyString())).thenThrow(exception);
+        
+        // When: 处理消息
+        TextMessageEntity message = createTextMessage(chatId, messageId, textContent);
+        PluginContext context = new PluginContext(null);
+        PluginResult result = plugin.handle(message, context);
+        
+        // Then: 应该返回CONTINUE而不是抛出异�?
+        // 这证明异常被捕获并且不会中断处理
+        assert result == PluginResult.CONTINUE : 
+                "Plugin should return CONTINUE even when exception occurs";
+        
+        // 验证QueueManager没有被调用（因为TagMatcher抛出了异常）
+        verify(queueManager, never()).enqueue(anyLong(), anyLong(), anyList());
+    }
+    
+    /**
+     * 属�?12 (变体): QueueManager异常不中断处�?
+     * 
+     * <p>当QueueManager抛出异常时，插件应该继续处理并返回CONTINUE
+     */
+    @Property
+    @Label("Feature: tag-based-message-forwarding, Property 12 (QueueManager variant): 异常不中断处�?)
+    void queueManagerExceptionDoesNotInterruptProcessing(
+            @ForAll @LongRange(min = -9999999999L, max = -1L) Long chatId,
+            @ForAll @LongRange(min = 1L, max = 9999999999L) Long messageId,
+            @ForAll String textContent,
+            @ForAll("exceptionTypes") Exception exception) {
+        
+        // Given: 创建插件和模拟依�?
+        TagMatcher tagMatcher = mock(TagMatcher.class);
+        QueueManager queueManager = mock(QueueManager.class);
+        ForwardScheduler forwardScheduler = mock(ForwardScheduler.class);
+        TelegramClientManager clientManager = mock(TelegramClientManager.class);
+        
+        TagBasedForwardingProperties properties = new TagBasedForwardingProperties();
+        properties.setEnabled(true);
+        properties.setTargetChannelId(-1001234567890L);
+        
+        TagBasedMessageForwardingPlugin plugin = new TagBasedMessageForwardingPlugin(
+                tagMatcher,
+                queueManager,
+                forwardScheduler,
+                properties,
+                clientManager
+        );
+        
+        // 模拟TagMatcher返回匹配的标�?
+        List<String> matchedTags = Arrays.asList("#test");
+        when(tagMatcher.matchTags(anyString())).thenReturn(matchedTags);
+        
+        // 模拟QueueManager抛出异常
+        doThrow(exception).when(queueManager).enqueue(anyLong(), anyLong(), anyList());
+        
+        // When: 处理消息
+        TextMessageEntity message = createTextMessage(chatId, messageId, textContent);
+        PluginContext context = new PluginContext(null);
+        PluginResult result = plugin.handle(message, context);
+        
+        // Then: 应该返回CONTINUE而不是抛出异�?
+        assert result == PluginResult.CONTINUE : 
+                "Plugin should return CONTINUE even when QueueManager throws exception";
+    }
+    
+    /**
+     * 属�? 插件总是返回CONTINUE
+     * 
+     * <p>对于任何消息，无论是否匹配标签，插件都应该返回CONTINUE�?
+     * 确保不会中断插件链的执行
+     */
+    @Property
+    @Label("Feature: tag-based-message-forwarding, Property: 插件总是返回CONTINUE")
+    void pluginAlwaysReturnsContinue(
+            @ForAll @LongRange(min = -9999999999L, max = -1L) Long chatId,
+            @ForAll @LongRange(min = 1L, max = 9999999999L) Long messageId,
+            @ForAll String textContent,
+            @ForAll boolean hasMatchedTags) {
+        
+        // Given: 创建插件和模拟依�?
+        TagMatcher tagMatcher = mock(TagMatcher.class);
+        QueueManager queueManager = mock(QueueManager.class);
+        ForwardScheduler forwardScheduler = mock(ForwardScheduler.class);
+        TelegramClientManager clientManager = mock(TelegramClientManager.class);
+        
+        TagBasedForwardingProperties properties = new TagBasedForwardingProperties();
+        properties.setEnabled(true);
+        properties.setTargetChannelId(-1001234567890L);
+        
+        TagBasedMessageForwardingPlugin plugin = new TagBasedMessageForwardingPlugin(
+                tagMatcher,
+                queueManager,
+                forwardScheduler,
+                properties,
+                clientManager
+        );
+        
+        // 根据hasMatchedTags决定返回�?
+        List<String> matchedTags = hasMatchedTags ? 
+                Arrays.asList("#test") : Collections.emptyList();
+        when(tagMatcher.matchTags(anyString())).thenReturn(matchedTags);
+        
+        // When: 处理消息
+        TextMessageEntity message = createTextMessage(chatId, messageId, textContent);
+        PluginContext context = new PluginContext(null);
+        PluginResult result = plugin.handle(message, context);
+        
+        // Then: 应该总是返回CONTINUE
+        assert result == PluginResult.CONTINUE : 
+                "Plugin should always return CONTINUE";
+    }
+    
+    /**
+     * 属�? 只有匹配标签的消息才会入�?
+     * 
+     * <p>对于任何消息，只有当TagMatcher返回非空标签列表时，
+     * 才应该调用QueueManager.enqueue方法
+     */
+    @Property
+    @Label("Feature: tag-based-message-forwarding, Property: 只有匹配标签的消息才会入�?)
+    void onlyMatchedMessagesAreEnqueued(
+            @ForAll @LongRange(min = -9999999999L, max = -1L) Long chatId,
+            @ForAll @LongRange(min = 1L, max = 9999999999L) Long messageId,
+            @ForAll String textContent,
+            @ForAll boolean hasMatchedTags) {
+        
+        // Given: 创建插件和模拟依�?
+        TagMatcher tagMatcher = mock(TagMatcher.class);
+        QueueManager queueManager = mock(QueueManager.class);
+        ForwardScheduler forwardScheduler = mock(ForwardScheduler.class);
+        TelegramClientManager clientManager = mock(TelegramClientManager.class);
+        
+        TagBasedForwardingProperties properties = new TagBasedForwardingProperties();
+        properties.setEnabled(true);
+        properties.setTargetChannelId(-1001234567890L);
+        
+        TagBasedMessageForwardingPlugin plugin = new TagBasedMessageForwardingPlugin(
+                tagMatcher,
+                queueManager,
+                forwardScheduler,
+                properties,
+                clientManager
+        );
+        
+        // 根据hasMatchedTags决定返回�?
+        List<String> matchedTags = hasMatchedTags ? 
+                Arrays.asList("#test", "#example") : Collections.emptyList();
+        when(tagMatcher.matchTags(anyString())).thenReturn(matchedTags);
+        
+        // When: 处理消息
+        TextMessageEntity message = createTextMessage(chatId, messageId, textContent);
+        PluginContext context = new PluginContext(null);
+        plugin.handle(message, context);
+        
+        // Then: 验证QueueManager的调�?
+        if (hasMatchedTags) {
+            verify(queueManager, times(1)).enqueue(eq(chatId), eq(messageId), eq(matchedTags));
+        } else {
+            verify(queueManager, never()).enqueue(anyLong(), anyLong(), anyList());
+        }
+    }
+    
+    /**
+     * 属�? 入队参数正确�?
+     * 
+     * <p>对于任何匹配的消息，调用QueueManager.enqueue时应该传递正确的参数�?
+     * chatId、messageId和匹配的标签列表
+     */
+    @Property
+    @Label("Feature: tag-based-message-forwarding, Property: 入队参数正确�?)
+    void enqueueParametersAreCorrect(
+            @ForAll @LongRange(min = -9999999999L, max = -1L) Long chatId,
+            @ForAll @LongRange(min = 1L, max = 9999999999L) Long messageId,
+            @ForAll String textContent,
+            @ForAll @Size(min = 1, max = 5) List<@From("tagStrings") String> matchedTags) {
+        
+        // Given: 创建插件和模拟依�?
+        TagMatcher tagMatcher = mock(TagMatcher.class);
+        QueueManager queueManager = mock(QueueManager.class);
+        ForwardScheduler forwardScheduler = mock(ForwardScheduler.class);
+        TelegramClientManager clientManager = mock(TelegramClientManager.class);
+        
+        TagBasedForwardingProperties properties = new TagBasedForwardingProperties();
+        properties.setEnabled(true);
+        properties.setTargetChannelId(-1001234567890L);
+        
+        TagBasedMessageForwardingPlugin plugin = new TagBasedMessageForwardingPlugin(
+                tagMatcher,
+                queueManager,
+                forwardScheduler,
+                properties,
+                clientManager
+        );
+        
+        when(tagMatcher.matchTags(anyString())).thenReturn(matchedTags);
+        
+        // When: 处理消息
+        TextMessageEntity message = createTextMessage(chatId, messageId, textContent);
+        PluginContext context = new PluginContext(null);
+        plugin.handle(message, context);
+        
+        // Then: 验证参数正确�?
+        verify(queueManager, times(1)).enqueue(
+                eq(chatId),
+                eq(messageId),
+                eq(matchedTags)
+        );
+    }
+    
+    /**
+     * 创建测试用的文本消息实体
+     */
+    private TextMessageEntity createTextMessage(Long chatId, Long messageId, String textContent) {
+        TextMessageEntity message = new TextMessageEntity();
+        message.setChatId(chatId);
+        message.setMessageId(messageId);
+        message.setTextContent(textContent);
+        return message;
+    }
+    
+    /**
+     * 提供各种异常类型用于测试
+     */
+    @Provide
+    Arbitrary<Exception> exceptionTypes() {
+        return Arbitraries.of(
+                new RuntimeException("Test runtime exception"),
+                new IllegalStateException("Test illegal state"),
+                new NullPointerException("Test null pointer"),
+                new IllegalArgumentException("Test illegal argument"),
+                new UnsupportedOperationException("Test unsupported operation")
+        );
+    }
+    
+    /**
+     * 提供标签字符串用于测�?
+     */
+    @Provide
+    Arbitrary<String> tagStrings() {
+        return Arbitraries.of(
+                "#test",
+                "#example",
+                "#tag1",
+                "#tag2",
+                "#sample"
+        );
+    }
+}
+
+
+

@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * 标签过滤配置数据模型
- * 
+ * <p>
  * 从tag_filter_configs_v2集合读取，包含启用的标签配置信息
  */
 @Document(collection = "tag_filter_configs_v2")

@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Negative;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -12,9 +13,10 @@ import org.springframework.validation.annotation.Validated;
  * <p>此类从application.yaml绑定前缀为"plugin.tag-based-forwarding"的配置属性，
  * 并提供对所有插件配置选项的类型安全访问
  */
-@ConfigurationProperties(prefix = "plugin.tag-based-forwarding")
-@Validated
 @Data
+@Validated
+@Configuration
+@ConfigurationProperties(prefix = "plugin.tag-based-forwarding")
 public class TagBasedForwardingProperties {
     
     /**

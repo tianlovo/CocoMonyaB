@@ -1,9 +1,11 @@
 package org.xlyo.cocomonyab.plugin.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.domain.entity.message.*;
 import org.xlyo.cocomonyab.plugin.*;
+import org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterProperties;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -15,9 +17,12 @@ import java.time.ZoneId;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class ConsolePrinterPlugin extends AbstractMessagePlugin {
     
     private static final int PRIORITY = 0;  // 最低优先级
+    
+    private final ConsolePrinterProperties properties;
     
     @Override
     public String getName() {
@@ -27,6 +32,16 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
     @Override
     public int getPriority() {
         return PRIORITY;
+    }
+    
+    /**
+     * 检查插件是否启用
+     * 
+     * @return 如果插件启用则返回true，否则返回false
+     */
+    @Override
+    public boolean isEnabled() {
+        return properties.isEnabled();
     }
     
     @Override
@@ -48,8 +63,8 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
         log.info("📨 收到新消息");
         log.info("━".repeat(80));
         log.info("频道: {} (@{})", entity.getChannelTitle(), entity.getChannelUsername());
-        log.info("消息ID: {}", entity.getMessageId());
-        log.info("频道ID: {}", entity.getChatId());
+        log.info("消息 ID: {}", entity.getMessageId());
+        log.info("频道 ID: {}", entity.getChatId());
         log.info("类型: {}", entity.getType().getDescription());
         
         LocalDateTime messageTime = LocalDateTime.ofInstant(
@@ -80,8 +95,8 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
         log.info("📨 收到媒体组消息");
         log.info("━".repeat(80));
         log.info("频道: {} (@{})", entity.getChannelTitle(), entity.getChannelUsername());
-        log.info("媒体组ID: {}", entity.getMediaAlbumId());
-        log.info("频道ID: {}", entity.getChatId());
+        log.info("媒体组 ID: {}", entity.getMediaAlbumId());
+        log.info("频道 ID: {}", entity.getChatId());
         log.info("消息数量: {} 条", entity.getItems() != null ? entity.getItems().size() : 0);
         
         LocalDateTime messageTime = LocalDateTime.ofInstant(
@@ -96,7 +111,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
         if (entity.getItems() != null) {
             for (int i = 0; i < entity.getItems().size(); i++) {
                 BaseMessageEntity item = entity.getItems().get(i);
-                log.info("  [{}] 消息ID: {}, 类型: {}", 
+                log.info("  [{}] 消息 ID: {}, 类型: {}", 
                     i + 1, item.getMessageId(), item.getType().getDescription());
                 printMessageContentIndented(item);
             }
@@ -121,8 +136,8 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
         log.info("📨 收到新消息");
         log.info("━".repeat(80));
         log.info("频道: {} (@{})", entity.getChannelTitle(), entity.getChannelUsername());
-        log.info("消息ID: {}", entity.getMessageId());
-        log.info("频道ID: {}", entity.getChatId());
+        log.info("消息 ID: {}", entity.getMessageId());
+        log.info("频道 ID: {}", entity.getChatId());
         log.info("类型: {}", entity.getType().getDescription());
         
         LocalDateTime messageTime = LocalDateTime.ofInstant(
@@ -204,7 +219,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: {} 个", photo.getPhotos().size());
                     photo.getPhotos().forEach(file -> {
-                        log.info("  - 类型: 图片, 大小: {} bytes, 文件ID: {}", 
+                        log.info("  - 类型: 图片, 大小: {} bytes, 文件 ID: {}", 
                             file.getFileSize(), 
                             file.getFileId());
                     });
@@ -217,7 +232,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (video.getVideo() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 视频, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 视频, 大小: {} bytes, 文件 ID: {}", 
                         video.getVideo().getFileSize(), 
                         video.getVideo().getFileId());
                 }
@@ -229,7 +244,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (doc.getDocument() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 文档, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 文档, 大小: {} bytes, 文件 ID: {}", 
                         doc.getDocument().getFileSize(), 
                         doc.getDocument().getFileId());
                 }
@@ -241,7 +256,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (audio.getAudio() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 音频, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 音频, 大小: {} bytes, 文件 ID: {}", 
                         audio.getAudio().getFileSize(), 
                         audio.getAudio().getFileId());
                 }
@@ -253,7 +268,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (voice.getVoice() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 语音, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 语音, 大小: {} bytes, 文件 ID: {}", 
                         voice.getVoice().getFileSize(), 
                         voice.getVoice().getFileId());
                 }
@@ -262,7 +277,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (videoNote.getVideoNote() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 视频笔记, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 视频笔记, 大小: {} bytes, 文件 ID: {}", 
                         videoNote.getVideoNote().getFileSize(), 
                         videoNote.getVideoNote().getFileId());
                 }
@@ -274,7 +289,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (animation.getAnimation() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 动画, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 动画, 大小: {} bytes, 文件 ID: {}", 
                         animation.getAnimation().getFileSize(), 
                         animation.getAnimation().getFileId());
                 }
@@ -283,7 +298,7 @@ public class ConsolePrinterPlugin extends AbstractMessagePlugin {
                 if (sticker.getSticker() != null) {
                     log.info("━".repeat(80));
                     log.info("📎 媒体文件: 1 个");
-                    log.info("  - 类型: 贴纸, 大小: {} bytes, 文件ID: {}", 
+                    log.info("  - 类型: 贴纸, 大小: {} bytes, 文件 ID: {}", 
                         sticker.getSticker().getFileSize(), 
                         sticker.getSticker().getFileId());
                 }

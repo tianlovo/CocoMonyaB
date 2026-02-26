@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * 标签实体数据模型
- * 
+ * <p>
  * 用于从tag_authors、tag_characters、tag_works集合读取标签信息
  */
 @Data
