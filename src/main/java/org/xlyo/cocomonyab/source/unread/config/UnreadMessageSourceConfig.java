@@ -13,8 +13,6 @@ import jakarta.validation.constraints.NotNull;
  * 
  * 使用 @ConfigurationProperties 绑定配置，支持配置启动行为、API 调用参数、
  * 重试策略和批处理参数
- * 
- * 验证需求：11.1, 11.2, 11.3, 11.4, 11.5
  */
 @Configuration
 @ConfigurationProperties(prefix = "message-source.unread")
@@ -24,14 +22,12 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 启动配置：是否在程序启动时自动检测未读消息
-     * 需求：11.1
      */
     @NotNull
     private Boolean autoDetectOnStartup = true;
     
     /**
      * API 调用配置：单次 API 调用最大消息数
-     * 需求：11.2
      */
     @Min(1)
     @NotNull
@@ -39,7 +35,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * API 调用配置：单个频道最大获取消息数
-     * 需求：11.2, 2.5
      */
     @Min(1)
     @NotNull
@@ -47,7 +42,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * API 调用配置：API 调用之间的延迟（毫秒）
-     * 需求：11.4
      */
     @Min(0)
     @NotNull
@@ -55,7 +49,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 重试配置：最大重试次数
-     * 需求：11.5
      */
     @Min(0)
     @NotNull
@@ -63,7 +56,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 重试配置：基础重试延迟（毫秒）
-     * 需求：11.5
      */
     @Min(0)
     @NotNull
@@ -71,7 +63,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 重试配置：最大重试延迟（毫秒）
-     * 需求：11.5
      */
     @Min(0)
     @NotNull
@@ -79,7 +70,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 批处理配置：每批处理的消息数
-     * 需求：11.3
      */
     @Min(1)
     @NotNull
@@ -87,7 +77,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 批处理配置：批次之间的延迟（毫秒）
-     * 需求：11.3
      */
     @Min(0)
     @NotNull
@@ -95,7 +84,6 @@ public class UnreadMessageSourceConfig {
     
     /**
      * 缓冲区配置：缓冲区 TTL（天）
-     * 需求：13.7
      */
     @Min(1)
     @NotNull
