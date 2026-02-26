@@ -322,7 +322,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
                             .sorted()  // 确保按递增顺序排序（TDLib要求）
                             .toList();
                     
-                    forwardMessageId = mediaGroupMessageIds.get(0);  // 第一条消息ID作为主ID
+                    forwardMessageId = mediaGroupMessageIds.getFirst();  // 第一条消息ID作为主ID
                     
                     log.info("[TagForward] 媒体组消息，将转发整个媒体组: chatId={}, firstMessageId={}, messageIds={}, itemCount={}", 
                             chatId, forwardMessageId, mediaGroupMessageIds, mediaGroup.getItems().size());
