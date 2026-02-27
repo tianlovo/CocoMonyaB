@@ -85,6 +85,10 @@ dependencies {
     implementation(platform("it.tdlight:tdlight-java-bom:3.4.0+td.1.8.26"))
     implementation("it.tdlight:tdlight-java")
     runtimeOnly(group = "it.tdlight", name = "tdlight-natives", classifier = "windows_amd64")
+
+    // ZXing 二维码生成
+    implementation("com.google.zxing:core:3.5.4")
+    implementation("com.google.zxing:javase:3.5.4")
 }
 
 tasks.withType<Test> {

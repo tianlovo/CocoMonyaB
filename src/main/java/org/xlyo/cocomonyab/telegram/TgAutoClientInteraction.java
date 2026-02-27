@@ -21,6 +21,7 @@ import org.xlyo.cocomonyab.config.properties.TgEnvProperties;
 public class TgAutoClientInteraction implements ClientInteraction {
     
     private final TgEnvProperties envProperties;
+    private final java.util.Scanner scanner = new java.util.Scanner(System.in);
     
     public TgAutoClientInteraction(TgEnvProperties envProperties) {
         this.envProperties = envProperties;
@@ -71,9 +72,7 @@ public class TgAutoClientInteraction implements ClientInteraction {
                     // 从控制台读取验证码
                     log.info("提示: 验证码将发送到你的其他已登录 Telegram 设备");
                     System.out.print("请输入验证码: ");
-                    try (var scanner = new java.util.Scanner(System.in)) {
-                        yield scanner.nextLine().trim();
-                    }
+                    yield scanner.nextLine().trim();
                 }
                 
                 case ASK_PASSWORD -> {

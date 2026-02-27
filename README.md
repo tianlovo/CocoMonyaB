@@ -187,9 +187,11 @@ cd CocoMonyaB
 # Telegram API 配置（必填）
 API_ID=12345678
 API_HASH=0123456789abcdef0123456789abcdef
+
+# 手机号（可选，验证码登录时如果配置了会自动使用）
 TG_PHONE=+8613800138000
 
-# 两步验证密码（如果启用了 2FA，必填）
+# 两步验证密码（可选，如果启用了 2FA 建议配置）
 TG_2FA=your_2fa_password
 ```
 
@@ -197,6 +199,27 @@ TG_2FA=your_2fa_password
 1. 访问 https://my.telegram.org/apps
 2. 登录你的 Telegram 账号
 3. 创建新应用获取 `API_ID` 和 `API_HASH`
+
+**登录方式说明：**
+
+应用启动时会先尝试使用已保存的会话自动登录。如果自动登录失败，会通过控制台交互让你选择登录方式：
+
+1. **验证码登录**
+   - 验证码发送到其他已登录的 Telegram 设备
+   - 如果配置了 `TG_PHONE` 会自动使用，否则需要手动输入
+   - 适合已在其他设备登录的用户
+
+2. **二维码登录（推荐首次登录使用）**
+   - 在控制台显示二维码，使用手机扫码登录
+   - 同时保存二维码图片到 `data/tmp/telegram_qrcode.png`
+   - 无需配置或输入手机号
+   - 适合首次登录或验证码无法收到的情况
+
+**重要提示：**
+- **首次登录推荐使用二维码登录**，更快捷方便
+- 如果验证码一直无法在所有设备收到，请使用二维码登录
+- 控制台显示的二维码可能比较抽象，建议直接打开 `data/tmp/telegram_qrcode.png` 图片文件扫码
+- 登录成功后，下次启动会自动登录，无需重复操作
 
 #### 3. 构建项目
 
@@ -210,12 +233,41 @@ gradlew.bat build
 
 #### 4. 运行应用
 
+**开发模式（IDE 中运行）：**
+
 ```bash
 # Windows
 gradlew.bat bootRun
 
 # Linux/macOS
 ./gradlew bootRun
+```
+
+**生产模式（Windows 控制台）：**
+
+为了解决 Windows 控制台中文乱码问题，建议使用提供的启动脚本：
+
+```bash
+# 1. 先构建项目
+gradlew.bat build
+
+# 2. 使用启动脚本运行（自动处理 jar 重命名和 UTF-8 编码）
+start.bat
+```
+
+`start.bat` 脚本会自动执行以下操作：
+- 查找并重命名 `CocoMonyaB-*.jar` 为 `CocoMonyaB.jar`
+- 设置控制台 UTF-8 编码
+- 启动应用
+
+或者手动运行并设置编码：
+
+```bash
+# 设置控制台编码为 UTF-8
+chcp 65001
+
+# 运行应用
+java -Dfile.encoding=UTF-8 -jar build\libs\CocoMonyaB-1.0.0.jar
 ```
 
 首次启动时需要输入 Telegram 验证码完成登录。
@@ -269,6 +321,7 @@ spring:
 telegram:
   device-model: "Coco Monya"
   login-timeout-minutes: 2
+  # 登录方式将在启动时通过控制台交互选择
 
 # 数据目录配置（可选，使用默认值即可）
 app:
@@ -286,21 +339,50 @@ app:
 
 ### 启动应用
 
-#### 开发模式
+#### 开发模式（IDE）
+
+在 IDE 中直接运行或使用 Gradle：
 
 ```bash
+# Windows
+gradlew.bat bootRun
+
+# Linux/macOS
 ./gradlew bootRun
 ```
 
 #### 生产模式
 
+**Windows 系统（推荐使用启动脚本）：**
+
+```bash
+# 1. 构建 JAR 包
+gradlew.bat build
+
+# 2. 使用启动脚本（自动处理 jar 重命名和编码问题）
+start.bat
+```
+
+`start.bat` 脚本功能：
+- 自动查找并重命名 `CocoMonyaB-*.jar` 为 `CocoMonyaB.jar`
+- 自动设置 UTF-8 编码避免中文乱码
+- 启动应用并等待用户确认
+
+**手动启动（所有系统）：**
+
 ```bash
 # 构建 JAR 包
 ./gradlew build
 
-# 运行 JAR 包
+# Windows - 设置 UTF-8 编码
+chcp 65001
+java -Dfile.encoding=UTF-8 -jar build/libs/CocoMonyaB-1.0.0.jar
+
+# Linux/macOS
 java -jar build/libs/CocoMonyaB-1.0.0.jar
 ```
+
+> **注意**：Windows 系统在控制台运行时，如果出现中文乱码，请使用 `start.bat` 脚本或手动设置 UTF-8 编码。IDE 中运行不受影响。
 
 ### API 文档
 
@@ -569,7 +651,47 @@ A: 访问 https://my.telegram.org/apps 登录并创建应用即可获取 `API_ID
 
 ### Q: 首次启动需要输入什么？
 
-A: 首次启动需要输入 Telegram 发送的验证码，如果启用了两步验证还需要输入 2FA 密码。
+A: 应用会先尝试自动登录。如果自动登录失败（首次启动或 session 过期），会提示你选择登录方式（1/2）：
+
+- **1. 验证码登录**: 验证码发送到其他已登录的 Telegram 设备，需要输入验证码
+- **2. 二维码登录（推荐首次登录）**: 在控制台显示二维码，同时保存到 `data/tmp/telegram_qrcode.png`，使用手机扫描即可
+
+**推荐做法：**
+- 首次登录建议选择二维码登录（输入 2），更快捷方便
+- 控制台二维码可能显示不清晰，直接打开 `data/tmp/telegram_qrcode.png` 图片文件扫码
+- 如果验证码一直无法在所有设备收到，请使用二维码登录
+
+如果启用了两步验证，还需要输入 2FA 密码（或在配置文件中预先配置）。
+
+### Q: 如何切换登录方式？
+
+A: 如果已有有效的 session，应用会自动登录。如果想重新选择登录方式，需要先清除 session：
+```bash
+rm -rf data/session/td/data
+```
+然后重启应用，会提示选择登录方式。
+
+### Q: 二维码显示乱码或无法识别怎么办？
+
+A: 控制台显示的二维码可能比较抽象，系统提供了多种备用方案：
+
+1. **使用图片文件（推荐）**：系统会自动保存二维码图片到 `data/tmp/telegram_qrcode.png`，使用图片查看器打开并扫描
+2. **使用登录链接**：复制控制台显示的登录链接，在 Telegram 中打开
+3. **切换登录方式**：重启应用，选择验证码登录（输入 1）
+
+如果想改善控制台二维码显示效果：
+- Windows 用户建议使用 Windows Terminal 或 PowerShell 7+
+- 确保控制台字体支持 Unicode 字符（█ ▀ ▄）
+- 调整控制台字体大小
+
+### Q: 验证码一直收不到怎么办？
+
+A: 如果验证码一直无法在所有已登录的 Telegram 设备上收到，请使用二维码登录：
+1. 重启应用
+2. 选择 `2`（二维码登录）
+3. 打开 `data/tmp/telegram_qrcode.png` 图片文件
+4. 使用手机 Telegram 扫描二维码
+5. 在手机上确认登录
 
 ### Q: 如何切换到远程 MongoDB？
 
@@ -578,6 +700,10 @@ A: 修改 `application.yaml` 中的 `spring.data.mongodb.mode` 为 `remote`，�
 ### Q: 如何添加自定义过滤器？
 
 A: 创建类继承 `AbstractMessageFilter`，实现必要方法，并添加 `@Component` 注解即可自动注册。
+
+### Q: Windows 控制台中文乱码怎么办？
+
+A: 使用项目根目录的 `start.bat` 脚本启动应用，该脚本会自动设置 UTF-8 编码。或者手动执行 `chcp 65001` 后再运行 JAR 文件。IDE 中运行不受影响。
 
 ### Q: 消息转发失败怎么办？
 

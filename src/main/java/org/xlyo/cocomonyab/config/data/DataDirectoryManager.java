@@ -141,23 +141,38 @@ public class DataDirectoryManager {
      * 2. 如果是IDE运行，在项目根目录创建data目录
      */
     private Path determineDataRootPath() throws URISyntaxException {
-        // 获取应用的运行位置
-        File jarFile = new File(
-            DataDirectoryManager.class.getProtectionDomain()
+        Path basePath;
+        
+        try {
+            // 获取应用的运行位置
+            String location = DataDirectoryManager.class.getProtectionDomain()
                 .getCodeSource()
                 .getLocation()
                 .toURI()
-        );
-
-        Path basePath;
-        if (jarFile.isFile()) {
-            // jar包运行：使用jar包所在目录
-            basePath = jarFile.getParentFile().toPath();
-            log.info("检测到jar包运行模式，jar路径: {}", jarFile.getAbsolutePath());
-        } else {
-            // IDE运行：使用项目根目录（当前工作目录）
+                .toString();
+            
+            // 检查是否在JAR包中运行
+            if (location.startsWith("jar:")) {
+                // 从 jar:file:/path/to/app.jar!/... 中提取实际的jar文件路径
+                String jarPath = location.substring(4); // 移除 "jar:"
+                int separatorIndex = jarPath.indexOf("!/");
+                if (separatorIndex != -1) {
+                    jarPath = jarPath.substring(0, separatorIndex);
+                }
+                
+                // 转换为File对象并获取父目录
+                File jarFile = new File(new java.net.URI(jarPath));
+                basePath = jarFile.getParentFile().toPath();
+                log.info("检测到jar包运行模式，jar路径: {}", jarFile.getAbsolutePath());
+            } else {
+                // IDE运行或解压后的classes目录：使用当前工作目录
+                basePath = Paths.get(System.getProperty("user.dir"));
+                log.info("检测到IDE运行模式，工作目录: {}", basePath.toAbsolutePath());
+            }
+        } catch (Exception e) {
+            // 如果上述方法失败，回退到使用当前工作目录
+            log.warn("无法确定jar包位置，使用当前工作目录: {}", e.getMessage());
             basePath = Paths.get(System.getProperty("user.dir"));
-            log.info("检测到IDE运行模式，工作目录: {}", basePath.toAbsolutePath());
         }
 
         return basePath.resolve(DATA_DIR_NAME);

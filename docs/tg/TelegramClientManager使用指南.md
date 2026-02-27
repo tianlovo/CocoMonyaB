@@ -16,7 +16,31 @@
 ✅ **依赖管理**: 确保在配置组件初始化后才开始初始化  
 ✅ **自动清理**: 在应用关闭时自动登出并释放资源  
 ✅ **线程安全**: 单例模式保证线程安全  
-✅ **状态检查**: 提供 `isReady()` 方法检查客户端是否就绪
+✅ **状态检查**: 提供 `isReady()` 方法检查客户端是否就绪  
+✅ **多种登录方式**: 支持自动登录、验证码登录、二维码登录
+
+## 登录方式
+
+系统支持自动登录和两种手动登录方式：
+
+### 1. 自动登录
+
+如果存在有效的登录会话（session），应用会自动登录，无需任何操作。
+
+### 2. 验证码登录（code，默认）
+
+验证码发送到其他已登录的 Telegram 设备，适合日常使用。
+
+如果配置了手机号会自动使用：
+```env
+TG_PHONE=+8613800138000
+```
+
+### 3. 二维码登录（qrcode）
+
+在控制台显示二维码，使用手机扫码登录，无需配置手机号。
+
+详细说明请参考：[登录方式指南](登录方式指南.md)
 
 ## 初始化流程
 
@@ -172,10 +196,12 @@ clientBuilder.addUpdateHandler(TdApi.UpdateNewMessage.class, update -> {
 
 ```yaml
 telegram:
+  # 设备型号标识
   device-model: "Coco Monya"
-  database-directory: "data/session/td/data"
-  download-directory: "data/session/td/downloads"
-  login-timeout-minutes: 2  # 登录超时时间（分钟）
+  # 登录超时时间（分钟）
+  login-timeout-minutes: 2
+  # 登录方式：code（验证码登录，默认）、qrcode（二维码登录）、console（控制台输入登录）
+  login-type: code
 ```
 
 ### .env 文件
@@ -183,7 +209,7 @@ telegram:
 ```env
 API_ID=12345678
 API_HASH=0123456789abcdef0123456789abcdef
-TG_PHONE=+8613800138000
+TG_PHONE=+8613800138000  # 验证码登录和控制台登录需要，二维码登录不需要
 TG_2FA=your_2fa_password  # 可选
 ```
 

@@ -16,6 +16,37 @@
       label-position="left"
       :disabled="loading"
     >
+      <!-- 从已登录账号选择频道 -->
+      <el-form-item v-if="!isEdit" label="快速选择">
+        <el-select
+          v-model="selectedTgChannels"
+          multiple
+          filterable
+          placeholder="从已登录账号的频道列表中选择"
+          style="width: 100%"
+          :loading="tgChannelsLoading"
+          @visible-change="handleSelectVisibleChange"
+          @change="handleTgChannelSelect"
+        >
+          <el-option
+            v-for="channel in tgChannels"
+            :key="channel.chatId"
+            :label="`${channel.title} ${channel.username ? '@' + channel.username : ''}`"
+            :value="channel.chatId"
+          >
+            <div style="display: flex; flex-direction: column">
+              <span>{{ channel.title }}</span>
+              <span style="font-size: 12px; color: var(--el-text-color-secondary)">
+                {{ channel.username ? '@' + channel.username : 'ID: ' + channel.chatId }}
+              </span>
+            </div>
+          </el-option>
+        </el-select>
+        <el-text type="info" size="small" style="margin-top: 4px">
+          选择后将自动填充频道信息，支持多选批量添加
+        </el-text>
+      </el-form-item>
+
       <el-form-item label="频道ID" prop="channelId">
         <el-input
           v-model.number="formData.channelId"
@@ -90,8 +121,10 @@ export default {
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { useChannelStore } from '@/stores/channel'
-import type { Channel, ChannelCreateDTO, ChannelUpdateDTO } from '@/types/models'
+import { channelApi } from '@/api/channel'
+import type { Channel, ChannelCreateDTO, ChannelUpdateDTO, TgChannel } from '@/types/models'
 import { handleConflictError, showSuccessMessage } from '@/utils/errorHandler'
 import { ApiError } from '@/utils/request'
 
@@ -111,6 +144,12 @@ const emit = defineEmits<Emits>()
 const channelStore = useChannelStore()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+
+// Telegram channels from logged-in account
+const tgChannels = ref<TgChannel[]>([])
+const tgChannelsLoading = ref(false)
+const selectedTgChannels = ref<number[]>([])
+const channelsToCreate = ref<ChannelCreateDTO[]>([])
 
 const dialogVisible = computed({
   get: () => props.visible,
@@ -150,7 +189,78 @@ const resetForm = () => {
     channelTitle: '',
     monitoringStatus: true
   }
+  selectedTgChannels.value = []
+  channelsToCreate.value = []
   formRef.value?.clearValidate()
+}
+
+// Load Telegram channels from logged-in account
+const loadTgChannels = async () => {
+  if (tgChannels.value.length > 0) return // Already loaded
+  
+  tgChannelsLoading.value = true
+  try {
+    const response = await channelApi.getTgChannels({
+      current: 1,
+      size: 100,
+      forceRefresh: false
+    })
+    tgChannels.value = response.records.filter(ch => ch.isChannel)
+  } catch (error) {
+    console.error('Failed to load Telegram channels:', error)
+    ElMessage.error('加载频道列表失败')
+  } finally {
+    tgChannelsLoading.value = false
+  }
+}
+
+// Handle select dropdown visibility change
+const handleSelectVisibleChange = (visible: boolean) => {
+  if (visible && !isEdit.value) {
+    loadTgChannels()
+  }
+}
+
+// Handle Telegram channel selection
+const handleTgChannelSelect = (selectedIds: number[]) => {
+  if (selectedIds.length === 0) {
+    channelsToCreate.value = []
+    return
+  }
+
+  // Build list of channels to create
+  const channels: ChannelCreateDTO[] = []
+  for (const chatId of selectedIds) {
+    const tgChannel = tgChannels.value.find(ch => ch.chatId === chatId)
+    if (tgChannel) {
+      channels.push({
+        channelId: tgChannel.chatId,
+        channelUsername: tgChannel.username || undefined,
+        channelTitle: tgChannel.title,
+        monitoringStatus: true
+      })
+    }
+  }
+  channelsToCreate.value = channels
+
+  // If only one channel selected, fill the form
+  if (channelsToCreate.value.length === 1) {
+    const channel = channelsToCreate.value[0]
+    formData.value = {
+      channelId: channel.channelId,
+      channelUsername: channel.channelUsername || '',
+      channelTitle: channel.channelTitle,
+      monitoringStatus: channel.monitoringStatus ?? true
+    }
+  } else if (channelsToCreate.value.length > 1) {
+    // Multiple channels selected, clear form
+    formData.value = {
+      channelId: 0,
+      channelUsername: '',
+      channelTitle: '',
+      monitoringStatus: true
+    }
+  }
 }
 
 // Watch for channel prop changes
@@ -170,6 +280,13 @@ watch(() => props.channel, (newChannel) => {
 
 // Handle confirm
 const handleConfirm = async () => {
+  // If multiple channels selected, batch create
+  if (!isEdit.value && channelsToCreate.value.length > 1) {
+    await handleBatchCreate()
+    return
+  }
+
+  // Single channel create or edit
   if (!formRef.value) return
 
   try {
@@ -206,6 +323,50 @@ const handleConfirm = async () => {
   } catch (error: any) {
     if (error instanceof ApiError && error.code === -60003) {
       handleConflictError(error)
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Handle batch create
+const handleBatchCreate = async () => {
+  loading.value = true
+  let successCount = 0
+  let failCount = 0
+  const errors: string[] = []
+
+  try {
+    for (const channelData of channelsToCreate.value) {
+      try {
+        await channelStore.createChannel(channelData)
+        successCount++
+      } catch (error: any) {
+        failCount++
+        const channelName = channelData.channelTitle || `ID: ${channelData.channelId}`
+        if (error instanceof ApiError && error.code === -60003) {
+          errors.push(`${channelName}: 频道已存在`)
+        } else {
+          errors.push(`${channelName}: ${error.message || '创建失败'}`)
+        }
+      }
+    }
+
+    // Show result message
+    if (successCount > 0 && failCount === 0) {
+      showSuccessMessage(`成功创建 ${successCount} 个频道`)
+    } else if (successCount > 0 && failCount > 0) {
+      ElMessage.warning(`成功创建 ${successCount} 个频道，${failCount} 个失败`)
+      if (errors.length > 0) {
+        console.error('Batch create errors:', errors)
+      }
+    } else {
+      ElMessage.error(`创建失败：${errors.join('; ')}`)
+    }
+
+    if (successCount > 0) {
+      dialogVisible.value = false
+      emit('success')
     }
   } finally {
     loading.value = false

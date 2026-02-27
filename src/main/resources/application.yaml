@@ -58,6 +58,7 @@ telegram:
   device-model: "Coco Monya"
   # 登录超时时间（分钟），默认 2 分钟
   login-timeout-minutes: 2
+  # 登录方式将在启动时通过控制台交互选择
 
 # 环境变量配置（从 .env 文件读取）
 env:
