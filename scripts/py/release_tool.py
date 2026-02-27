@@ -680,8 +680,8 @@ def main():
     console.print("[bold cyan]10. 合并 development 分支[/bold cyan]")
     console.print("[cyan]使用 Squash and merge 模式...[/cyan]")
     
-    # 执行 squash merge
-    stdout, stderr, code = run_command(["git", "merge", "--squash", "development"])
+    # 执行 squash merge，允许不相关的历史记录
+    stdout, stderr, code = run_command(["git", "merge", "--squash", "--allow-unrelated-histories", "development"])
     
     if code != 0:
         console.print(f"[bold red]合并失败:[/bold red] {stderr}")
