@@ -18,6 +18,11 @@ const router = createRouter({
           component: () => import('@/views/MessageTrackingView.vue')
         },
         {
+          path: 'system-info',
+          name: 'system-info',
+          component: () => import('@/views/SystemInfoView.vue')
+        },
+        {
           path: 'channel',
           component: () => import('@/views/ChannelLayout.vue'),
           children: [

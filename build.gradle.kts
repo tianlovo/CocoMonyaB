@@ -1,3 +1,5 @@
+import java.time.Instant
+
 plugins {
     java
     id("org.springframework.boot") version "4.0.3"
@@ -5,7 +7,8 @@ plugins {
 }
 
 group = "org.xlyo"
-version = "0.0.1-INDEV"
+// 主版本号.次版本号.修订号[-预发布标识]
+version = "1.0.0"
 description = "【后端】基于 TG Userbot 监控与多级审核，实现媒体资源自动化筛选、编辑及本地结构化存储的存档系统。"
 
 val protobufVersion by extra("4.33.5")
@@ -98,4 +101,114 @@ tasks.compileJava {
 
 tasks.compileTestJava {
     options.encoding = "UTF-8"
+}
+
+// 生成版本信息类的任务
+tasks.register("generateVersionInfo") {
+    group = "build"
+    description = "Generate version information class from build.gradle.kts"
+    
+    val outputDir = layout.buildDirectory.dir("generated/sources/version/java").get().asFile
+    val packageName = "org.xlyo.cocomonyab.config.version"
+    val className = "VersionInfo"
+    val packagePath = packageName.replace('.', '/')
+    val outputFile = file("$outputDir/$packagePath/$className.java")
+    
+    val projectVersion = project.version.toString()
+    val projectGroup = project.group.toString()
+    val projectDescription = project.description ?: "CocoMonyaB Backend System"
+    
+    inputs.property("version", projectVersion)
+    inputs.property("group", projectGroup)
+    inputs.property("description", projectDescription)
+    outputs.file(outputFile)
+    
+    doLast {
+        outputFile.parentFile.mkdirs()
+        
+        val buildTime = Instant.now().toString()
+        val javaVersion = System.getProperty("java.version")
+        val gradleVersion = gradle.gradleVersion
+        
+        outputFile.writeText("""
+package $packageName;
+
+/**
+ * 版本信息类（自动生成）
+ * <p>
+ * 此类由Gradle任务自动生成，包含项目的版本、构建时间等信息。
+ * 请勿手动修改此文件。
+ * </p>
+ * 
+ * @see org.xlyo.cocomonyab.controller.SystemStatusController
+ */
+public final class VersionInfo {
+    
+    /**
+     * 项目版本号
+     */
+    public static final String VERSION = "$projectVersion";
+    
+    /**
+     * 项目组ID
+     */
+    public static final String GROUP = "$projectGroup";
+    
+    /**
+     * 项目描述
+     */
+    public static final String DESCRIPTION = "$projectDescription";
+    
+    /**
+     * 构建时间（ISO 8601格式）
+     */
+    public static final String BUILD_TIME = "$buildTime";
+    
+    /**
+     * Java版本
+     */
+    public static final String JAVA_VERSION = "$javaVersion";
+    
+    /**
+     * Gradle版本
+     */
+    public static final String GRADLE_VERSION = "$gradleVersion";
+    
+    /**
+     * 项目名称
+     */
+    public static final String PROJECT_NAME = "CocoMonyaB";
+    
+    private VersionInfo() {
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    }
+    
+    /**
+     * 获取完整的版本信息字符串
+     * 
+     * @return 格式化的版本信息
+     */
+    public static String getFullVersionInfo() {
+        return String.format("%s v%s (Built: %s, Java: %s)", 
+            PROJECT_NAME, VERSION, BUILD_TIME, JAVA_VERSION);
+    }
+}
+        """.trimIndent())
+        
+        println("Generated version info class: $outputFile")
+    }
+}
+
+// 将生成的源代码添加到源集
+sourceSets {
+    main {
+        java {
+            srcDir(layout.buildDirectory.dir("generated/sources/version/java"))
+        }
+    }
+}
+
+// 确保在编译前生成版本信息
+tasks.compileJava {
+    dependsOn("generateVersionInfo")
 }

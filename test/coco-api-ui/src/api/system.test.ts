@@ -53,4 +53,29 @@ describe('systemApi', () => {
       expect(result).toBe('OK')
     })
   })
+
+  describe('getInfo', () => {
+    it('should call GET /system/info', async () => {
+      const mockInfo = {
+        projectName: 'CocoMonyaB',
+        version: '1.0.0',
+        artifact: 'cocomonyab',
+        group: 'org.xlyo',
+        description: '测试项目',
+        buildTime: '2024-03-20T10:30:00.000Z',
+        javaVersion: '21.0.1',
+        gradleVersion: '8.5',
+        fullVersionInfo: 'CocoMonyaB v1.0.0 (Built: 2024-03-20T10:30:00.000Z, Java: 21.0.1)'
+      }
+      
+      vi.mocked(request.get).mockResolvedValue(mockInfo)
+
+      const result = await systemApi.getInfo()
+
+      expect(request.get).toHaveBeenCalledWith('/system/info')
+      expect(result).toEqual(mockInfo)
+      expect(result.projectName).toBe('CocoMonyaB')
+      expect(result.version).toBe('1.0.0')
+    })
+  })
 })

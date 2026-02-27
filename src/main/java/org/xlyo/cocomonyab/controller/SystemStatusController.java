@@ -5,15 +5,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.xlyo.cocomonyab.common.response.ApiResponse;
+import org.xlyo.cocomonyab.config.version.VersionInfo;
+import org.xlyo.cocomonyab.domain.vo.SystemInfoVO;
+import org.xlyo.cocomonyab.domain.vo.SystemStatusVO;
 import org.xlyo.cocomonyab.service.SystemReadyService;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 系统状态REST控制器
  * <p>
- * 提供系统就绪状态查询接口
+ * 提供系统就绪状态查询、健康检查和版本信息接口
  * </p>
  */
 @RestController
@@ -30,13 +30,13 @@ public class SystemStatusController {
      * @return 系统状态信息
      */
     @GetMapping("/status")
-    public ApiResponse<Map<String, Object>> getSystemStatus() {
-        Map<String, Object> status = new HashMap<>();
-        status.put("ready", systemReadyService.getSystemReady().get());
-        status.put("reason", systemReadyService.getNotReadyReason());
-        status.put("timestamp", System.currentTimeMillis());
-        
-        return ApiResponse.success(status);
+    public ApiResponse<SystemStatusVO> getSystemStatus() {
+        SystemStatusVO vo = new SystemStatusVO(
+            systemReadyService.getSystemReady().get(),
+            systemReadyService.getNotReadyReason(),
+            System.currentTimeMillis()
+        );
+        return ApiResponse.success(vo);
     }
     
     /**
@@ -48,5 +48,26 @@ public class SystemStatusController {
     @GetMapping("/health")
     public ApiResponse<String> health() {
         return ApiResponse.success("OK");
+    }
+    
+    /**
+     * 获取系统版本信息
+     * GET /api/system/info
+     *
+     * @return 版本信息
+     */
+    @GetMapping("/info")
+    public ApiResponse<SystemInfoVO> getSystemInfo() {
+        SystemInfoVO vo = new SystemInfoVO(
+            VersionInfo.PROJECT_NAME,
+            VersionInfo.VERSION,
+            VersionInfo.GROUP,
+            VersionInfo.DESCRIPTION,
+            VersionInfo.BUILD_TIME,
+            VersionInfo.JAVA_VERSION,
+            VersionInfo.GRADLE_VERSION,
+            VersionInfo.getFullVersionInfo()
+        );
+        return ApiResponse.success(vo);
     }
 }

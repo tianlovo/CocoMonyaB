@@ -33,3 +33,15 @@ export interface SystemStatus {
   reason: string | null
   timestamp: number
 }
+
+export interface SystemInfo {
+  projectName: string
+  version: string
+  artifact: string
+  group: string
+  description: string
+  buildTime: string
+  javaVersion: string
+  gradleVersion: string
+  fullVersionInfo: string
+}

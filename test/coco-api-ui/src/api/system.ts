@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import type { SystemStatus } from '@/types/api'
+import type { SystemStatus, SystemInfo } from '@/types/api'
 
 export const systemApi = {
   // Get system status
@@ -10,5 +10,10 @@ export const systemApi = {
   // Health check
   healthCheck() {
     return request.get<any, string>('/system/health')
+  },
+
+  // Get system version info
+  getInfo() {
+    return request.get<any, SystemInfo>('/system/info')
   }
 }

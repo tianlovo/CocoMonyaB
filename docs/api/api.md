@@ -27,6 +27,54 @@
 
 系统状态 API 提供了查询系统就绪状态和健康检查的接口。这些接口不受系统启动就绪机制的限制，即使系统未完全启动也可以访问。
 
+### 系统状态-数据结构
+
+#### SystemStatusVO（系统状态响应对象）
+
+```json
+{
+  "ready": true,
+  "reason": null,
+  "timestamp": 1708588800000
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ready | Boolean | 系统是否就绪 |
+| reason | String | 未就绪原因（就绪时为null） |
+| timestamp | Long | 当前时间戳（毫秒） |
+
+#### SystemInfoVO（系统信息响应对象）
+
+```json
+{
+  "projectName": "CocoMonyaB",
+  "version": "1.0.0",
+  "group": "org.xlyo",
+  "description": "【后端】基于 TG Userbot 监控与多级审核，实现媒体资源自动化筛选、编辑及本地结构化存储的存档系统。",
+  "buildTime": "2024-03-20T10:30:00.000Z",
+  "javaVersion": "21.0.1",
+  "gradleVersion": "8.5",
+  "fullVersionInfo": "CocoMonyaB v1.0.0 (Built: 2024-03-20T10:30:00.000Z, Java: 21.0.1)"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| projectName | String | 项目名称 |
+| version | String | 项目版本号 |
+| group | String | 项目组ID |
+| description | String | 项目描述 |
+| buildTime | String | 构建时间（ISO 8601格式） |
+| javaVersion | String | Java版本 |
+| gradleVersion | String | Gradle版本 |
+| fullVersionInfo | String | 完整的版本信息字符串 |
+
 ### 系统状态-API 端点
 
 #### 获取系统状态
@@ -87,6 +135,44 @@
 }
 ```
 
+#### 获取系统版本信息
+
+**接口地址：** `GET /api/system/info`
+
+**查询参数：** 无
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "projectName": "CocoMonyaB",
+    "version": "1.0.0",
+    "group": "org.xlyo",
+    "description": "【后端】基于 TG Userbot 监控与多级审核，实现媒体资源自动化筛选、编辑及本地结构化存储的存档系统。",
+    "buildTime": "2024-03-20T10:30:00.000Z",
+    "javaVersion": "21.0.1",
+    "gradleVersion": "8.5",
+    "fullVersionInfo": "CocoMonyaB v1.0.0 (Built: 2024-03-20T10:30:00.000Z, Java: 21.0.1)"
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| projectName | String | 项目名称 |
+| version | String | 项目版本号 |
+| group | String | 项目组ID |
+| description | String | 项目描述 |
+| buildTime | String | 构建时间（ISO 8601格式） |
+| javaVersion | String | Java版本 |
+| gradleVersion | String | Gradle版本 |
+| fullVersionInfo | String | 完整的版本信息字符串 |
+
 ### 系统状态-使用示例
 
 #### 查询系统状态
@@ -127,6 +213,22 @@ curl http://localhost:8080/api/channel/list
 curl http://localhost:8080/api/system/health
 ```
 
+#### 获取版本信息
+
+```bash
+# 查询系统版本信息
+curl http://localhost:8080/api/system/info
+
+# 格式化输出
+curl -s http://localhost:8080/api/system/info | jq .
+
+# 只显示版本号
+curl -s http://localhost:8080/api/system/info | jq -r '.data.version'
+
+# 显示完整版本信息
+curl -s http://localhost:8080/api/system/info | jq -r '.data.fullVersionInfo'
+```
+
 ### 系统状态-注意事项
 
 1. **白名单机制**：`/api/system/**` 路径下的所有API都在白名单中，不受系统启动就绪机制的限制
@@ -134,6 +236,8 @@ curl http://localhost:8080/api/system/health
 3. **监控用途**：建议在启动脚本、健康检查、监控系统中使用这些接口
 4. **HTTP状态码**：系统状态查询始终返回 `200 OK`，通过响应体中的 `ready` 字段判断系统状态
 5. **业务API拦截**：当系统未就绪时，访问业务API会收到 `503 Service Unavailable` 响应
+6. **版本信息**：`/api/system/info` 端点提供详细的版本和构建信息，版本信息在构建时自动生成
+7. **构建时生成**：版本信息类由Gradle任务自动生成，无需手动维护
 
 ### 业务API未就绪响应示例
 

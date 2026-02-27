@@ -17,6 +17,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * - 错误处理
  * <p>
  * 子类只需实现 doStart() 和 doStop() 方法即可
+ * <p>
+ * <b>注意：</b>start()、stop()、isRunning() 方法不使用 final 修饰符，
+ * 以允许 Spring AOP 进行代理。如果使用 final，会导致 CGLIB 代理警告。
  * 
  * @author CocoMonya Team
  * @since 1.0
@@ -66,7 +69,7 @@ public abstract class AbstractMessageSource implements MessageSource {
     private volatile LocalDateTime lastErrorTime;
     
     @Override
-    public final void start() throws MessageSourceException {
+    public void start() throws MessageSourceException {
         if (running.get()) {
             log.warn("消息来源已在运行: sourceId={}", getSourceId());
             return;
@@ -87,7 +90,7 @@ public abstract class AbstractMessageSource implements MessageSource {
     }
     
     @Override
-    public final void stop() throws MessageSourceException {
+    public void stop() throws MessageSourceException {
         if (!running.get()) {
             log.warn("消息来源未运行: sourceId={}", getSourceId());
             return;
@@ -107,7 +110,7 @@ public abstract class AbstractMessageSource implements MessageSource {
     }
     
     @Override
-    public final boolean isRunning() {
+    public boolean isRunning() {
         return running.get();
     }
     

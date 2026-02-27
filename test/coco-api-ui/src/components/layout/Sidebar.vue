@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { User, Document, Avatar, Setting, ChatDotRound, Connection } from '@element-plus/icons-vue'
+import { User, Document, Avatar, Setting, ChatDotRound, Connection, InfoFilled } from '@element-plus/icons-vue'
 
 interface Props {
   collapsed?: boolean
@@ -100,7 +100,8 @@ const navItems = [
     { path: '/config/works', label: '原作库', icon: Document },
     { path: '/config/characters', label: '角色库', icon: Avatar },
     { path: '/config/filter', label: '标签过滤配置', icon: Setting }
-  ]}
+  ]},
+  { path: '/system-info', label: '系统信息', icon: InfoFilled }
 ]
 
 const isActive = (path: string) => {
