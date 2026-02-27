@@ -12,6 +12,8 @@ import org.xlyo.cocomonyab.config.data.DataDirectoryManager;
 import org.xlyo.cocomonyab.config.properties.TelegramProperties;
 import org.xlyo.cocomonyab.config.properties.TgEnvProperties;
 import org.xlyo.cocomonyab.telegram.handler.TgUpdateNewMessageHandler;
+import org.xlyo.cocomonyab.telegram.handler.TgUpdateNewChatHandler;
+import org.xlyo.cocomonyab.telegram.handler.TgUpdateChatPositionHandler;
 
 import java.nio.file.Paths;
 import java.util.Locale;
@@ -39,6 +41,8 @@ public class TelegramClientManager {
     private final TgEnvProperties envProperties;
     private final TelegramProperties telegramProperties;
     private final TgUpdateNewMessageHandler updateNewMessageHandler;
+    private final TgUpdateNewChatHandler updateNewChatHandler;
+    private final TgUpdateChatPositionHandler updateChatPositionHandler;
     private final DataDirectoryManager dataDirectoryManager;
 
     private SimpleTelegramClient client;
@@ -201,6 +205,8 @@ public class TelegramClientManager {
             // 6. 注册监听器
             clientBuilder.addUpdateHandler(TdApi.UpdateAuthorizationState.class, this::onAuthStateUpdate);
             clientBuilder.addUpdateHandler(TdApi.UpdateNewMessage.class, updateNewMessageHandler::onNewMessageUpdate);
+            clientBuilder.addUpdateHandler(TdApi.UpdateNewChat.class, updateNewChatHandler::onNewChatUpdate);
+            clientBuilder.addUpdateHandler(TdApi.UpdateChatPosition.class, updateChatPositionHandler::onChatPositionUpdate);
 
             // 7. 设置自定义客户端交互（处理验证码和密码输入）
             TgAutoClientInteraction clientInteraction = new TgAutoClientInteraction(envProperties);

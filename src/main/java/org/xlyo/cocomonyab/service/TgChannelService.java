@@ -44,6 +44,8 @@ public class TgChannelService {
         if (forceRefresh != null && forceRefresh) {
             log.info("强制刷新TG频道列表缓存");
             evictChannelsCache();
+        } else {
+            log.info("查询TG频道列表 - 页码: {}, 每页大小: {} (可能使用缓存)", current, size);
         }
         // 验证客户端是否就绪
         if (!telegramClientManager.isReady()) {
@@ -98,7 +100,9 @@ public class TgChannelService {
             log.info("共找到 {} 个频道", channels.size());
 
             // 3. 应用分页
-            return applyPagination(channels, current, size);
+            List<TgChannelVO> result = applyPagination(channels, current, size);
+            log.info("返回第 {} 页数据，共 {} 条记录", current, result.size());
+            return result;
 
         } catch (Exception e) {
             log.error("获取Telegram频道列表失败", e);
@@ -115,6 +119,7 @@ public class TgChannelService {
      */
     @Cacheable(value = CacheConfig.TG_CHANNELS_COUNT_CACHE, key = "'total'")
     public Long countLoggedInChannels() {
+        log.info("统计TG频道总数 (可能使用缓存)");
         // 验证客户端是否就绪
         if (!telegramClientManager.isReady()) {
             throw new BusinessException(ResponseCode.TELEGRAM_ERROR, "Telegram客户端未就绪");
@@ -154,6 +159,8 @@ public class TgChannelService {
             log.error("统计Telegram频道数量失败", e);
             throw new BusinessException(ResponseCode.TELEGRAM_ERROR,
                     "统计Telegram频道数量失败: " + e.getMessage());
+        } finally {
+            log.info("频道总数统计完成: {} 个频道", count);
         }
     }
 
