@@ -1,5 +1,7 @@
 package org.xlyo.cocomonyab.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.xlyo.cocomonyab.domain.entity.ProcessedMessage;
@@ -57,4 +59,51 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @return 删除的记录数
      */
     long deleteByCreateTimeBefore(LocalDateTime before);
+    
+    /**
+     * 根据频道ID分页查询处理记录，按处理时间降序排列
+     *
+     * @param chatId 频道ID
+     * @param pageable 分页参数
+     * @return 处理记录分页结果
+     */
+    Page<ProcessedMessage> findByChatIdOrderByProcessTimeDesc(Long chatId, Pageable pageable);
+    
+    /**
+     * 根据已读状态分页查询处理记录，按处理时间降序排列
+     *
+     * @param isRead 是否已读
+     * @param pageable 分页参数
+     * @return 处理记录分页结果
+     */
+    Page<ProcessedMessage> findByIsReadOrderByProcessTimeDesc(Boolean isRead, Pageable pageable);
+    
+    /**
+     * 根据匹配状态分页查询处理记录，按处理时间降序排列
+     *
+     * @param isMatched 是否匹配标签
+     * @param pageable 分页参数
+     * @return 处理记录分页结果
+     */
+    Page<ProcessedMessage> findByIsMatchedOrderByProcessTimeDesc(Boolean isMatched, Pageable pageable);
+    
+    /**
+     * 根据频道ID和已读状态分页查询处理记录，按处理时间降序排列
+     *
+     * @param chatId 频道ID
+     * @param isRead 是否已读
+     * @param pageable 分页参数
+     * @return 处理记录分页结果
+     */
+    Page<ProcessedMessage> findByChatIdAndIsReadOrderByProcessTimeDesc(Long chatId, Boolean isRead, Pageable pageable);
+    
+    /**
+     * 根据频道ID和匹配状态分页查询处理记录，按处理时间降序排列
+     *
+     * @param chatId 频道ID
+     * @param isMatched 是否匹配标签
+     * @param pageable 分页参数
+     * @return 处理记录分页结果
+     */
+    Page<ProcessedMessage> findByChatIdAndIsMatchedOrderByProcessTimeDesc(Long chatId, Boolean isMatched, Pageable pageable);
 }

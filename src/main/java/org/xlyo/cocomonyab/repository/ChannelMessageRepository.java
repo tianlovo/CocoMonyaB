@@ -1,9 +1,12 @@
 package org.xlyo.cocomonyab.repository;
 
 import lombok.NonNull;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.xlyo.cocomonyab.domain.entity.ChannelMessage;
+import org.xlyo.cocomonyab.domain.entity.ChannelMessage.MessageStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -50,4 +53,52 @@ public interface ChannelMessageRepository extends MongoRepository<@NonNull Chann
      * @return 消息数量
      */
     long countByChatIdAndMediaAlbumId(Long chatId, Long mediaAlbumId);
+    
+    /**
+     * 根据频道ID分页查询消息，按日期降序排列
+     *
+     * @param chatId 频道ID
+     * @param pageable 分页参数
+     * @return 消息分页结果
+     */
+    Page<ChannelMessage> findByChatIdOrderByDateDesc(Long chatId, Pageable pageable);
+    
+    /**
+     * 根据状态分页查询消息，按创建时间降序排列
+     *
+     * @param status 消息状态
+     * @param pageable 分页参数
+     * @return 消息分页结果
+     */
+    Page<ChannelMessage> findByStatusOrderByCreateTimeDesc(MessageStatus status, Pageable pageable);
+    
+    /**
+     * 根据频道ID和状态分页查询消息，按日期降序排列
+     *
+     * @param chatId 频道ID
+     * @param status 消息状态
+     * @param pageable 分页参数
+     * @return 消息分页结果
+     */
+    Page<ChannelMessage> findByChatIdAndStatusOrderByDateDesc(Long chatId, MessageStatus status, Pageable pageable);
+    
+    /**
+     * 根据频道ID和日期范围分页查询消息，按日期降序排列
+     *
+     * @param chatId 频道ID
+     * @param startDate 开始日期（Unix时间戳）
+     * @param endDate 结束日期（Unix时间戳）
+     * @param pageable 分页参数
+     * @return 消息分页结果
+     */
+    Page<ChannelMessage> findByChatIdAndDateBetweenOrderByDateDesc(Long chatId, Integer startDate, Integer endDate, Pageable pageable);
+    
+    /**
+     * 根据频道ID和媒体组ID查找所有消息（用于媒体组查询）
+     *
+     * @param chatId 频道ID
+     * @param mediaAlbumId 媒体组ID
+     * @return 属于该媒体组的所有消息列表
+     */
+    List<ChannelMessage> findAllByChatIdAndMediaAlbumId(Long chatId, Long mediaAlbumId);
 }

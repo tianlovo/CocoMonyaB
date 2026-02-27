@@ -62,7 +62,7 @@ dependencies {
 
     // 测试依赖
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     

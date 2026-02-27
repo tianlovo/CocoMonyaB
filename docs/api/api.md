@@ -55,6 +55,34 @@
   - [7.4 常见错误场景](#74-常见错误场景)
   - [7.5 使用示例](#75-使用示例)
   - [7.6 注意事项](#76-注意事项)
+- [8. 频道消息查询 API](#8-频道消息查询-api)
+  - [8.1 概述](#81-概述)
+  - [8.2 数据结构](#82-数据结构)
+  - [8.3 API 端点](#83-api-端点)
+  - [8.4 常见错误场景](#84-常见错误场景)
+  - [8.5 使用示例](#85-使用示例)
+  - [8.6 注意事项](#86-注意事项)
+- [9. 转发队列查询 API](#9-转发队列查询-api)
+  - [9.1 概述](#91-概述)
+  - [9.2 数据结构](#92-数据结构)
+  - [9.3 API 端点](#93-api-端点)
+  - [9.4 常见错误场景](#94-常见错误场景)
+  - [9.5 使用示例](#95-使用示例)
+  - [9.6 注意事项](#96-注意事项)
+- [10. 已处理消息查询 API](#10-已处理消息查询-api)
+  - [10.1 概述](#101-概述)
+  - [10.2 数据结构](#102-数据结构)
+  - [10.3 API 端点](#103-api-端点)
+  - [10.4 常见错误场景](#104-常见错误场景)
+  - [10.5 使用示例](#105-使用示例)
+  - [10.6 注意事项](#106-注意事项)
+- [11. 未读消息缓冲区查询 API](#11-未读消息缓冲区查询-api)
+  - [11.1 概述](#111-概述)
+  - [11.2 数据结构](#112-数据结构)
+  - [11.3 API 端点](#113-api-端点)
+  - [11.4 常见错误场景](#114-常见错误场景)
+  - [11.5 使用示例](#115-使用示例)
+  - [11.6 注意事项](#116-注意事项)
 
 ---
 
@@ -1299,6 +1327,13 @@ curl -X GET "http://localhost:8080/api/message/media-album?chatId=-1001234567890
 1. **ID 格式**：MongoDB ID 是 24 位十六进制字符串（如 65f8a1b2c3d4e5f6a7b8c9d0）
 2. **格式校验**：系统会自动校验 ID 格式，无效格式会返回 VALIDATION_ERROR
 3. **大小写**：MongoDB ID 不区分大小写，但建议使用小写
+
+#### 3.6.8 包路径变更
+
+1. **Controller 位置**：MessageController 已从 `org.xlyo.cocomonyab.controller` 移动到 `org.xlyo.cocomonyab.controller.readonly` 包
+2. **API 路径不变**：API 路径保持为 `/api/message`，确保向后兼容性
+3. **功能不变**：所有功能和接口签名保持不变
+4. **只读操作**：本 API 仅提供查询操作，不提供增删改功能
 
 ---
 
@@ -4313,9 +4348,1858 @@ curl -X POST http://localhost:8080/api/config/tag/filter/expand \
 2. **测试标签展开**：使用 `/expand` 端点测试标签展开结果
 3. **定期检查**：定期检查标签 ID 的有效性，清理无效的标签引用
 
+
+---
+
+## 8. 频道消息查询 API
+
+### 8.1 概述
+
+频道消息查询 API 提供了对已处理的频道消息（channel_messages 集合）的查询接口。这些消息是经过系统处理和结构化后的频道消息数据，包含了完整的消息内容、媒体文件信息、网页预览等。
+
+主要功能包括：
+- 根据 MongoDB ID 或 Telegram ID 查询单条频道消息
+- 支持多条件过滤的分页查询（频道、状态、日期范围）
+- 查询媒体组（相册）消息
+
+### 8.2 数据结构
+
+#### 8.2.1 ChannelMessageQueryDTO（频道消息查询请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "chatId": -1001234567890,
+  "status": "APPROVED",
+  "startDate": 1708588800,
+  "endDate": 1708675200
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 校验规则 | 说明 |
+|------|------|------|----------|------|
+| chatId | Long | 否 | - | Telegram 频道 ID（负数） |
+| status | String | 否 | - | 消息状态：PENDING/APPROVED/REJECTED |
+| startDate | Integer | 否 | ≥ 0 | 开始日期（Unix 时间戳） |
+| endDate | Integer | 否 | ≥ 0 | 结束日期（Unix 时间戳） |
+
+#### 8.2.2 ChannelMessageVO（频道消息响应对象）
+
+返回给客户端的频道消息数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "messageId": 123456,
+  "chatId": -1001234567890,
+  "channelUsername": "tech_news",
+  "channelTitle": "科技新闻频道",
+  "date": 1708588800,
+  "editDate": null,
+  "contentType": "TEXT",
+  "textContent": "这是一条频道消息",
+  "mediaFiles": [],
+  "webPage": null,
+  "mediaAlbumId": null,
+  "isMediaGroup": false,
+  "mediaGroupItemCount": 0,
+  "mediaGroupMessageIds": [],
+  "views": 1000,
+  "forwards": 50,
+  "status": "APPROVED",
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:30:00"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID |
+| messageId | Long | Telegram 消息 ID |
+| chatId | Long | Telegram 频道 ID |
+| channelUsername | String | 频道用户名 |
+| channelTitle | String | 频道标题 |
+| date | Integer | 消息日期（Unix 时间戳） |
+| editDate | Integer | 编辑日期（Unix 时间戳，可为null） |
+| contentType | String | 内容类型 |
+| textContent | String | 文本内容 |
+| mediaFiles | List | 媒体文件列表 |
+| webPage | Object | 网页信息（可为null） |
+| mediaAlbumId | Long | 媒体组 ID（可为null） |
+| isMediaGroup | Boolean | 是否为媒体组 |
+| mediaGroupItemCount | Integer | 媒体组项目数 |
+| mediaGroupMessageIds | List | 媒体组消息ID列表 |
+| views | Integer | 浏览次数 |
+| forwards | Integer | 转发次数 |
+| status | String | 消息状态 |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+
+### 8.3 API 端点
+
+#### 8.3.1 根据 MongoDB ID 查询单条频道消息
+
+**接口地址：** `GET /api/channel-message/{id}`
+
+**路径参数：**
+- `id`: MongoDB 文档 ID（String，24位十六进制）
+
+**请求示例：**
+
+```
+GET /api/channel-message/65f8a1b2c3d4e5f6a7b8c9d0
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "messageId": 123456,
+    "chatId": -1001234567890,
+    "channelUsername": "tech_news",
+    "channelTitle": "科技新闻频道",
+    "date": 1708588800,
+    "editDate": null,
+    "contentType": "TEXT",
+    "textContent": "这是一条频道消息",
+    "mediaFiles": [],
+    "webPage": null,
+    "mediaAlbumId": null,
+    "isMediaGroup": false,
+    "mediaGroupItemCount": 0,
+    "mediaGroupMessageIds": [],
+    "views": 1000,
+    "forwards": 50,
+    "status": "APPROVED",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+频道消息不存在：
+```json
+{
+  "code": -60002,
+  "msg": "频道消息不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+#### 8.3.2 根据 ChatId 和 MessageId 查询频道消息
+
+**接口地址：** `GET /api/channel-message/by-tg-id`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| messageId | Long | 是 | Telegram 消息 ID |
+
+**请求示例：**
+
+```
+GET /api/channel-message/by-tg-id?chatId=-1001234567890&messageId=123456
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "messageId": 123456,
+    "chatId": -1001234567890,
+    "channelUsername": "tech_news",
+    "channelTitle": "科技新闻频道",
+    "date": 1708588800,
+    "contentType": "TEXT",
+    "textContent": "这是一条频道消息",
+    "status": "APPROVED",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+频道消息不存在：
+```json
+{
+  "code": -60002,
+  "msg": "频道消息不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 8.3.3 分页查询频道消息列表
+
+**接口地址：** `GET /api/channel-message/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤 |
+| status | String | 否 | - | 消息状态过滤 |
+| startDate | Integer | 否 | - | 开始日期（Unix 时间戳） |
+| endDate | Integer | 否 | - | 结束日期（Unix 时间戳） |
+
+**请求示例：**
+
+```
+GET /api/channel-message/page?current=1&size=20&chatId=-1001234567890&status=APPROVED&startDate=1708588800&endDate=1708675200
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "messageId": 123456,
+        "chatId": -1001234567890,
+        "channelUsername": "tech_news",
+        "channelTitle": "科技新闻频道",
+        "date": 1708675000,
+        "contentType": "TEXT",
+        "textContent": "这是一条频道消息",
+        "status": "APPROVED",
+        "createTime": "2024-03-20T10:30:00",
+        "updateTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 100,
+    "pages": 5
+  }
+}
+```
+
+**空页响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 20,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+**错误响应示例：**
+
+无效的分页参数：
+```json
+{
+  "code": -40006,
+  "msg": "页码必须大于等于1; 每页大小必须在1-100之间",
+  "data": null
+}
+```
+
+#### 8.3.4 查询媒体组消息
+
+**接口地址：** `GET /api/channel-message/media-album`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| mediaAlbumId | Long | 是 | 媒体组 ID |
+
+**请求示例：**
+
+```
+GET /api/channel-message/media-album?chatId=-1001234567890&mediaAlbumId=789012
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": [
+    {
+      "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+      "messageId": 123456,
+      "chatId": -1001234567890,
+      "mediaAlbumId": 789012,
+      "contentType": "PHOTO",
+      "mediaFiles": [{"type": "photo", "fileId": "xxx"}],
+      "createTime": "2024-03-20T10:30:00"
+    },
+    {
+      "id": "65f8a1b2c3d4e5f6a7b8c9d1",
+      "messageId": 123457,
+      "chatId": -1001234567890,
+      "mediaAlbumId": 789012,
+      "contentType": "PHOTO",
+      "mediaFiles": [{"type": "photo", "fileId": "yyy"}],
+      "createTime": "2024-03-20T10:30:00"
+    }
+  ]
+}
+```
+
+**空列表响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": []
+}
+```
+
+**错误响应示例：**
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; mediaAlbumId不能为空",
+  "data": null
+}
+```
+
+### 8.4 常见错误场景
+
+#### 8.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的 MongoDB ID
+- 查询不存在的 ChatId + MessageId 组合
+
+**响应示例：**
+
+```json
+{
+  "code": -60002,
+  "msg": "频道消息不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+#### 8.4.2 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- 缺少必需参数（chatId、messageId、mediaAlbumId）
+- 分页参数无效（current < 1 或 size < 1 或 size > 100）
+- 日期参数无效（startDate < 0 或 endDate < 0）
+
+**响应示例：**
+
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 8.4.3 系统内部错误（INTERNAL_ERROR）
+
+**响应码：** `-50000`
+
+**触发场景：**
+- 数据库连接失败
+- 数据库操作异常
+
+**响应示例：**
+
+```json
+{
+  "code": -50000,
+  "msg": "系统内部错误，请联系管理员",
+  "data": null
+}
+```
+
+### 8.5 使用示例
+
+#### 8.5.1 查询单条频道消息
+
+```bash
+# 根据 MongoDB ID 查询
+curl -X GET http://localhost:8080/api/channel-message/65f8a1b2c3d4e5f6a7b8c9d0
+
+# 根据 Telegram ID 查询
+curl -X GET "http://localhost:8080/api/channel-message/by-tg-id?chatId=-1001234567890&messageId=123456"
+```
+
+#### 8.5.2 分页查询所有频道消息
+
+```bash
+# 查询第1页，每页10条（使用默认参数）
+curl -X GET "http://localhost:8080/api/channel-message/page"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/channel-message/page?current=2&size=20"
+```
+
+#### 8.5.3 按频道查询消息
+
+```bash
+# 查询指定频道的所有消息
+curl -X GET "http://localhost:8080/api/channel-message/page?chatId=-1001234567890"
+```
+
+#### 8.5.4 按状态查询消息
+
+```bash
+# 查询已批准的消息
+curl -X GET "http://localhost:8080/api/channel-message/page?status=APPROVED"
+```
+
+#### 8.5.5 按日期范围查询消息
+
+```bash
+# 查询2024年2月22日到2月23日的消息
+curl -X GET "http://localhost:8080/api/channel-message/page?startDate=1708588800&endDate=1708675200"
+```
+
+#### 8.5.6 组合条件查询
+
+```bash
+# 查询指定频道在指定日期范围内的已批准消息
+curl -X GET "http://localhost:8080/api/channel-message/page?chatId=-1001234567890&status=APPROVED&startDate=1708588800&endDate=1708675200&current=1&size=20"
+```
+
+#### 8.5.7 查询媒体组消息
+
+```bash
+# 查询指定频道的指定媒体组（相册）
+curl -X GET "http://localhost:8080/api/channel-message/media-album?chatId=-1001234567890&mediaAlbumId=789012"
+```
+
+### 8.6 注意事项
+
+#### 8.6.1 数据来源
+
+1. **数据集合**：查询 MongoDB 的 channel_messages 集合
+2. **数据特点**：已处理和结构化的频道消息数据
+3. **与消息查询 API 的区别**：消息查询 API（第3节）查询 raw_messages 集合（原始消息），本 API 查询 channel_messages 集合（处理后的消息）
+
+#### 8.6.2 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始
+2. **分页大小限制**：每页最大支持 100 条记录
+3. **默认值**：current=1, size=10
+4. **排序规则**：消息列表按 date 字段降序排列（最新消息在前）
+
+#### 8.6.3 过滤条件
+
+1. **过滤条件组合**：chatId、status、startDate、endDate 可以任意组合使用
+2. **日期范围查询**：startDate 和 endDate 都是 Unix 时间戳（秒）
+3. **频道 ID 格式**：Telegram 频道 ID 通常是负数（如 -1001234567890）
+4. **状态值**：PENDING（待审核）、APPROVED（已批准）、REJECTED（已拒绝）
+
+#### 8.6.4 媒体组查询
+
+1. **媒体组定义**：媒体组是 Telegram 的相册功能，多条消息共享同一个 mediaAlbumId
+2. **查询要求**：必须同时提供 chatId 和 mediaAlbumId
+3. **排序规则**：媒体组内的消息按 messageId 升序排列（保持相册顺序）
+
+#### 8.6.5 性能优化
+
+1. **索引利用**：系统使用 MongoDB 索引优化查询性能
+2. **避免大结果集**：建议使用分页查询，避免一次性获取大量数据
+3. **合理设置分页大小**：根据实际需求设置 size 参数
+
+#### 8.6.6 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200
+2. **错误判断**：通过响应体中的 code 字段判断是否成功
+3. **参数校验**：所有参数都经过严格校验
+
+#### 8.6.7 包路径变更
+
+1. **Controller 位置**：ChannelMessageController 位于 `org.xlyo.cocomonyab.controller.readonly` 包
+2. **API 路径**：`/api/channel-message`
+3. **只读操作**：本 API 仅提供查询操作，不提供增删改功能
+
+
+---
+
+## 9. 转发队列查询 API
+
+### 9.1 概述
+
+转发队列查询 API 提供了对消息转发队列（forward_queue 集合）的查询接口。转发队列记录了待转发或已转发的消息信息，包括源消息、匹配的标签、转发状态等。
+
+主要功能包括：
+- 根据 MongoDB ID 或源消息 ID 查询单条队列记录
+- 支持多条件过滤的分页查询（源频道、转发状态）
+- 查询转发统计信息（待处理、成功、失败数量）
+
+### 9.2 数据结构
+
+#### 9.2.1 ForwardQueueQueryDTO（转发队列查询请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "sourceChatId": -1001234567890,
+  "status": "PENDING"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sourceChatId | Long | 否 | 源频道 ID |
+| status | String | 否 | 转发状态：PENDING/SUCCESS/FAILED |
+
+#### 9.2.2 ForwardQueueVO（转发队列响应对象）
+
+返回给客户端的转发队列数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "sourceChatId": -1001234567890,
+  "sourceMessageId": 123456,
+  "mediaGroupMessageIds": [123456, 123457],
+  "matchedTags": ["作者1", "角色1", "原作1"],
+  "status": "SUCCESS",
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:35:00",
+  "forwardTime": "2024-03-20T10:35:00",
+  "retryCount": 0,
+  "errorMessage": null
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID |
+| sourceChatId | Long | 源频道 ID |
+| sourceMessageId | Long | 源消息 ID |
+| mediaGroupMessageIds | List | 媒体组消息ID列表 |
+| matchedTags | List | 匹配到的标签列表 |
+| status | String | 转发状态：PENDING/SUCCESS/FAILED |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+| forwardTime | String | 转发成功时间（可为null） |
+| retryCount | Integer | 重试次数 |
+| errorMessage | String | 错误消息（可为null） |
+
+#### 9.2.3 ForwardQueueStatsVO（转发队列统计响应对象）
+
+返回转发队列的统计信息。
+
+```json
+{
+  "pendingCount": 10,
+  "successCount": 100,
+  "failedCount": 5,
+  "totalCount": 115
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| pendingCount | Long | 待处理数量 |
+| successCount | Long | 成功数量 |
+| failedCount | Long | 失败数量 |
+| totalCount | Long | 总数量 |
+
+### 9.3 API 端点
+
+#### 9.3.1 根据 MongoDB ID 查询单条队列记录
+
+**接口地址：** `GET /api/forward-queue/{id}`
+
+**路径参数：**
+- `id`: MongoDB 文档 ID（String，24位十六进制）
+
+**请求示例：**
+
+```
+GET /api/forward-queue/65f8a1b2c3d4e5f6a7b8c9d0
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "sourceChatId": -1001234567890,
+    "sourceMessageId": 123456,
+    "mediaGroupMessageIds": [],
+    "matchedTags": ["作者1", "角色1"],
+    "status": "SUCCESS",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:35:00",
+    "forwardTime": "2024-03-20T10:35:00",
+    "retryCount": 0,
+    "errorMessage": null
+  }
+}
+```
+
+**错误响应示例：**
+
+队列记录不存在：
+```json
+{
+  "code": -60002,
+  "msg": "转发队列记录不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+#### 9.3.2 根据源消息 ID 查询队列记录
+
+**接口地址：** `GET /api/forward-queue/by-source`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sourceChatId | Long | 是 | 源频道 ID |
+| sourceMessageId | Long | 是 | 源消息 ID |
+
+**请求示例：**
+
+```
+GET /api/forward-queue/by-source?sourceChatId=-1001234567890&sourceMessageId=123456
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "sourceChatId": -1001234567890,
+    "sourceMessageId": 123456,
+    "matchedTags": ["作者1"],
+    "status": "PENDING",
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+队列记录不存在：
+```json
+{
+  "code": -60002,
+  "msg": "转发队列记录不存在: sourceChatId=-1001234567890, sourceMessageId=123456",
+  "data": null
+}
+```
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "sourceChatId不能为空; sourceMessageId不能为空",
+  "data": null
+}
+```
+
+#### 9.3.3 分页查询队列记录
+
+**接口地址：** `GET /api/forward-queue/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| sourceChatId | Long | 否 | - | 源频道 ID 过滤 |
+| status | String | 否 | - | 转发状态过滤 |
+
+**请求示例：**
+
+```
+GET /api/forward-queue/page?current=1&size=20&sourceChatId=-1001234567890&status=PENDING
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "sourceChatId": -1001234567890,
+        "sourceMessageId": 123456,
+        "matchedTags": ["作者1"],
+        "status": "PENDING",
+        "createTime": "2024-03-20T10:30:00",
+        "updateTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 50,
+    "pages": 3
+  }
+}
+```
+
+**空页响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 20,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+**错误响应示例：**
+
+无效的分页参数：
+```json
+{
+  "code": -40006,
+  "msg": "页码必须大于等于1; 每页大小必须在1-100之间",
+  "data": null
+}
+```
+
+#### 9.3.4 查询转发统计信息
+
+**接口地址：** `GET /api/forward-queue/stats`
+
+**请求示例：**
+
+```
+GET /api/forward-queue/stats
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "pendingCount": 10,
+    "successCount": 100,
+    "failedCount": 5,
+    "totalCount": 115
+  }
+}
+```
+
+### 9.4 常见错误场景
+
+#### 9.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的 MongoDB ID
+- 查询不存在的 sourceChatId + sourceMessageId 组合
+
+**响应示例：**
+
+```json
+{
+  "code": -60002,
+  "msg": "转发队列记录不存在: 65f8a1b2c3d4e5f6a7b8c9d0",
+  "data": null
+}
+```
+
+#### 9.4.2 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- 缺少必需参数（sourceChatId、sourceMessageId）
+- 分页参数无效（current < 1 或 size < 1 或 size > 100）
+
+**响应示例：**
+
+```json
+{
+  "code": -40006,
+  "msg": "sourceChatId不能为空; sourceMessageId不能为空",
+  "data": null
+}
+```
+
+#### 9.4.3 系统内部错误（INTERNAL_ERROR）
+
+**响应码：** `-50000`
+
+**触发场景：**
+- 数据库连接失败
+- 数据库操作异常
+
+**响应示例：**
+
+```json
+{
+  "code": -50000,
+  "msg": "系统内部错误，请联系管理员",
+  "data": null
+}
+```
+
+### 9.5 使用示例
+
+#### 9.5.1 查询单条队列记录
+
+```bash
+# 根据 MongoDB ID 查询
+curl -X GET http://localhost:8080/api/forward-queue/65f8a1b2c3d4e5f6a7b8c9d0
+
+# 根据源消息 ID 查询
+curl -X GET "http://localhost:8080/api/forward-queue/by-source?sourceChatId=-1001234567890&sourceMessageId=123456"
+```
+
+#### 9.5.2 分页查询所有队列记录
+
+```bash
+# 查询第1页，每页10条（使用默认参数）
+curl -X GET "http://localhost:8080/api/forward-queue/page"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/forward-queue/page?current=2&size=20"
+```
+
+#### 9.5.3 按源频道查询队列记录
+
+```bash
+# 查询指定源频道的所有队列记录
+curl -X GET "http://localhost:8080/api/forward-queue/page?sourceChatId=-1001234567890"
+```
+
+#### 9.5.4 按状态查询队列记录
+
+```bash
+# 查询待处理的队列记录
+curl -X GET "http://localhost:8080/api/forward-queue/page?status=PENDING"
+
+# 查询失败的队列记录
+curl -X GET "http://localhost:8080/api/forward-queue/page?status=FAILED"
+```
+
+#### 9.5.5 组合条件查询
+
+```bash
+# 查询指定源频道的待处理记录
+curl -X GET "http://localhost:8080/api/forward-queue/page?sourceChatId=-1001234567890&status=PENDING&current=1&size=20"
+```
+
+#### 9.5.6 查询转发统计信息
+
+```bash
+# 查询转发统计
+curl -X GET "http://localhost:8080/api/forward-queue/stats"
+```
+
+### 9.6 注意事项
+
+#### 9.6.1 数据来源
+
+1. **数据集合**：查询 MongoDB 的 forward_queue 集合
+2. **数据特点**：记录消息转发队列的状态和进度
+3. **用途**：监控消息转发的进度和排查问题
+
+#### 9.6.2 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始
+2. **分页大小限制**：每页最大支持 100 条记录
+3. **默认值**：current=1, size=10
+4. **排序规则**：队列记录按 createTime 字段升序排列（最早创建的在前）
+
+#### 9.6.3 过滤条件
+
+1. **过滤条件组合**：sourceChatId、status 可以任意组合使用
+2. **状态值**：PENDING（待处理）、SUCCESS（成功）、FAILED（失败）
+3. **源频道 ID 格式**：Telegram 频道 ID 通常是负数（如 -1001234567890）
+
+#### 9.6.4 转发统计
+
+1. **统计范围**：统计所有队列记录的状态分布
+2. **实时性**：统计结果反映数据库的当前状态
+3. **总数计算**：totalCount = pendingCount + successCount + failedCount
+
+#### 9.6.5 性能优化
+
+1. **索引利用**：系统使用 MongoDB 索引优化查询性能
+2. **避免大结果集**：建议使用分页查询
+3. **合理设置分页大小**：根据实际需求设置 size 参数
+
+#### 9.6.6 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200
+2. **错误判断**：通过响应体中的 code 字段判断是否成功
+3. **参数校验**：所有参数都经过严格校验
+
+#### 9.6.7 包路径变更
+
+1. **Controller 位置**：ForwardQueueController 位于 `org.xlyo.cocomonyab.controller.readonly` 包
+2. **API 路径**：`/api/forward-queue`
+3. **只读操作**：本 API 仅提供查询操作，不提供增删改功能
+
+
+---
+
+## 10. 已处理消息查询 API
+
+### 10.1 概述
+
+已处理消息查询 API 提供了对已处理消息记录（processed_messages 集合）的查询接口。已处理消息记录了消息的处理状态、是否已读、是否匹配标签等信息。
+
+主要功能包括：
+- 根据 Telegram ID 查询单条处理记录
+- 支持多条件过滤的分页查询（频道、已读状态、匹配状态）
+- 查询未读消息列表
+- 查询匹配标签的消息列表
+
+### 10.2 数据结构
+
+#### 10.2.1 ProcessedMessageQueryDTO（已处理消息查询请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "chatId": -1001234567890,
+  "isRead": false,
+  "isMatched": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 否 | Telegram 频道 ID |
+| isRead | Boolean | 否 | 是否已读 |
+| isMatched | Boolean | 否 | 是否匹配标签 |
+
+#### 10.2.2 ProcessedMessageVO（已处理消息响应对象）
+
+返回给客户端的已处理消息数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "chatId": -1001234567890,
+  "messageId": 123456,
+  "messageType": "TEXT",
+  "isRead": false,
+  "isMatched": true,
+  "matchedTags": ["作者1", "角色1", "原作1"],
+  "processTime": "2024-03-20T10:30:00",
+  "readTime": null,
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:30:00"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID |
+| chatId | Long | 频道 ID |
+| messageId | Long | 消息 ID |
+| messageType | String | 消息类型 |
+| isRead | Boolean | 是否已读 |
+| isMatched | Boolean | 是否匹配标签 |
+| matchedTags | List | 匹配到的标签列表 |
+| processTime | String | 处理时间（ISO 8601 格式） |
+| readTime | String | 标记已读时间（可为null） |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+
+### 10.3 API 端点
+
+#### 10.3.1 根据 Telegram ID 查询处理记录
+
+**接口地址：** `GET /api/processed-message/by-tg-id`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| messageId | Long | 是 | Telegram 消息 ID |
+
+**请求示例：**
+
+```
+GET /api/processed-message/by-tg-id?chatId=-1001234567890&messageId=123456
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "chatId": -1001234567890,
+    "messageId": 123456,
+    "messageType": "TEXT",
+    "isRead": false,
+    "isMatched": true,
+    "matchedTags": ["作者1", "角色1"],
+    "processTime": "2024-03-20T10:30:00",
+    "readTime": null,
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+处理记录不存在：
+```json
+{
+  "code": -60002,
+  "msg": "已处理消息记录不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 10.3.2 分页查询处理记录
+
+**接口地址：** `GET /api/processed-message/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤 |
+| isRead | Boolean | 否 | - | 已读状态过滤 |
+| isMatched | Boolean | 否 | - | 匹配状态过滤 |
+
+**请求示例：**
+
+```
+GET /api/processed-message/page?current=1&size=20&chatId=-1001234567890&isRead=false&isMatched=true
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "chatId": -1001234567890,
+        "messageId": 123456,
+        "messageType": "TEXT",
+        "isRead": false,
+        "isMatched": true,
+        "matchedTags": ["作者1"],
+        "processTime": "2024-03-20T10:30:00",
+        "createTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 50,
+    "pages": 3
+  }
+}
+```
+
+**空页响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 20,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+**错误响应示例：**
+
+无效的分页参数：
+```json
+{
+  "code": -40006,
+  "msg": "页码必须大于等于1; 每页大小必须在1-100之间",
+  "data": null
+}
+```
+
+#### 10.3.3 查询未读消息列表
+
+**接口地址：** `GET /api/processed-message/unread`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤（可选） |
+
+**请求示例：**
+
+```
+GET /api/processed-message/unread?current=1&size=20&chatId=-1001234567890
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "chatId": -1001234567890,
+        "messageId": 123456,
+        "isRead": false,
+        "isMatched": true,
+        "matchedTags": ["作者1"],
+        "processTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 30,
+    "pages": 2
+  }
+}
+```
+
+#### 10.3.4 查询匹配标签的消息列表
+
+**接口地址：** `GET /api/processed-message/matched`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤（可选） |
+
+**请求示例：**
+
+```
+GET /api/processed-message/matched?current=1&size=20&chatId=-1001234567890
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "chatId": -1001234567890,
+        "messageId": 123456,
+        "isRead": false,
+        "isMatched": true,
+        "matchedTags": ["作者1", "角色1"],
+        "processTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 40,
+    "pages": 2
+  }
+}
+```
+
+### 10.4 常见错误场景
+
+#### 10.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的 chatId + messageId 组合
+
+**响应示例：**
+
+```json
+{
+  "code": -60002,
+  "msg": "已处理消息记录不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+#### 10.4.2 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- 缺少必需参数（chatId、messageId）
+- 分页参数无效（current < 1 或 size < 1 或 size > 100）
+
+**响应示例：**
+
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 10.4.3 系统内部错误（INTERNAL_ERROR）
+
+**响应码：** `-50000`
+
+**触发场景：**
+- 数据库连接失败
+- 数据库操作异常
+
+**响应示例：**
+
+```json
+{
+  "code": -50000,
+  "msg": "系统内部错误，请联系管理员",
+  "data": null
+}
+```
+
+### 10.5 使用示例
+
+#### 10.5.1 查询单条处理记录
+
+```bash
+# 根据 Telegram ID 查询
+curl -X GET "http://localhost:8080/api/processed-message/by-tg-id?chatId=-1001234567890&messageId=123456"
+```
+
+#### 10.5.2 分页查询所有处理记录
+
+```bash
+# 查询第1页，每页10条（使用默认参数）
+curl -X GET "http://localhost:8080/api/processed-message/page"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/processed-message/page?current=2&size=20"
+```
+
+#### 10.5.3 按频道查询处理记录
+
+```bash
+# 查询指定频道的所有处理记录
+curl -X GET "http://localhost:8080/api/processed-message/page?chatId=-1001234567890"
+```
+
+#### 10.5.4 查询未读消息
+
+```bash
+# 查询所有未读消息
+curl -X GET "http://localhost:8080/api/processed-message/unread"
+
+# 查询指定频道的未读消息
+curl -X GET "http://localhost:8080/api/processed-message/unread?chatId=-1001234567890"
+```
+
+#### 10.5.5 查询匹配标签的消息
+
+```bash
+# 查询所有匹配标签的消息
+curl -X GET "http://localhost:8080/api/processed-message/matched"
+
+# 查询指定频道的匹配标签消息
+curl -X GET "http://localhost:8080/api/processed-message/matched?chatId=-1001234567890"
+```
+
+#### 10.5.6 组合条件查询
+
+```bash
+# 查询指定频道的未读且匹配标签的消息
+curl -X GET "http://localhost:8080/api/processed-message/page?chatId=-1001234567890&isRead=false&isMatched=true&current=1&size=20"
+```
+
+### 10.6 注意事项
+
+#### 10.6.1 数据来源
+
+1. **数据集合**：查询 MongoDB 的 processed_messages 集合
+2. **数据特点**：记录消息的处理状态和历史
+3. **用途**：了解消息的处理状态和历史
+
+#### 10.6.2 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始
+2. **分页大小限制**：每页最大支持 100 条记录
+3. **默认值**：current=1, size=10
+4. **排序规则**：处理记录按 processTime 字段降序排列（最新处理的在前）
+
+#### 10.6.3 过滤条件
+
+1. **过滤条件组合**：chatId、isRead、isMatched 可以任意组合使用
+2. **布尔值过滤**：isRead 和 isMatched 接受 true 或 false
+3. **频道 ID 格式**：Telegram 频道 ID 通常是负数（如 -1001234567890）
+
+#### 10.6.4 专用查询端点
+
+1. **未读消息查询**：`/unread` 端点等同于 `/page?isRead=false`
+2. **匹配标签消息查询**：`/matched` 端点等同于 `/page?isMatched=true`
+3. **可选频道过滤**：两个专用端点都支持可选的 chatId 参数
+
+#### 10.6.5 性能优化
+
+1. **索引利用**：系统使用 MongoDB 索引优化查询性能
+2. **避免大结果集**：建议使用分页查询
+3. **合理设置分页大小**：根据实际需求设置 size 参数
+
+#### 10.6.6 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200
+2. **错误判断**：通过响应体中的 code 字段判断是否成功
+3. **参数校验**：所有参数都经过严格校验
+
+#### 10.6.7 包路径变更
+
+1. **Controller 位置**：ProcessedMessageController 位于 `org.xlyo.cocomonyab.controller.readonly` 包
+2. **API 路径**：`/api/processed-message`
+3. **只读操作**：本 API 仅提供查询操作，不提供增删改功能
+
+
+---
+
+## 11. 未读消息缓冲区查询 API
+
+### 11.1 概述
+
+未读消息缓冲区查询 API 提供了对未读消息缓冲区（unread_messages_buffer 集合）的查询接口。未读消息缓冲区记录了从 Telegram 获取的未读消息信息，用于监控消息获取和处理的进度。
+
+主要功能包括：
+- 根据 Telegram ID 查询单条缓冲记录
+- 支持多条件过滤的分页查询（频道、缓冲区状态）
+- 查询待处理消息数量
+- 查询各状态消息统计
+
+### 11.2 数据结构
+
+#### 11.2.1 UnreadMessageBufferQueryDTO（未读消息缓冲区查询请求）
+
+用于分页查询时的过滤条件，所有字段均为可选。
+
+```json
+{
+  "chatId": -1001234567890,
+  "status": "PENDING"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 否 | Telegram 频道 ID |
+| status | String | 否 | 缓冲区状态：PENDING/PROCESSED/FAILED |
+
+#### 11.2.2 UnreadMessageBufferVO（未读消息缓冲区响应对象）
+
+返回给客户端的未读消息缓冲区数据。
+
+```json
+{
+  "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+  "chatId": -1001234567890,
+  "messageId": 123456,
+  "fetchTime": "2024-03-20T10:30:00",
+  "status": "PENDING",
+  "errorMessage": null,
+  "createTime": "2024-03-20T10:30:00",
+  "updateTime": "2024-03-20T10:30:00"
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String | MongoDB 文档 ID |
+| chatId | Long | 频道 ID |
+| messageId | Long | 消息 ID |
+| fetchTime | String | 获取时间（ISO 8601 格式） |
+| status | String | 缓冲区状态：PENDING/PROCESSED/FAILED |
+| errorMessage | String | 错误消息（可为null） |
+| createTime | String | 创建时间（ISO 8601 格式） |
+| updateTime | String | 更新时间（ISO 8601 格式） |
+
+#### 11.2.3 UnreadMessageBufferStatsVO（未读消息缓冲区统计响应对象）
+
+返回未读消息缓冲区的统计信息。
+
+```json
+{
+  "pendingCount": 10,
+  "processedCount": 100,
+  "failedCount": 5,
+  "totalCount": 115
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| pendingCount | Long | 待处理数量 |
+| processedCount | Long | 已处理数量 |
+| failedCount | Long | 失败数量 |
+| totalCount | Long | 总数量 |
+
+### 11.3 API 端点
+
+#### 11.3.1 根据 Telegram ID 查询缓冲记录
+
+**接口地址：** `GET /api/unread-buffer/by-tg-id`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 是 | Telegram 频道 ID |
+| messageId | Long | 是 | Telegram 消息 ID |
+
+**请求示例：**
+
+```
+GET /api/unread-buffer/by-tg-id?chatId=-1001234567890&messageId=123456
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+    "chatId": -1001234567890,
+    "messageId": 123456,
+    "fetchTime": "2024-03-20T10:30:00",
+    "status": "PENDING",
+    "errorMessage": null,
+    "createTime": "2024-03-20T10:30:00",
+    "updateTime": "2024-03-20T10:30:00"
+  }
+}
+```
+
+**错误响应示例：**
+
+缓冲记录不存在：
+```json
+{
+  "code": -60002,
+  "msg": "未读消息缓冲记录不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+缺少必需参数：
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 11.3.2 分页查询缓冲记录
+
+**接口地址：** `GET /api/unread-buffer/page`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| current | Long | 否 | 1 | 当前页码（≥ 1） |
+| size | Long | 否 | 10 | 每页大小（1-100） |
+| chatId | Long | 否 | - | 频道 ID 过滤 |
+| status | String | 否 | - | 缓冲区状态过滤 |
+
+**请求示例：**
+
+```
+GET /api/unread-buffer/page?current=1&size=20&chatId=-1001234567890&status=PENDING
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [
+      {
+        "id": "65f8a1b2c3d4e5f6a7b8c9d0",
+        "chatId": -1001234567890,
+        "messageId": 123456,
+        "fetchTime": "2024-03-20T10:30:00",
+        "status": "PENDING",
+        "errorMessage": null,
+        "createTime": "2024-03-20T10:30:00",
+        "updateTime": "2024-03-20T10:30:00"
+      }
+    ],
+    "current": 1,
+    "size": 20,
+    "total": 50,
+    "pages": 3
+  }
+}
+```
+
+**空页响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "records": [],
+    "current": 1,
+    "size": 20,
+    "total": 0,
+    "pages": 0
+  }
+}
+```
+
+**错误响应示例：**
+
+无效的分页参数：
+```json
+{
+  "code": -40006,
+  "msg": "页码必须大于等于1; 每页大小必须在1-100之间",
+  "data": null
+}
+```
+
+#### 11.3.3 查询待处理消息数量
+
+**接口地址：** `GET /api/unread-buffer/pending-count`
+
+**查询参数：**
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| chatId | Long | 否 | 频道 ID（可选，不提供则查询所有频道） |
+
+**请求示例：**
+
+```
+# 查询所有频道的待处理消息数量
+GET /api/unread-buffer/pending-count
+
+# 查询指定频道的待处理消息数量
+GET /api/unread-buffer/pending-count?chatId=-1001234567890
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": 10
+}
+```
+
+#### 11.3.4 查询各状态消息统计
+
+**接口地址：** `GET /api/unread-buffer/stats`
+
+**请求示例：**
+
+```
+GET /api/unread-buffer/stats
+```
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "pendingCount": 10,
+    "processedCount": 100,
+    "failedCount": 5,
+    "totalCount": 115
+  }
+}
+```
+
+### 11.4 常见错误场景
+
+#### 11.4.1 数据不存在（DATA_NOT_FOUND）
+
+**响应码：** `-60002`
+
+**触发场景：**
+- 查询不存在的 chatId + messageId 组合
+
+**响应示例：**
+
+```json
+{
+  "code": -60002,
+  "msg": "未读消息缓冲记录不存在: chatId=-1001234567890, messageId=123456",
+  "data": null
+}
+```
+
+#### 11.4.2 参数校验失败（VALIDATION_ERROR）
+
+**响应码：** `-40006`
+
+**触发场景：**
+- 缺少必需参数（chatId、messageId）
+- 分页参数无效（current < 1 或 size < 1 或 size > 100）
+
+**响应示例：**
+
+```json
+{
+  "code": -40006,
+  "msg": "chatId不能为空; messageId不能为空",
+  "data": null
+}
+```
+
+#### 11.4.3 系统内部错误（INTERNAL_ERROR）
+
+**响应码：** `-50000`
+
+**触发场景：**
+- 数据库连接失败
+- 数据库操作异常
+
+**响应示例：**
+
+```json
+{
+  "code": -50000,
+  "msg": "系统内部错误，请联系管理员",
+  "data": null
+}
+```
+
+### 11.5 使用示例
+
+#### 11.5.1 查询单条缓冲记录
+
+```bash
+# 根据 Telegram ID 查询
+curl -X GET "http://localhost:8080/api/unread-buffer/by-tg-id?chatId=-1001234567890&messageId=123456"
+```
+
+#### 11.5.2 分页查询所有缓冲记录
+
+```bash
+# 查询第1页，每页10条（使用默认参数）
+curl -X GET "http://localhost:8080/api/unread-buffer/page"
+
+# 查询第2页，每页20条
+curl -X GET "http://localhost:8080/api/unread-buffer/page?current=2&size=20"
+```
+
+#### 11.5.3 按频道查询缓冲记录
+
+```bash
+# 查询指定频道的所有缓冲记录
+curl -X GET "http://localhost:8080/api/unread-buffer/page?chatId=-1001234567890"
+```
+
+#### 11.5.4 按状态查询缓冲记录
+
+```bash
+# 查询待处理的缓冲记录
+curl -X GET "http://localhost:8080/api/unread-buffer/page?status=PENDING"
+
+# 查询失败的缓冲记录
+curl -X GET "http://localhost:8080/api/unread-buffer/page?status=FAILED"
+```
+
+#### 11.5.5 组合条件查询
+
+```bash
+# 查询指定频道的待处理记录
+curl -X GET "http://localhost:8080/api/unread-buffer/page?chatId=-1001234567890&status=PENDING&current=1&size=20"
+```
+
+#### 11.5.6 查询待处理消息数量
+
+```bash
+# 查询所有频道的待处理消息数量
+curl -X GET "http://localhost:8080/api/unread-buffer/pending-count"
+
+# 查询指定频道的待处理消息数量
+curl -X GET "http://localhost:8080/api/unread-buffer/pending-count?chatId=-1001234567890"
+```
+
+#### 11.5.7 查询统计信息
+
+```bash
+# 查询各状态消息统计
+curl -X GET "http://localhost:8080/api/unread-buffer/stats"
+```
+
+### 11.6 注意事项
+
+#### 11.6.1 数据来源
+
+1. **数据集合**：查询 MongoDB 的 unread_messages_buffer 集合
+2. **数据特点**：记录从 Telegram 获取的未读消息信息
+3. **用途**：监控消息获取和处理的进度
+
+#### 11.6.2 分页查询
+
+1. **页码从 1 开始**：current 参数从 1 开始
+2. **分页大小限制**：每页最大支持 100 条记录
+3. **默认值**：current=1, size=10
+4. **排序规则**：缓冲记录按 fetchTime 字段升序排列（最早获取的在前）
+
+#### 11.6.3 过滤条件
+
+1. **过滤条件组合**：chatId、status 可以任意组合使用
+2. **状态值**：PENDING（待处理）、PROCESSED（已处理）、FAILED（失败）
+3. **频道 ID 格式**：Telegram 频道 ID 通常是负数（如 -1001234567890）
+
+#### 11.6.4 待处理消息数量查询
+
+1. **全局查询**：不提供 chatId 参数时，查询所有频道的待处理消息数量
+2. **频道查询**：提供 chatId 参数时，查询指定频道的待处理消息数量
+3. **状态过滤**：只统计 status = PENDING 的记录
+
+#### 11.6.5 统计信息查询
+
+1. **统计范围**：统计所有缓冲记录的状态分布
+2. **实时性**：统计结果反映数据库的当前状态
+3. **总数计算**：totalCount = pendingCount + processedCount + failedCount
+
+#### 11.6.6 性能优化
+
+1. **索引利用**：系统使用 MongoDB 索引优化查询性能
+2. **避免大结果集**：建议使用分页查询
+3. **合理设置分页大小**：根据实际需求设置 size 参数
+
+#### 11.6.7 错误处理
+
+1. **HTTP 状态码**：所有响应的 HTTP 状态码均为 200
+2. **错误判断**：通过响应体中的 code 字段判断是否成功
+3. **参数校验**：所有参数都经过严格校验
+
+#### 11.6.8 包路径变更
+
+1. **Controller 位置**：UnreadMessageBufferController 位于 `org.xlyo.cocomonyab.controller.readonly` 包
+2. **API 路径**：`/api/unread-buffer`
+3. **只读操作**：本 API 仅提供查询操作，不提供增删改功能
+
 ---
 
 ## 相关文档
 
 - [API 响应规范文档](./API%20响应规范文档.md) - 了解统一的 API 响应格式和错误处理机制
 - [TelegramClientManager 使用指南](../TelegramClientManager使用指南.md) - 了解 Telegram 客户端管理器的使用方法
+

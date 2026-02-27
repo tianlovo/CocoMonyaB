@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.controller;
+package org.xlyo.cocomonyab.controller.readonly;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
