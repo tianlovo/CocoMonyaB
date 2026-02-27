@@ -3,9 +3,10 @@
     <!-- Filter Form -->
     <div class="filter-form">
       <el-input
-        v-model="filters.chatId"
-        placeholder="聊天ID"
+        v-model.number="filters.chatId"
+        placeholder="频道ID"
         clearable
+        type="number"
         style="width: 200px"
       />
       <el-date-picker
@@ -37,21 +38,49 @@
       @page-change="handlePageChange"
       @size-change="handleSizeChange"
     >
-      <template #content="{ row }">
-        <el-tooltip
-          v-if="row.content && row.content.length > 100"
-          :content="row.content"
-          placement="top"
-        >
-          <span>{{ truncateText(row.content, 100) }}</span>
-        </el-tooltip>
-        <span v-else>{{ row.content || '-' }}</span>
+      <template #date="{ row }">
+        {{ formatTimestamp(row.date) }}
       </template>
 
-      <template #timestamp="{ row }">
-        {{ formatDateTime(row.timestamp) }}
+      <template #mediaAlbumId="{ row }">
+        {{ row.mediaAlbumId || '-' }}
+      </template>
+
+      <template #rawJson="{ row }">
+        <el-button
+          type="primary"
+          link
+          size="small"
+          @click="showJsonDialog(row.rawJson)"
+        >
+          查看
+        </el-button>
+      </template>
+
+      <template #createTime="{ row }">
+        {{ formatDateTime(row.createTime) }}
       </template>
     </DataTable>
+
+    <!-- JSON Dialog -->
+    <el-dialog
+      v-model="jsonDialogVisible"
+      title="消息原始数据"
+      width="80%"
+      :close-on-click-modal="false"
+    >
+      <el-input
+        v-model="currentJson"
+        type="textarea"
+        :rows="20"
+        readonly
+        style="font-family: monospace"
+      />
+      <template #footer>
+        <el-button @click="jsonDialogVisible = false">关闭</el-button>
+        <el-button type="primary" @click="copyJson">复制</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -63,14 +92,14 @@ import type { TableColumn } from '@/components/common/DataTable.vue'
 import { usePagination } from '@/composables/usePagination'
 import { messageApi } from '@/api/message'
 import type { Message } from '@/types/models'
-import { formatDateTime, truncateText } from '@/utils/formatters'
+import { formatDateTime } from '@/utils/formatters'
 
 // Pagination
 const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
 
 // Filter state
 const filters = reactive({
-  chatId: '',
+  chatId: undefined as number | undefined,
   startDate: '',
   endDate: ''
 })
@@ -78,6 +107,10 @@ const filters = reactive({
 // Data state
 const data = ref<Message[]>([])
 const loading = ref(false)
+
+// JSON Dialog state
+const jsonDialogVisible = ref(false)
+const currentJson = ref('')
 
 // Computed
 const hasFilters = computed(() => {
@@ -87,35 +120,82 @@ const hasFilters = computed(() => {
 // Table columns configuration
 const columns: TableColumn[] = [
   {
-    prop: 'messageId',
-    label: '消息ID',
+    prop: 'id',
+    label: 'ID',
     width: 200,
     hideOnMobile: true
   },
   {
     prop: 'chatId',
-    label: '聊天ID',
+    label: '频道ID',
     width: 150
   },
   {
-    prop: 'content',
-    label: '内容',
-    minWidth: 200,
-    slot: 'content'
+    prop: 'messageId',
+    label: '消息ID',
+    width: 150
   },
   {
-    prop: 'timestamp',
-    label: '时间',
-    width: 180,
-    slot: 'timestamp'
-  },
-  {
-    prop: 'sender',
-    label: '发送者',
+    prop: 'mediaAlbumId',
+    label: '媒体组ID',
     width: 150,
+    slot: 'mediaAlbumId',
+    hideOnMobile: true
+  },
+  {
+    prop: 'date',
+    label: '消息日期',
+    width: 180,
+    slot: 'date'
+  },
+  {
+    prop: 'rawJson',
+    label: '原始数据',
+    width: 120,
+    slot: 'rawJson'
+  },
+  {
+    prop: 'createTime',
+    label: '创建时间',
+    width: 180,
+    slot: 'createTime',
     hideOnMobile: true
   }
 ]
+
+// Format Unix timestamp to datetime string
+const formatTimestamp = (timestamp: number | null | undefined): string => {
+  if (!timestamp) return '-'
+  try {
+    const date = new Date(timestamp * 1000)
+    return formatDateTime(date)
+  } catch {
+    return '-'
+  }
+}
+
+// Show JSON dialog
+const showJsonDialog = (json: string) => {
+  try {
+    // Pretty print JSON
+    const parsed = JSON.parse(json)
+    currentJson.value = JSON.stringify(parsed, null, 2)
+  } catch {
+    // If parsing fails, show raw string
+    currentJson.value = json
+  }
+  jsonDialogVisible.value = true
+}
+
+// Copy JSON to clipboard
+const copyJson = async () => {
+  try {
+    await navigator.clipboard.writeText(currentJson.value)
+    ElMessage.success('已复制到剪贴板')
+  } catch (error) {
+    ElMessage.error('复制失败')
+  }
+}
 
 // Load data function
 const loadData = async () => {
@@ -165,7 +245,7 @@ const handleSearch = () => {
 
 // Reset filters
 const handleReset = () => {
-  filters.chatId = ''
+  filters.chatId = undefined
   filters.startDate = ''
   filters.endDate = ''
   pagination.current = 1
@@ -204,6 +284,17 @@ watch(() => pagination.size, () => {
   gap: var(--spacing-md);
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* Remove number input spinner */
+:deep(input[type="number"]::-webkit-inner-spin-button),
+:deep(input[type="number"]::-webkit-outer-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:deep(input[type="number"]) {
+  -moz-appearance: textfield;
 }
 
 /* Responsive adjustments */

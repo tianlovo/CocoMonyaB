@@ -122,42 +122,97 @@ export interface TagFilterConfigUpdateDTO {
 
 // Message Tracking types
 export interface Message {
-  messageId: string
-  chatId: string
-  content: string
-  timestamp: string
-  sender: string
+  id: string
+  chatId: number
+  messageId: number
+  mediaAlbumId: number | null
+  date: number
+  rawJson: string
+  createTime: string
+  updateTime: string
 }
 
 export interface ChannelMessage {
-  messageId: string
-  chatId: string
+  id: string
+  messageId: number
+  chatId: number
+  channelUsername: string
+  channelTitle: string
+  date: number
+  editDate: number | null
+  contentType: string
+  textContent: string | null
+  mediaFiles: MediaFile[]
+  webPage: WebPageInfo | null
+  mediaAlbumId: number | null
+  isMediaGroup: boolean
+  mediaGroupItemCount: number | null
+  mediaGroupMessageIds: number[] | null
+  views: number | null
+  forwards: number | null
   status: string
-  content: string
-  timestamp: string
+  createTime: string
+  updateTime: string
+}
+
+export interface MediaFile {
+  fileId: string
+  fileType: string
+  fileSize: number
+  mimeType: string
+  localPath: string | null
+  downloaded: boolean
+}
+
+export interface WebPageInfo {
+  url: string
+  displayUrl: string
+  type: string
+  siteName: string | null
+  title: string | null
+  description: string | null
+  author: string | null
+  duration: number | null
+  hasInstantView: boolean
+  instantViewVersion: string | null
 }
 
 export interface ForwardQueue {
-  queueId: string
-  sourceChatId: string
-  targetChatId: string
+  id: string
+  sourceChatId: number
+  sourceMessageId: number
+  mediaGroupMessageIds: number[] | null
+  matchedTags: string[]
   status: string
   createTime: string
+  updateTime: string
+  forwardTime: string | null
+  retryCount: number
+  errorMessage: string | null
 }
 
 export interface ProcessedMessage {
-  messageId: string
-  chatId: string
+  id: string
+  chatId: number
+  messageId: number
+  messageType: string
   isRead: boolean
   isMatched: boolean
+  matchedTags: string[]
   processTime: string
+  readTime: string | null
+  createTime: string
+  updateTime: string
 }
 
 export interface UnreadBuffer {
-  bufferId: string
-  chatId: string
-  messageCount: number
+  id: string
+  chatId: number
+  messageId: number
+  fetchTime: string
   status: string
+  errorMessage: string | null
+  createTime: string
   updateTime: string
 }
 
@@ -165,7 +220,7 @@ export interface UnreadBuffer {
 export interface MessageQueryParams {
   current: number
   size: number
-  chatId?: string
+  chatId?: number
   startDate?: number
   endDate?: number
 }
@@ -173,7 +228,7 @@ export interface MessageQueryParams {
 export interface ChannelMessageQueryParams {
   current: number
   size: number
-  chatId?: string
+  chatId?: number
   status?: string
   startDate?: number
   endDate?: number
@@ -182,14 +237,14 @@ export interface ChannelMessageQueryParams {
 export interface ForwardQueueQueryParams {
   current: number
   size: number
-  sourceChatId?: string
+  sourceChatId?: number
   status?: string
 }
 
 export interface ProcessedMessageQueryParams {
   current: number
   size: number
-  chatId?: string
+  chatId?: number
   isRead?: boolean
   isMatched?: boolean
 }
@@ -197,6 +252,6 @@ export interface ProcessedMessageQueryParams {
 export interface UnreadBufferQueryParams {
   current: number
   size: number
-  chatId?: string
+  chatId?: number
   status?: string
 }

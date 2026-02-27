@@ -3,9 +3,10 @@
     <!-- Filter Form -->
     <div class="filter-form">
       <el-input
-        v-model="filters.chatId"
-        placeholder="聊天ID"
+        v-model.number="filters.chatId"
+        placeholder="频道ID"
         clearable
+        type="number"
         style="width: 200px"
       />
       <el-select
@@ -42,10 +43,69 @@
         </el-tag>
       </template>
 
+      <template #fetchTime="{ row }">
+        {{ formatDateTime(row.fetchTime) }}
+      </template>
+
       <template #updateTime="{ row }">
         {{ formatDateTime(row.updateTime) }}
       </template>
+
+      <template #hasError="{ row }">
+        <el-tag v-if="row.errorMessage" type="danger" size="small">
+          有错误
+        </el-tag>
+        <span v-else>-</span>
+      </template>
+
+      <template #actions="{ row }">
+        <el-button
+          type="primary"
+          link
+          size="small"
+          @click="showDetailDialog(row)"
+        >
+          详情
+        </el-button>
+      </template>
     </DataTable>
+
+    <!-- Detail Dialog -->
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="未读消息缓冲区详情"
+      width="70%"
+      :close-on-click-modal="false"
+    >
+      <div v-if="currentBuffer" class="buffer-detail">
+        <el-descriptions :column="2" border>
+          <el-descriptions-item label="ID">{{ currentBuffer.id }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="getStatusType(currentBuffer.status)" size="small">
+              {{ getStatusLabel(currentBuffer.status) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="频道ID">{{ currentBuffer.chatId }}</el-descriptions-item>
+          <el-descriptions-item label="消息ID">{{ currentBuffer.messageId }}</el-descriptions-item>
+          <el-descriptions-item label="获取时间">{{ formatDateTime(currentBuffer.fetchTime) }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(currentBuffer.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="更新时间" :span="2">{{ formatDateTime(currentBuffer.updateTime) }}</el-descriptions-item>
+        </el-descriptions>
+
+        <div v-if="currentBuffer.errorMessage" class="detail-section">
+          <h4>错误信息</h4>
+          <el-alert
+            :title="currentBuffer.errorMessage"
+            type="error"
+            :closable="false"
+            show-icon
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -64,13 +124,17 @@ const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
 
 // Filter state
 const filters = reactive({
-  chatId: '',
+  chatId: undefined as number | undefined,
   status: ''
 })
 
 // Data state
 const data = ref<UnreadBuffer[]>([])
 const loading = ref(false)
+
+// Detail Dialog state
+const detailDialogVisible = ref(false)
+const currentBuffer = ref<UnreadBuffer | null>(null)
 
 // Computed
 const hasFilters = computed(() => {
@@ -80,26 +144,32 @@ const hasFilters = computed(() => {
 // Table columns configuration
 const columns: TableColumn[] = [
   {
-    prop: 'bufferId',
-    label: '缓冲区ID',
+    prop: 'id',
+    label: 'ID',
     width: 200,
     hideOnMobile: true
   },
   {
     prop: 'chatId',
-    label: '聊天ID',
-    width: 150
+    label: '频道ID',
+    width: 120
   },
   {
-    prop: 'messageCount',
-    label: '消息数量',
+    prop: 'messageId',
+    label: '消息ID',
     width: 120
   },
   {
     prop: 'status',
     label: '状态',
-    width: 120,
+    width: 100,
     slot: 'status'
+  },
+  {
+    prop: 'fetchTime',
+    label: '获取时间',
+    width: 180,
+    slot: 'fetchTime'
   },
   {
     prop: 'updateTime',
@@ -107,8 +177,28 @@ const columns: TableColumn[] = [
     width: 180,
     slot: 'updateTime',
     hideOnMobile: true
+  },
+  {
+    prop: 'hasError',
+    label: '错误',
+    width: 100,
+    slot: 'hasError',
+    hideOnMobile: true
+  },
+  {
+    prop: 'actions',
+    label: '操作',
+    width: 100,
+    slot: 'actions',
+    fixed: 'right'
   }
 ]
+
+// Show detail dialog
+const showDetailDialog = (buffer: UnreadBuffer) => {
+  currentBuffer.value = buffer
+  detailDialogVisible.value = true
+}
 
 // Load data function
 const loadData = async () => {
@@ -153,7 +243,7 @@ const handleSearch = () => {
 
 // Reset filters
 const handleReset = () => {
-  filters.chatId = ''
+  filters.chatId = undefined
   filters.status = ''
   pagination.current = 1
   loadData()
@@ -191,6 +281,33 @@ watch(() => pagination.size, () => {
   gap: var(--spacing-md);
   align-items: center;
   flex-wrap: wrap;
+}
+
+.buffer-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.detail-section {
+  margin-top: var(--spacing-md);
+}
+
+.detail-section h4 {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--fluent-text-primary);
+  font-size: var(--font-size-md);
+}
+
+/* Remove number input spinner */
+:deep(input[type="number"]::-webkit-inner-spin-button),
+:deep(input[type="number"]::-webkit-outer-spin-button) {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+:deep(input[type="number"]) {
+  -moz-appearance: textfield;
 }
 
 /* Responsive adjustments */
