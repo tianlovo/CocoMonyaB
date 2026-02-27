@@ -6,8 +6,169 @@
 
 所有 API 接口遵循统一的响应格式规范，详见 [API 响应规范文档](./API%20响应规范文档.md)。
 
+## 系统启动就绪机制
+
+系统实现了启动就绪机制，确保在所有关键组件（Telegram客户端、MongoDB、消息处理器等）完全初始化完成后才接受业务API请求。
+
+### 启动期间的API行为
+
+- **业务API**（如频道管理、消息查询等）：系统未就绪时返回 `503 Service Unavailable`
+- **系统状态API**（`/api/system/**`）：不受限制，始终可访问
+
+详细说明请参考：[系统启动就绪机制文档](../arch/系统启动就绪机制.md)
+
+---
+
+## 系统状态 API
+
+### 系统状态-概述
+
+系统状态 API 提供了查询系统就绪状态和健康检查的接口。这些接口不受系统启动就绪机制的限制，即使系统未完全启动也可以访问。
+
+### 系统状态-API 端点
+
+#### 获取系统状态
+
+**接口地址：** `GET /api/system/status`
+
+**查询参数：** 无
+
+**成功响应：**
+
+系统已就绪：
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "ready": true,
+    "reason": null,
+    "timestamp": 1708588800000
+  }
+}
+```
+
+系统未就绪：
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": {
+    "ready": false,
+    "reason": "系统正在启动中...",
+    "timestamp": 1708588800000
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| ready | Boolean | 系统是否就绪 |
+| reason | String | 未就绪原因（就绪时为null） |
+| timestamp | Long | 当前时间戳（毫秒） |
+
+#### 健康检查
+
+**接口地址：** `GET /api/system/health`
+
+**查询参数：** 无
+
+**成功响应：**
+
+```json
+{
+  "code": 200,
+  "msg": "操作成功",
+  "data": "OK"
+}
+```
+
+### 系统状态-使用示例
+
+#### 查询系统状态
+
+```bash
+# 查询系统是否就绪
+curl http://localhost:8080/api/system/status
+
+# 持续监控系统状态
+watch -n 1 'curl -s http://localhost:8080/api/system/status | jq .data.ready'
+```
+
+#### 等待系统就绪
+
+```bash
+#!/bin/bash
+# 等待系统就绪后执行操作
+
+echo "等待系统启动..."
+while true; do
+  READY=$(curl -s http://localhost:8080/api/system/status | jq -r '.data.ready')
+  if [ "$READY" = "true" ]; then
+    echo "系统已就绪！"
+    break
+  fi
+  echo "系统未就绪，继续等待..."
+  sleep 2
+done
+
+# 执行业务操作
+curl http://localhost:8080/api/channel/list
+```
+
+#### 健康检查
+
+```bash
+# 简单的健康检查
+curl http://localhost:8080/api/system/health
+```
+
+### 系统状态-注意事项
+
+1. **白名单机制**：`/api/system/**` 路径下的所有API都在白名单中，不受系统启动就绪机制的限制
+2. **始终可访问**：即使系统未完全启动，系统状态API也可以正常访问
+3. **监控用途**：建议在启动脚本、健康检查、监控系统中使用这些接口
+4. **HTTP状态码**：系统状态查询始终返回 `200 OK`，通过响应体中的 `ready` 字段判断系统状态
+5. **业务API拦截**：当系统未就绪时，访问业务API会收到 `503 Service Unavailable` 响应
+
+### 业务API未就绪响应示例
+
+当系统未就绪时访问业务API（如频道管理、消息查询等）：
+
+**请求：**
+```bash
+curl -i http://localhost:8080/api/channel/list
+```
+
+**响应：**
+```
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/json
+
+{
+  "code": -50003,
+  "msg": "系统正在启动中...",
+  "data": null
+}
+```
+
+**错误码说明：**
+
+| 错误码 | 说明 |
+|--------|------|
+| -50003 | 服务暂时不可用（系统未就绪） |
+
+---
+
 ## 目录
 
+- [系统状态 API](#系统状态-api)
+  - [概述](#系统状态-概述)
+  - [API 端点](#系统状态-api-端点)
+  - [使用示例](#系统状态-使用示例)
+  - [注意事项](#系统状态-注意事项)
 - [1. 频道管理 API](#1-频道管理-api)
   - [1.1 数据结构](#11-数据结构)
   - [1.2 API 端点](#12-api-端点)
