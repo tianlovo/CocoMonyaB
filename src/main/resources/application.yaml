@@ -170,18 +170,22 @@ plugin:
     schedule-interval-seconds: 30
     # 最大重试次数（默认: 3）
     max-retry-count: 3
-    # 欢迎消息模板（支持占位符：{pluginName}, {tagPrefix}, {rateLimitPerMinute}, {batchSize}, {scheduleInterval}, {maxRetryCount}）
+    # 欢迎消息模板
+    # 支持占位符：{pluginName}, {version}, {tagPrefix}, {rateLimitPerMinute}, {batchSize}, {scheduleInterval}, {maxRetryCount}
     welcome-message: |
-      🎉 标签转发插件已启动
+      🎊 CocoMonyaB 标签转发系统已启动
       
-      📋 基础信息:
+      📌 系统信息:
+      • 项目名称: CocoMonyaB
+      • 系统版本: v{version}
       • 插件名称: {pluginName}
       • 标签前缀: {tagPrefix}
       
-      ⚙️ 运行配置:
-      • 转发速率: {rateLimitPerMinute} 次/分钟
+      ⚙️ 转发配置:
+      • 转发速率: {rateLimitPerMinute} 条/分钟
       • 批次大小: {batchSize} 条消息
       • 调度间隔: {scheduleInterval} 秒
       • 最大重试: {maxRetryCount} 次
       
-      ✅ 权限验证通过，插件运行正常
+      ✅ 目标频道权限验证通过
+      ✅ 系统运行正常，准备接收消息

@@ -9,16 +9,6 @@
         type="number"
         style="width: 200px"
       />
-      <el-select
-        v-model="filters.status"
-        placeholder="状态"
-        clearable
-        style="width: 150px"
-      >
-        <el-option label="待审核" value="PENDING" />
-        <el-option label="已通过" value="APPROVED" />
-        <el-option label="已拒绝" value="REJECTED" />
-      </el-select>
       <el-date-picker
         v-model="filters.startDate"
         type="datetime"
@@ -37,81 +27,139 @@
       <el-button @click="handleReset">重置</el-button>
     </div>
 
-    <!-- Data Table -->
-    <DataTable
-      :data="data"
-      :columns="columns"
-      :loading="loading"
-      :pagination="pagination"
-      :empty-type="hasFilters ? 'no-result' : 'empty'"
-      :empty-message="hasFilters ? '未找到匹配的记录' : '暂无数据'"
-      @page-change="handlePageChange"
-      @size-change="handleSizeChange"
+    <!-- Tree Table -->
+    <el-table
+      :data="treeData"
+      v-loading="loading"
+      stripe
+      style="width: 100%"
+      row-key="id"
+      :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+      :default-expand-all="false"
+      class="fluent-card channel-message-table"
     >
-      <template #status="{ row }">
-        <el-tag
-          :type="getStatusType(row.status)"
-          size="small"
-        >
-          {{ getStatusLabel(row.status) }}
-        </el-tag>
-      </template>
+      <!-- Message ID Column -->
+      <el-table-column prop="messageId" label="消息ID" width="140">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader" class="message-id-cell">
+            <span class="message-id-text">{{ row.messageId }}</span>
+          </div>
+          <div v-else class="group-header-cell">
+            <el-icon><FolderOpened /></el-icon>
+            <span class="group-header-text">媒体组</span>
+          </div>
+        </template>
+      </el-table-column>
 
-      <template #channelInfo="{ row }">
-        <div class="channel-info">
-          <div class="channel-title">{{ row.channelTitle || '-' }}</div>
-          <div class="channel-username">@{{ row.channelUsername || '-' }}</div>
-        </div>
-      </template>
+      <!-- Channel Info Column -->
+      <el-table-column prop="channelInfo" label="频道信息" width="200">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader" class="channel-info">
+            <div class="channel-title">{{ row.channelTitle || '-' }}</div>
+            <div class="channel-username">@{{ row.channelUsername || '-' }}</div>
+          </div>
+          <div v-else class="group-header-info">
+            <span class="group-id">#{{ row.mediaAlbumId }}</span>
+          </div>
+        </template>
+      </el-table-column>
 
-      <template #contentType="{ row }">
-        <el-tag size="small" type="info">{{ formatContentType(row.contentType) }}</el-tag>
-      </template>
+      <!-- Content Type Column -->
+      <el-table-column prop="contentType" label="类型" width="120">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader">
+            <el-tag size="small" :type="getContentTypeTagType(row.contentType)">
+              {{ formatContentType(row.contentType) }}
+            </el-tag>
+          </div>
+        </template>
+      </el-table-column>
 
-      <template #textContent="{ row }">
-        <el-tooltip
-          v-if="row.textContent && row.textContent.length > 50"
-          :content="row.textContent"
-          placement="top"
-        >
-          <span>{{ truncateText(row.textContent, 50) }}</span>
-        </el-tooltip>
-        <span v-else>{{ row.textContent || '-' }}</span>
-      </template>
+      <!-- Text Content Column -->
+      <el-table-column prop="textContent" label="内容" min-width="200">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader">
+            <el-tooltip
+              v-if="row.textContent && row.textContent.length > 50"
+              :content="row.textContent"
+              placement="top"
+            >
+              <span>{{ truncateText(row.textContent, 50) }}</span>
+            </el-tooltip>
+            <span v-else>{{ row.textContent || '-' }}</span>
+          </div>
+          <span v-else class="group-summary">
+            {{ getGroupSummary(row) }}
+          </span>
+        </template>
+      </el-table-column>
 
-      <template #mediaInfo="{ row }">
-        <div v-if="row.isMediaGroup" class="media-info">
-          <el-tag size="small" type="warning">媒体组 ({{ row.mediaGroupItemCount }})</el-tag>
-        </div>
-        <div v-else-if="row.mediaFiles && row.mediaFiles.length > 0" class="media-info">
-          <el-tag size="small">{{ row.mediaFiles.length }} 个文件</el-tag>
-        </div>
-        <span v-else>-</span>
-      </template>
+      <!-- Media Info Column -->
+      <el-table-column prop="mediaInfo" label="媒体" width="180">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader">
+            <div v-if="row.mediaFiles && row.mediaFiles.length > 0" class="media-info">
+              <el-tooltip :content="getMediaFilesInfo(row.mediaFiles)" placement="top">
+                <div class="media-files-info">
+                  <el-icon class="media-icon"><Document /></el-icon>
+                  <span class="media-text">
+                    {{ getMediaTypeIcon(row.mediaFiles[0].fileType) }}
+                    <span v-if="row.mediaFiles.length > 1" class="media-count">×{{ row.mediaFiles.length }}</span>
+                  </span>
+                </div>
+              </el-tooltip>
+            </div>
+            <span v-else class="no-media">无媒体</span>
+          </div>
+        </template>
+      </el-table-column>
 
-      <template #stats="{ row }">
-        <div class="stats-info">
-          <span v-if="row.views">👁 {{ row.views }}</span>
-          <span v-if="row.forwards">↗ {{ row.forwards }}</span>
-          <span v-if="!row.views && !row.forwards">-</span>
-        </div>
-      </template>
+      <!-- Stats Column -->
+      <el-table-column prop="stats" label="统计" width="120">
+        <template #default="{ row }">
+          <div v-if="!row.isGroupHeader" class="stats-info">
+            <span v-if="row.views">👁 {{ row.views }}</span>
+            <span v-if="row.forwards">↗ {{ row.forwards }}</span>
+            <span v-if="!row.views && !row.forwards">-</span>
+          </div>
+        </template>
+      </el-table-column>
 
-      <template #date="{ row }">
-        {{ formatTimestamp(row.date) }}
-      </template>
+      <!-- Date Column -->
+      <el-table-column prop="date" label="日期" width="180">
+        <template #default="{ row }">
+          <span v-if="!row.isGroupHeader">{{ formatTimestamp(row.date) }}</span>
+        </template>
+      </el-table-column>
 
-      <template #actions="{ row }">
-        <el-button
-          type="primary"
-          link
-          size="small"
-          @click="showDetailDialog(row)"
-        >
-          详情
-        </el-button>
-      </template>
-    </DataTable>
+      <!-- Actions Column -->
+      <el-table-column label="操作" width="100" fixed="right">
+        <template #default="{ row }">
+          <el-button
+            v-if="!row.isGroupHeader"
+            type="primary"
+            link
+            size="small"
+            @click="showDetailDialog(row)"
+          >
+            详情
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- Pagination -->
+    <div v-if="pagination.total > 0" class="pagination-container">
+      <el-pagination
+        v-model:current-page="pagination.current"
+        v-model:page-size="pagination.size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="pagination.total"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+      />
+    </div>
 
     <!-- Detail Dialog -->
     <el-dialog
@@ -126,18 +174,11 @@
           <el-descriptions-item label="频道ID">{{ currentMessage.chatId }}</el-descriptions-item>
           <el-descriptions-item label="频道标题">{{ currentMessage.channelTitle }}</el-descriptions-item>
           <el-descriptions-item label="频道用户名">@{{ currentMessage.channelUsername }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="getStatusType(currentMessage.status)" size="small">
-              {{ getStatusLabel(currentMessage.status) }}
-            </el-tag>
-          </el-descriptions-item>
           <el-descriptions-item label="内容类型">{{ formatContentType(currentMessage.contentType) }}</el-descriptions-item>
           <el-descriptions-item label="消息日期">{{ formatTimestamp(currentMessage.date) }}</el-descriptions-item>
           <el-descriptions-item label="编辑日期">{{ currentMessage.editDate ? formatTimestamp(currentMessage.editDate) : '-' }}</el-descriptions-item>
           <el-descriptions-item label="浏览次数">{{ currentMessage.views || '-' }}</el-descriptions-item>
           <el-descriptions-item label="转发次数">{{ currentMessage.forwards || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="媒体组ID">{{ currentMessage.mediaAlbumId || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="是否媒体组">{{ currentMessage.isMediaGroup ? '是' : '否' }}</el-descriptions-item>
         </el-descriptions>
 
         <div v-if="currentMessage.textContent" class="detail-section">
@@ -145,10 +186,58 @@
           <div class="text-content">{{ currentMessage.textContent }}</div>
         </div>
 
+        <!-- Media Group Section -->
+        <div v-if="currentMessage.mediaAlbumId" class="detail-section">
+          <h4>
+            <el-icon><PictureFilled /></el-icon>
+            媒体组信息
+          </h4>
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+          >
+            <template #title>
+              <div class="media-group-alert">
+                <span>媒体组 ID: {{ currentMessage.mediaAlbumId }}</span>
+                <el-tag type="warning" size="small">{{ getMediaGroupCountText(currentMessage) }}</el-tag>
+              </div>
+            </template>
+          </el-alert>
+          
+          <div v-if="currentMessage.mediaGroupMessageIds && currentMessage.mediaGroupMessageIds.length > 0" class="media-group-messages">
+            <div class="media-group-header">
+              <span>关联消息ID列表 ({{ currentMessage.mediaGroupMessageIds.length }} 条)：</span>
+            </div>
+            <div class="media-group-ids">
+              <el-tag 
+                v-for="id in currentMessage.mediaGroupMessageIds" 
+                :key="id" 
+                :type="id === currentMessage.messageId ? 'primary' : 'info'"
+                size="small"
+              >
+                {{ id }}
+                <span v-if="id === currentMessage.messageId"> (当前)</span>
+              </el-tag>
+            </div>
+          </div>
+          
+          <div v-else class="media-group-messages">
+            <el-empty 
+              description="暂无关联消息ID列表" 
+              :image-size="60"
+            />
+          </div>
+        </div>
+
         <div v-if="currentMessage.mediaFiles && currentMessage.mediaFiles.length > 0" class="detail-section">
           <h4>媒体文件 ({{ currentMessage.mediaFiles.length }})</h4>
           <el-table :data="currentMessage.mediaFiles" border>
-            <el-table-column prop="fileType" label="类型" width="100" />
+            <el-table-column prop="fileType" label="类型" width="100">
+              <template #default="{ row }">
+                <el-tag size="small" type="success">{{ getMediaTypeIcon(row.fileType) }}</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="mimeType" label="MIME类型" width="150" />
             <el-table-column prop="fileSize" label="大小" width="120">
               <template #default="{ row }">{{ formatFileSize(row.fileSize) }}</template>
@@ -160,7 +249,12 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="localPath" label="本地路径" min-width="200" />
+            <el-table-column prop="localPath" label="本地路径" min-width="200">
+              <template #default="{ row }">
+                <span v-if="row.localPath" class="local-path">{{ row.localPath }}</span>
+                <span v-else class="no-path">-</span>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
 
@@ -168,7 +262,10 @@
           <h4>网页信息</h4>
           <el-descriptions :column="1" border>
             <el-descriptions-item label="URL">
-              <a :href="currentMessage.webPage.url" target="_blank">{{ currentMessage.webPage.url }}</a>
+              <a :href="currentMessage.webPage.url" target="_blank" class="web-link">
+                {{ currentMessage.webPage.url }}
+                <el-icon><TopRight /></el-icon>
+              </a>
             </el-descriptions-item>
             <el-descriptions-item label="类型">{{ currentMessage.webPage.type }}</el-descriptions-item>
             <el-descriptions-item label="站点名称">{{ currentMessage.webPage.siteName || '-' }}</el-descriptions-item>
@@ -177,15 +274,6 @@
             <el-descriptions-item label="作者">{{ currentMessage.webPage.author || '-' }}</el-descriptions-item>
             <el-descriptions-item label="即时预览">{{ currentMessage.webPage.hasInstantView ? '支持' : '不支持' }}</el-descriptions-item>
           </el-descriptions>
-        </div>
-
-        <div v-if="currentMessage.isMediaGroup && currentMessage.mediaGroupMessageIds" class="detail-section">
-          <h4>媒体组消息ID列表</h4>
-          <div class="media-group-ids">
-            <el-tag v-for="id in currentMessage.mediaGroupMessageIds" :key="id" style="margin: 4px">
-              {{ id }}
-            </el-tag>
-          </div>
         </div>
       </div>
       <template #footer>
@@ -198,12 +286,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import DataTable from '@/components/common/DataTable.vue'
-import type { TableColumn } from '@/components/common/DataTable.vue'
+import { PictureFilled, Document, TopRight, FolderOpened } from '@element-plus/icons-vue'
 import { usePagination } from '@/composables/usePagination'
 import { messageApi } from '@/api/message'
 import type { ChannelMessage } from '@/types/models'
-import { formatDateTime, getStatusType, getStatusLabel, truncateText } from '@/utils/formatters'
+import { formatDateTime, truncateText } from '@/utils/formatters'
 
 // Pagination
 const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
@@ -211,7 +298,6 @@ const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
 // Filter state
 const filters = reactive({
   chatId: undefined as number | undefined,
-  status: '',
   startDate: '',
   endDate: ''
 })
@@ -224,71 +310,58 @@ const loading = ref(false)
 const detailDialogVisible = ref(false)
 const currentMessage = ref<ChannelMessage | null>(null)
 
-// Computed
-const hasFilters = computed(() => {
-  return !!(filters.chatId || filters.status || filters.startDate || filters.endDate)
-})
+// Tree data - group messages by mediaAlbumId
+const treeData = computed(() => {
+  const mediaGroups = new Map<number, ChannelMessage[]>()
+  const standalone: ChannelMessage[] = []
 
-// Table columns configuration
-const columns: TableColumn[] = [
-  {
-    prop: 'messageId',
-    label: '消息ID',
-    width: 120
-  },
-  {
-    prop: 'channelInfo',
-    label: '频道信息',
-    width: 200,
-    slot: 'channelInfo'
-  },
-  {
-    prop: 'status',
-    label: '状态',
-    width: 100,
-    slot: 'status'
-  },
-  {
-    prop: 'contentType',
-    label: '类型',
-    width: 120,
-    slot: 'contentType',
-    hideOnMobile: true
-  },
-  {
-    prop: 'textContent',
-    label: '内容',
-    minWidth: 200,
-    slot: 'textContent'
-  },
-  {
-    prop: 'mediaInfo',
-    label: '媒体',
-    width: 120,
-    slot: 'mediaInfo',
-    hideOnMobile: true
-  },
-  {
-    prop: 'stats',
-    label: '统计',
-    width: 120,
-    slot: 'stats',
-    hideOnMobile: true
-  },
-  {
-    prop: 'date',
-    label: '日期',
-    width: 180,
-    slot: 'date'
-  },
-  {
-    prop: 'actions',
-    label: '操作',
-    width: 100,
-    slot: 'actions',
-    fixed: 'right'
-  }
-]
+  // Group messages by mediaAlbumId
+  data.value.forEach(message => {
+    // Add unique id for tree structure
+    const messageWithId = { ...message, id: `msg-${message.messageId}` }
+    
+    if (message.mediaAlbumId) {
+      if (!mediaGroups.has(message.mediaAlbumId)) {
+        mediaGroups.set(message.mediaAlbumId, [])
+      }
+      mediaGroups.get(message.mediaAlbumId)!.push(messageWithId)
+    } else {
+      standalone.push(messageWithId)
+    }
+  })
+
+  // Build tree structure
+  const result: any[] = []
+
+  // Add media groups
+  mediaGroups.forEach((messages, albumId) => {
+    if (messages.length > 1) {
+      // Create group header
+      result.push({
+        id: `group-${albumId}`,
+        isGroupHeader: true,
+        mediaAlbumId: albumId,
+        children: messages,
+        hasChildren: true
+      })
+    } else {
+      // Single message in group, treat as standalone
+      result.push(messages[0])
+    }
+  })
+
+  // Add standalone messages
+  result.push(...standalone)
+
+  // Sort by date (newest first)
+  result.sort((a, b) => {
+    const dateA = a.isGroupHeader ? (a.children[0]?.date || 0) : (a.date || 0)
+    const dateB = b.isGroupHeader ? (b.children[0]?.date || 0) : (b.date || 0)
+    return dateB - dateA
+  })
+
+  return result
+})
 
 // Format Unix timestamp to datetime string
 const formatTimestamp = (timestamp: number | null | undefined): string => {
@@ -323,6 +396,91 @@ const formatContentType = (type: string): string => {
   return typeMap[type] || type
 }
 
+// Get content type tag color
+const getContentTypeTagType = (type: string): string => {
+  const typeColorMap: Record<string, string> = {
+    text: 'info',
+    photo: 'success',
+    video: 'warning',
+    audio: 'primary',
+    document: '',
+    animation: 'warning',
+    voice: 'primary',
+    sticker: 'success',
+    poll: 'info',
+    location: 'danger',
+    contact: 'info',
+    venue: 'danger',
+    game: 'success',
+    invoice: 'warning',
+    web_page: 'primary'
+  }
+  return typeColorMap[type] || 'info'
+}
+
+// Get media type icon text
+const getMediaTypeIcon = (fileType: string): string => {
+  const iconMap: Record<string, string> = {
+    photo: '图片',
+    video: '视频',
+    audio: '音频',
+    document: '文档',
+    animation: '动画',
+    voice: '语音'
+  }
+  return iconMap[fileType] || '文件'
+}
+
+// Get media files info for tooltip
+const getMediaFilesInfo = (mediaFiles: any[]): string => {
+  if (!mediaFiles || mediaFiles.length === 0) return '无媒体文件'
+  
+  const fileTypes = mediaFiles.map(f => getMediaTypeIcon(f.fileType))
+  const uniqueTypes = [...new Set(fileTypes)]
+  
+  return `包含 ${mediaFiles.length} 个文件: ${uniqueTypes.join(', ')}`
+}
+
+// Get media group count text for detail dialog
+const getMediaGroupCountText = (message: ChannelMessage): string => {
+  if (message.mediaGroupMessageIds && message.mediaGroupMessageIds.length > 0) {
+    return `包含 ${message.mediaGroupMessageIds.length} 条消息`
+  }
+  
+  if (message.mediaGroupItemCount && message.mediaGroupItemCount > 0) {
+    return `包含 ${message.mediaGroupItemCount} 项`
+  }
+  
+  if (message.mediaFiles && message.mediaFiles.length > 0) {
+    return `包含 ${message.mediaFiles.length} 个文件`
+  }
+  
+  return '媒体组 (数量未知)'
+}
+
+// Generate consistent color for media group ID
+const getMediaGroupColor = (mediaAlbumId: number | null): string => {
+  if (!mediaAlbumId) return '#909399'
+  
+  const colors = [
+    '#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#9C27B0', '#00BCD4',
+    '#FF9800', '#4CAF50', '#2196F3', '#FF5722', '#673AB7', '#009688'
+  ]
+  
+  const index = Math.abs(mediaAlbumId) % colors.length
+  return colors[index]
+}
+
+// Get group summary
+const getGroupSummary = (row: any): string => {
+  if (!row.children || row.children.length === 0) return ''
+  
+  const types = row.children.map((m: any) => formatContentType(m.contentType))
+  const uniqueTypes = [...new Set(types)]
+  
+  return `包含 ${uniqueTypes.join('、')} 等内容`
+}
+
 // Format file size
 const formatFileSize = (bytes: number): string => {
   if (!bytes) return '-'
@@ -351,19 +509,13 @@ const loadData = async () => {
       size: pagination.size
     }
 
-    // Only include filter parameters if they have valid values
     if (filters.chatId) {
       params.chatId = filters.chatId
     }
-    if (filters.status) {
-      params.status = filters.status
-    }
     if (filters.startDate) {
-      // Convert date string to timestamp (seconds)
       params.startDate = Math.floor(new Date(filters.startDate).getTime() / 1000)
     }
     if (filters.endDate) {
-      // Convert date string to timestamp (seconds)
       params.endDate = Math.floor(new Date(filters.endDate).getTime() / 1000)
     }
 
@@ -394,7 +546,6 @@ const handleSearch = () => {
 // Reset filters
 const handleReset = () => {
   filters.chatId = undefined
-  filters.status = ''
   filters.startDate = ''
   filters.endDate = ''
   pagination.current = 1
@@ -435,6 +586,52 @@ watch(() => pagination.size, () => {
   flex-wrap: wrap;
 }
 
+.channel-message-table {
+  margin-top: var(--spacing-md);
+}
+
+.message-id-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.message-id-text {
+  font-weight: 500;
+  color: var(--fluent-text-primary);
+}
+
+.group-header-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-weight: 600;
+  color: var(--fluent-primary);
+}
+
+.group-header-text {
+  font-size: var(--font-size-base);
+}
+
+.group-header-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.group-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: var(--font-size-sm);
+  color: var(--fluent-text-secondary);
+  font-weight: 600;
+}
+
+.group-summary {
+  color: var(--fluent-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
 .channel-info {
   display: flex;
   flex-direction: column;
@@ -451,9 +648,58 @@ watch(() => pagination.size, () => {
   color: var(--fluent-text-secondary);
 }
 
+.content-type-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
 .media-info {
   display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.media-files-info {
+  display: flex;
+  align-items: center;
   gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--fluent-bg-alt);
+  border-radius: var(--radius-sm);
+  cursor: help;
+  transition: all var(--transition-fast);
+}
+
+.media-files-info:hover {
+  background-color: var(--fluent-bg-hover);
+  transform: translateX(2px);
+}
+
+.media-icon {
+  font-size: 14px;
+  color: var(--fluent-primary);
+}
+
+.media-text {
+  font-size: var(--font-size-xs);
+  color: var(--fluent-text-primary);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.media-count {
+  font-size: var(--font-size-xs);
+  color: var(--fluent-text-secondary);
+  font-weight: normal;
+}
+
+.no-media {
+  color: var(--fluent-text-tertiary);
+  font-size: var(--font-size-sm);
 }
 
 .stats-info {
@@ -461,6 +707,12 @@ watch(() => pagination.size, () => {
   flex-direction: column;
   gap: 4px;
   font-size: var(--font-size-xs);
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--spacing-lg);
 }
 
 .message-detail {
@@ -477,6 +729,9 @@ watch(() => pagination.size, () => {
   margin: 0 0 var(--spacing-sm) 0;
   color: var(--fluent-text-primary);
   font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
 .text-content {
@@ -487,21 +742,79 @@ watch(() => pagination.size, () => {
   word-break: break-word;
 }
 
+.media-group-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.media-group-messages {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--fluent-bg-alt);
+  border-radius: var(--radius-md);
+}
+
+.media-group-header {
+  font-size: var(--font-size-sm);
+  color: var(--fluent-text-secondary);
+  margin-bottom: var(--spacing-sm);
+  font-weight: 500;
+}
+
 .media-group-ids {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
 }
 
+.local-path {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: var(--font-size-xs);
+  color: var(--fluent-text-secondary);
+}
+
+.no-path {
+  color: var(--fluent-text-tertiary);
+}
+
+.web-link {
+  color: var(--fluent-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.web-link:hover {
+  text-decoration: underline;
+}
+
+/* Tree table styles */
+:deep(.el-table__expand-icon) {
+  color: var(--fluent-primary);
+}
+
+:deep(.el-table__row--level-1) {
+  background-color: rgba(64, 158, 255, 0.02);
+}
+
+:deep(.el-table__row--level-1:hover) {
+  background-color: rgba(64, 158, 255, 0.05) !important;
+}
+
 /* Remove number input spinner */
 :deep(input[type="number"]::-webkit-inner-spin-button),
 :deep(input[type="number"]::-webkit-outer-spin-button) {
   -webkit-appearance: none;
+  appearance: none;
   margin: 0;
 }
 
 :deep(input[type="number"]) {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 /* Responsive adjustments */

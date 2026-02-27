@@ -30,8 +30,8 @@ public class TagBasedForwardingProperties {
      * 必须是负数（Telegram频道ID格式）
      * 这是必需的配置项
      */
-    @NotNull(message = "Target channel ID must be configured")
-    @Negative(message = "Target channel ID must be negative")
+    @NotNull(message = "必须配置目标频道ID")
+    @Negative(message = "目标频道ID必须为负数")
     private Long targetChannelId;
     
     /**
@@ -67,10 +67,10 @@ public class TagBasedForwardingProperties {
     
     /**
      * 欢迎消息模板
-     * 用于验证目标频道的发送权限并提供插件状态信息
+     * 用于验证目标频道的发送权限并提供系统状态信息
      * 支持占位符：
      * - {pluginName}: 插件名称
-     * - {version}: 插件版本
+     * - {version}: 系统版本
      * - {tagPrefix}: 标签前缀
      * - {rateLimitPerMinute}: 每分钟转发速率限制
      * - {batchSize}: 批次大小
@@ -80,18 +80,29 @@ public class TagBasedForwardingProperties {
      * 默认值: 多行欢迎消息模板
      */
     private String welcomeMessage = """
-            🎉 标签转发插件已启动
+            🎊 CocoMonyaB 标签转发系统已启动
             
-            📋 基础信息:
+            📌 系统信息:
+            • 项目名称: CocoMonyaB
+            • 系统版本: v{version}
             • 插件名称: {pluginName}
             • 标签前缀: {tagPrefix}
             
-            ⚙️ 运行配置:
-            • 转发速率: {rateLimitPerMinute} 次/分钟
+            ⚙️ 转发配置:
+            • 转发速率: {rateLimitPerMinute} 条/分钟
             • 批次大小: {batchSize} 条消息
             • 调度间隔: {scheduleInterval} 秒
             • 最大重试: {maxRetryCount} 次
             
-            ✅ 权限验证通过，插件运行正常
+            📝 功能说明:
+            • 自动监控频道消息
+            • 基于标签智能过滤
+            • 多级审核机制
+            • 结构化存储
+            
+            ✅ 目标频道权限验证通过
+            ✅ 系统运行正常，准备接收消息
+            
+            💡 提示: 系统将自动转发匹配标签的消息到此频道
             """;
 }

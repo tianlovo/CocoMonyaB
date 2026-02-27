@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.xlyo.cocomonyab.config.version.VersionInfo;
 import org.xlyo.cocomonyab.domain.entity.ProcessedMessage;
 import org.xlyo.cocomonyab.domain.entity.message.AnimationMessageEntity;
 import org.xlyo.cocomonyab.domain.entity.message.AudioMessageEntity;
@@ -258,6 +259,7 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
     private String buildWelcomeMessage() {
         return properties.getWelcomeMessage()
                 .replace("{pluginName}", getName())
+                .replace("{version}", VersionInfo.VERSION)
                 .replace("{tagPrefix}", properties.getTagPrefix())
                 .replace("{rateLimitPerMinute}", String.valueOf(properties.getRateLimitPerMinute()))
                 .replace("{batchSize}", String.valueOf(properties.getBatchSize()))
