@@ -238,6 +238,50 @@ public class UnreadMessageSourceBufferService {
     }
     
     /**
+     * 重试失败的缓冲消息
+     * <p>
+     * 将失败状态的消息重新标记为待处理，然后重新处理
+     */
+    public void retryFailedMessages() {
+        List<UnreadMessageBuffer> failedBuffers = bufferRepository
+            .findByStatus(BufferStatus.FAILED);
+        
+        if (failedBuffers.isEmpty()) {
+            return;
+        }
+        
+        log.info("开始重试失败的缓冲消息: 数量={}", failedBuffers.size());
+        
+        // 将失败消息重新标记为待处理
+        for (UnreadMessageBuffer buffer : failedBuffers) {
+            buffer.setStatus(BufferStatus.PENDING);
+            buffer.setErrorMessage(null);
+            buffer.setUpdateTime(LocalDateTime.now());
+        }
+        
+        // 批量保存
+        bufferRepository.saveAll(failedBuffers);
+        
+        // 按频道分组
+        Map<Long, List<UnreadMessageBuffer>> groupedByChannel = failedBuffers.stream()
+            .collect(Collectors.groupingBy(UnreadMessageBuffer::getChatId));
+        
+        // 对每个频道处理
+        for (Map.Entry<Long, List<UnreadMessageBuffer>> entry : groupedByChannel.entrySet()) {
+            long chatId = entry.getKey();
+            List<UnreadMessageBuffer> buffers = entry.getValue();
+            
+            log.info("重试频道的失败消息: chatId={}, 数量={}", chatId, buffers.size());
+            
+            // 获取频道信息（简化处理，使用空字符串）
+            String channelUsername = "";
+            String channelTitle = "";
+            
+            processBatches(buffers, channelUsername, channelTitle);
+        }
+    }
+    
+    /**
      * 统计待处理消息数量
      * 
      * @return 待处理消息数量

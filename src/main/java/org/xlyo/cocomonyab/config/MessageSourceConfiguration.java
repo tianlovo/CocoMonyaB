@@ -5,9 +5,11 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.xlyo.cocomonyab.source.MessageSourceException;
 import org.xlyo.cocomonyab.source.MessageSourceRegistry;
 import org.xlyo.cocomonyab.source.telegram.TelegramMessageSource;
+import org.xlyo.cocomonyab.source.unread.UnreadMessageSource;
 
 /**
  * 消息来源配置类
@@ -21,10 +23,12 @@ import org.xlyo.cocomonyab.source.telegram.TelegramMessageSource;
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
+@DependsOn("embeddedMongoConfiguration")
 public class MessageSourceConfiguration {
     
     private final MessageSourceRegistry messageSourceRegistry;
     private final TelegramMessageSource telegramMessageSource;
+    private final UnreadMessageSource unreadMessageSource;
     
     /**
      * 应用启动时注册和启动所有消息来源
@@ -41,6 +45,14 @@ public class MessageSourceConfiguration {
             // 启动 Telegram 消息来源
             messageSourceRegistry.startSource(telegramMessageSource.getSourceId());
             log.info("已启动消息来源: {}", telegramMessageSource.getSourceName());
+            
+            // 注册未读消息来源
+            messageSourceRegistry.register(unreadMessageSource);
+            log.info("已注册消息来源: {}", unreadMessageSource.getSourceName());
+            
+            // 启动未读消息来源
+            messageSourceRegistry.startSource(unreadMessageSource.getSourceId());
+            log.info("已启动消息来源: {}", unreadMessageSource.getSourceName());
             
             // 输出统计信息
             log.info("消息来源系统初始化完成，已注册 {} 个消息来源，运行中 {} 个",

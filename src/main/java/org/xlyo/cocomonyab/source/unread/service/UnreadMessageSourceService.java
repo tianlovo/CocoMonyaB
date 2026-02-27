@@ -60,11 +60,18 @@ public class UnreadMessageSourceService {
     public void initialize() {
         log.info("初始化未读消息来源生成器");
         
-        // 检查缓冲区中是否有未处理的消息
+        // 检查缓冲区中是否有待处理的消息
         long pendingCount = bufferService.countPendingMessages();
         if (pendingCount > 0) {
             log.info("发现 {} 条待处理的缓冲消息", pendingCount);
             bufferService.processPendingMessages();
+        }
+        
+        // 检查缓冲区中是否有失败的消息
+        long failedCount = bufferService.countFailedMessages();
+        if (failedCount > 0) {
+            log.info("发现 {} 条失败的缓冲消息，尝试重新处理", failedCount);
+            bufferService.retryFailedMessages();
         }
     }
     
