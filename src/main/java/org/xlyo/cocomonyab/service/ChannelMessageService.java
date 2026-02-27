@@ -87,20 +87,13 @@ public class ChannelMessageService {
         Page<@NonNull ChannelMessage> messagePage;
         
         // 根据查询条件选择合适的查询方法
-        if (query.getChatId() != null && query.getStatus() != null) {
-            // 按频道ID和状态查询
-            messagePage = channelMessageRepository.findByChatIdAndStatusOrderByDateDesc(
-                    query.getChatId(), query.getStatus(), pageable);
-        } else if (query.getChatId() != null && query.getStartDate() != null && query.getEndDate() != null) {
+        if (query.getChatId() != null && query.getStartDate() != null && query.getEndDate() != null) {
             // 按频道ID和日期范围查询
             messagePage = channelMessageRepository.findByChatIdAndDateBetweenOrderByDateDesc(
                     query.getChatId(), query.getStartDate(), query.getEndDate(), pageable);
         } else if (query.getChatId() != null) {
             // 仅按频道ID查询
             messagePage = channelMessageRepository.findByChatIdOrderByDateDesc(query.getChatId(), pageable);
-        } else if (query.getStatus() != null) {
-            // 仅按状态查询
-            messagePage = channelMessageRepository.findByStatusOrderByCreateTimeDesc(query.getStatus(), pageable);
         } else {
             // 查询所有消息
             messagePage = channelMessageRepository.findAll(pageable);
@@ -163,7 +156,6 @@ public class ChannelMessageService {
         vo.setMediaGroupMessageIds(entity.getMediaGroupMessageIds());
         vo.setViews(entity.getViews());
         vo.setForwards(entity.getForwards());
-        vo.setStatus(entity.getStatus() != null ? entity.getStatus().name() : null);
         vo.setCreateTime(entity.getCreateTime());
         vo.setUpdateTime(entity.getUpdateTime());
         

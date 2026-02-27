@@ -2,7 +2,6 @@ package org.xlyo.cocomonyab.domain.dto;
 
 import jakarta.validation.constraints.Min;
 import lombok.Data;
-import org.xlyo.cocomonyab.domain.entity.ChannelMessage;
 
 /**
  * 频道消息查询DTO
@@ -27,9 +26,4 @@ public class ChannelMessageQueryDTO {
      */
     @Min(value = 0, message = "结束日期必须大于等于0")
     private Integer endDate;
-    
-    /**
-     * 消息状态（可选）
-     */
-    private ChannelMessage.MessageStatus status;
 }

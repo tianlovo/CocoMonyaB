@@ -26,10 +26,6 @@ import java.util.List;
         def = "{'chatId': 1, 'date': -1}"
     ),
     @CompoundIndex(
-        name = "status_date_idx", 
-        def = "{'status': 1, 'createTime': -1}"
-    ),
-    @CompoundIndex(
         name = "media_album_idx", 
         def = "{'chatId': 1, 'mediaAlbumId': 1, 'date': 1}"
     )
@@ -69,9 +65,6 @@ public class ChannelMessage {
     private Integer views;
     private Integer forwards;
     
-    @Indexed
-    private MessageStatus status;
-    
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     
@@ -103,14 +96,5 @@ public class ChannelMessage {
         private Integer duration;            // 视频/音频时长
         private Boolean hasInstantView;      // 是否有即时预览（Telegraph）
         private String instantViewVersion;   // 即时预览版本
-    }
-    
-    /**
-     * 频道消息状态枚举
-     */
-    public enum MessageStatus {
-        PENDING,    // 待审核
-        APPROVED,   // 已通过
-        REJECTED    // 已拒绝
     }
 }

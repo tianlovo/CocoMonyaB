@@ -98,11 +98,6 @@ public class ChannelMessageVO {
     private Integer forwards;
     
     /**
-     * 消息状态
-     */
-    private String status;
-    
-    /**
      * 创建时间
      */
     private LocalDateTime createTime;

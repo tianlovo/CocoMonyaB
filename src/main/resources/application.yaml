@@ -140,6 +140,12 @@ message-source:
 
 # 插件配置
 plugin:
+  # 频道消息存储插件配置
+  channel-message-storage:
+    # 是否启用插件（默认: true）
+    # 此插件负责将监控频道的消息存储到 channel_messages 数据库集合
+    enabled: true
+  
   # 控制台打印插件配置
   console-printer:
     # 是否启用插件
