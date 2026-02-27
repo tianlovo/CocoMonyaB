@@ -13,6 +13,7 @@
         @refresh="handleRefresh"
         @toggle-sidebar="toggleSidebar"
         :show-menu-button="isMobile"
+        :show-system-status="true"
       />
       
       <main class="main-content fluent-fade-in">

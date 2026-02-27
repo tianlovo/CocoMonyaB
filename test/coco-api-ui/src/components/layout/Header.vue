@@ -13,6 +13,12 @@
       </div>
       
       <div class="header-right">
+        <SystemStatusIndicator 
+          v-if="showSystemStatus"
+          :auto-refresh="true" 
+          :refresh-interval="30000"
+          class="system-status"
+        />
         <el-tooltip content="刷新" placement="bottom">
           <button class="header-action" @click="handleRefresh">
             <el-icon><Refresh /></el-icon>
@@ -27,12 +33,16 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Refresh, Menu } from '@element-plus/icons-vue'
+import SystemStatusIndicator from '@/components/common/SystemStatusIndicator.vue'
 
 interface Props {
   showMenuButton?: boolean
+  showSystemStatus?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  showSystemStatus: false
+})
 
 const route = useRoute()
 
@@ -102,6 +112,10 @@ const handleToggleSidebar = () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+}
+
+.system-status {
+  margin-right: var(--spacing-xs);
 }
 
 .header-action {

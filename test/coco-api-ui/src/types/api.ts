@@ -27,3 +27,9 @@ export interface ImportResult {
     error: string
   }>
 }
+
+export interface SystemStatus {
+  ready: boolean
+  reason: string | null
+  timestamp: number
+}

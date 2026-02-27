@@ -84,6 +84,10 @@ request.interceptors.response.use(
       case 500:
         errorMessage = '服务器错误，请稍后重试'
         break
+      case 503:
+        // Service Unavailable - System not ready
+        errorMessage = apiResponse?.msg || '系统正在启动中，请稍后重试'
+        break
       default:
         // Use msg field from response for other errors
         errorMessage = apiResponse?.msg || '请求失败'
