@@ -1,0 +1,341 @@
+/* Responsive Layout Grid System */
+
+/* ============================================
+   Breakpoints
+   Desktop: ≥1200px
+   Tablet: 768px - 1199px
+   Mobile: <768px
+   ============================================ */
+
+/* Container */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* Desktop */
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1200px;
+    padding-left: var(--spacing-lg);
+    padding-right: var(--spacing-lg);
+  }
+}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 767px) {
+  .container {
+    padding-left: var(--spacing-sm);
+    padding-right: var(--spacing-sm);
+  }
+}
+
+/* ============================================
+   Grid System
+   ============================================ */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: calc(var(--spacing-md) * -1);
+  margin-right: calc(var(--spacing-md) * -1);
+}
+
+.col {
+  flex: 1;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+/* Column sizes */
+.col-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+.col-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+.col-3 { flex: 0 0 25%; max-width: 25%; }
+.col-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+.col-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+.col-6 { flex: 0 0 50%; max-width: 50%; }
+.col-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+.col-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+.col-9 { flex: 0 0 75%; max-width: 75%; }
+.col-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+.col-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+
+/* ============================================
+   Responsive Utilities - Desktop (≥1200px)
+   ============================================ */
+@media (min-width: 1200px) {
+  .col-desktop-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-desktop-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-desktop-3 { flex: 0 0 25%; max-width: 25%; }
+  .col-desktop-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-desktop-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-desktop-6 { flex: 0 0 50%; max-width: 50%; }
+  .col-desktop-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-desktop-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-desktop-9 { flex: 0 0 75%; max-width: 75%; }
+  .col-desktop-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+  .col-desktop-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+  .col-desktop-12 { flex: 0 0 100%; max-width: 100%; }
+  
+  .hidden-desktop { display: none !important; }
+  .visible-desktop { display: block !important; }
+}
+
+/* ============================================
+   Responsive Utilities - Tablet (768px - 1199px)
+   ============================================ */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .col-tablet-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-tablet-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-tablet-3 { flex: 0 0 25%; max-width: 25%; }
+  .col-tablet-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-tablet-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-tablet-6 { flex: 0 0 50%; max-width: 50%; }
+  .col-tablet-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-tablet-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-tablet-9 { flex: 0 0 75%; max-width: 75%; }
+  .col-tablet-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+  .col-tablet-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+  .col-tablet-12 { flex: 0 0 100%; max-width: 100%; }
+  
+  .hidden-tablet { display: none !important; }
+  .visible-tablet { display: block !important; }
+}
+
+/* ============================================
+   Responsive Utilities - Mobile (<768px)
+   ============================================ */
+@media (max-width: 767px) {
+  .col-mobile-1 { flex: 0 0 8.333333%; max-width: 8.333333%; }
+  .col-mobile-2 { flex: 0 0 16.666667%; max-width: 16.666667%; }
+  .col-mobile-3 { flex: 0 0 25%; max-width: 25%; }
+  .col-mobile-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+  .col-mobile-5 { flex: 0 0 41.666667%; max-width: 41.666667%; }
+  .col-mobile-6 { flex: 0 0 50%; max-width: 50%; }
+  .col-mobile-7 { flex: 0 0 58.333333%; max-width: 58.333333%; }
+  .col-mobile-8 { flex: 0 0 66.666667%; max-width: 66.666667%; }
+  .col-mobile-9 { flex: 0 0 75%; max-width: 75%; }
+  .col-mobile-10 { flex: 0 0 83.333333%; max-width: 83.333333%; }
+  .col-mobile-11 { flex: 0 0 91.666667%; max-width: 91.666667%; }
+  .col-mobile-12 { flex: 0 0 100%; max-width: 100%; }
+  
+  .hidden-mobile { display: none !important; }
+  .visible-mobile { display: block !important; }
+  
+  /* Stack columns on mobile by default */
+  .row-mobile-stack > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* ============================================
+   Flexbox Utilities
+   ============================================ */
+.d-flex { display: flex; }
+.d-inline-flex { display: inline-flex; }
+.d-block { display: block; }
+.d-inline-block { display: inline-block; }
+.d-none { display: none; }
+
+.flex-row { flex-direction: row; }
+.flex-column { flex-direction: column; }
+.flex-row-reverse { flex-direction: row-reverse; }
+.flex-column-reverse { flex-direction: column-reverse; }
+
+.flex-wrap { flex-wrap: wrap; }
+.flex-nowrap { flex-wrap: nowrap; }
+
+.justify-start { justify-content: flex-start; }
+.justify-end { justify-content: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-around { justify-content: space-around; }
+.justify-evenly { justify-content: space-evenly; }
+
+.align-start { align-items: flex-start; }
+.align-end { align-items: flex-end; }
+.align-center { align-items: center; }
+.align-baseline { align-items: baseline; }
+.align-stretch { align-items: stretch; }
+
+.flex-1 { flex: 1; }
+.flex-auto { flex: auto; }
+.flex-none { flex: none; }
+
+/* ============================================
+   Responsive Spacing
+   ============================================ */
+
+/* Desktop spacing */
+@media (min-width: 1200px) {
+  .p-desktop-xs { padding: var(--spacing-xs); }
+  .p-desktop-sm { padding: var(--spacing-sm); }
+  .p-desktop-md { padding: var(--spacing-md); }
+  .p-desktop-lg { padding: var(--spacing-lg); }
+  .p-desktop-xl { padding: var(--spacing-xl); }
+  
+  .m-desktop-xs { margin: var(--spacing-xs); }
+  .m-desktop-sm { margin: var(--spacing-sm); }
+  .m-desktop-md { margin: var(--spacing-md); }
+  .m-desktop-lg { margin: var(--spacing-lg); }
+  .m-desktop-xl { margin: var(--spacing-xl); }
+}
+
+/* Tablet spacing */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .p-tablet-xs { padding: var(--spacing-xs); }
+  .p-tablet-sm { padding: var(--spacing-sm); }
+  .p-tablet-md { padding: var(--spacing-md); }
+  .p-tablet-lg { padding: var(--spacing-lg); }
+  
+  .m-tablet-xs { margin: var(--spacing-xs); }
+  .m-tablet-sm { margin: var(--spacing-sm); }
+  .m-tablet-md { margin: var(--spacing-md); }
+  .m-tablet-lg { margin: var(--spacing-lg); }
+}
+
+/* Mobile spacing */
+@media (max-width: 767px) {
+  .p-mobile-xs { padding: var(--spacing-xs); }
+  .p-mobile-sm { padding: var(--spacing-sm); }
+  .p-mobile-md { padding: var(--spacing-md); }
+  
+  .m-mobile-xs { margin: var(--spacing-xs); }
+  .m-mobile-sm { margin: var(--spacing-sm); }
+  .m-mobile-md { margin: var(--spacing-md); }
+}
+
+/* ============================================
+   Responsive Text Utilities
+   ============================================ */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+@media (min-width: 1200px) {
+  .text-desktop-left { text-align: left; }
+  .text-desktop-center { text-align: center; }
+  .text-desktop-right { text-align: right; }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .text-tablet-left { text-align: left; }
+  .text-tablet-center { text-align: center; }
+  .text-tablet-right { text-align: right; }
+}
+
+@media (max-width: 767px) {
+  .text-mobile-left { text-align: left; }
+  .text-mobile-center { text-align: center; }
+  .text-mobile-right { text-align: right; }
+}
+
+/* ============================================
+   Responsive Width Utilities
+   ============================================ */
+.w-25 { width: 25%; }
+.w-50 { width: 50%; }
+.w-75 { width: 75%; }
+.w-100 { width: 100%; }
+.w-auto { width: auto; }
+
+.h-25 { height: 25%; }
+.h-50 { height: 50%; }
+.h-75 { height: 75%; }
+.h-100 { height: 100%; }
+.h-auto { height: auto; }
+
+/* ============================================
+   Responsive Element Plus Overrides
+   ============================================ */
+
+/* Dialog responsive width */
+@media (max-width: 767px) {
+  .el-dialog {
+    width: 90% !important;
+    max-width: 90vw !important;
+    margin: var(--spacing-sm) !important;
+  }
+  
+  .el-dialog__body {
+    padding: var(--spacing-md);
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  
+  .el-dialog__header {
+    padding: var(--spacing-md);
+  }
+  
+  .el-dialog__footer {
+    padding: var(--spacing-md);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .el-dialog {
+    width: 75% !important;
+    max-width: 700px !important;
+  }
+}
+
+/* Table responsive */
+@media (max-width: 767px) {
+  .el-table {
+    font-size: var(--font-size-xs);
+  }
+  
+  .el-table th,
+  .el-table td {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  /* Hide less important columns on mobile */
+  .el-table .mobile-hidden {
+    display: none !important;
+  }
+  
+  /* Adjust table cell content for mobile */
+  .el-table__cell {
+    word-break: break-word;
+  }
+  
+  /* Make action buttons smaller on mobile */
+  .el-table .el-button--small {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .el-table {
+    font-size: var(--font-size-sm);
+  }
+  
+  /* Hide some columns on tablet */
+  .el-table .tablet-hidden {
+    display: none !important;
+  }
+}
+
+/* Form responsive */
+@media (max-width: 767px) {
+  .el-form-item {
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .el-form-item__label {
+    padding-bottom: var(--spacing-xs);
+  }
+}

@@ -1,0 +1,192 @@
+spring:
+  application:
+    name: "CocoMonyaB"
+  
+  # MongoDB 配置
+  data:
+    mongodb:
+      # 运行模式：embedded（嵌入式）或 remote（远程）
+      mode: embedded
+      # 嵌入式 MongoDB 配置
+      embedded:
+        # MongoDB 版本号
+        version: 7.0.12
+        # MongoDB 监听端口
+        port: 27017
+        # MongoDB 绑定 IP 地址
+        bind-ip: 127.0.0.1
+      # 远程 MongoDB 连接 URI（仅在 remote 模式下使用）
+      # uri: mongodb://localhost:27017/cocomonya
+
+server:
+  port: 10721
+
+# 日志配置
+logging:
+  config: classpath:logback-spring.xml
+  level:
+    root: INFO
+    "[it.tdlight.TDLight]": WARN
+
+# Spring Dotenv 配置
+springdotenv:
+  # .env 文件目录（相对于工作目录）
+  directory: "data/config"
+  filename: ".env"
+  ignore-if-missing: false
+
+# 应用配置
+app:
+  # Data目录配置
+  # 注意：data 根目录和 config 目录路径固定，不可配置
+  # - data 根目录：固定为应用同级的 "data" 目录
+  # - config 目录：固定为 "data/config"
+  data:
+    # 各子目录相对路径（可选，默认值如下）
+    database-directory: "db"
+    mongo-db-directory: "db/mongo"
+    session-directory: "session"
+    telegram-session-directory: "session/td"
+    bin-directory: "bin"
+    mongo-bin-directory: "bin/mongo"
+    tmp-directory: "tmp"
+    logs-directory: "logs"
+
+# Telegram 配置
+telegram:
+  # 设备型号标识
+  device-model: "Coco Monya"
+  # 登录超时时间（分钟），默认 2 分钟
+  login-timeout-minutes: 2
+  # 登录方式将在启动时通过控制台交互选择
+
+# 环境变量配置（从 .env 文件读取）
+env:
+  # Telegram API ID（纯数字）
+  api-id: ${API_ID}
+  # Telegram API Hash（32位十六进制）
+  api-hash: ${API_HASH}
+  # 登录手机号（+国家代码+号码）
+  tg-phone: ${TG_PHONE}
+  # 两步验证密码（可选，如果未启用 2FA 则为空）
+  tg-2fa: ${TG_2FA:}
+
+# 并发安全性配置
+concurrent-safety:
+  # 媒体组配置
+  media-group:
+    # 媒体组超时时间（毫秒）- 超过此时间未收到新消息则触发处理
+    timeout: 2000
+    # 最大缓冲区大小 - 防止内存溢出
+    max-buffer-size: 1000
+  
+  # 锁配置
+  lock:
+    # 分段锁数量（锁条带数）- 用于减少锁竞争，提高并发性能
+    stripes: 128
+    # 锁超时时间（毫秒）- 获取锁的最大等待时间
+    timeout: 5000
+  
+  # 缓存配置
+  cache:
+    # 缓存过期时间（秒）- 消息去重缓存的有效期
+    ttl: 10
+    # 最大缓存大小 - 防止内存溢出
+    max-size: 10000
+    # 失败消息缓存时间（秒）- 处理失败的消息短暂缓存，防止立即重试
+    failed-message-ttl: 5
+
+# 消息来源配置
+message-source:
+  # 未读频道消息来源生成器配置
+  unread:
+    # 启动时自动检测未读消息（默认: true）
+    # 设置为 true 时，程序启动后会自动扫描所有监控频道的未读消息
+    auto-detect-on-startup: true
+    
+    # API 调用配置
+    # 单次 API 调用获取的最大消息数量（默认: 100）
+    # 建议值: 50-100，过大可能导致 API 超时
+    max-messages-per-fetch: 100
+    # 单个频道最大获取消息总数（默认: 1000）
+    # 用于防止历史消息过多导致处理时间过长
+    max-total-messages: 1000
+    # API 调用之间的延迟时间（毫秒）（默认: 1000）
+    # 用于避免触发 Telegram API 速率限制
+    api-call-delay: 1000
+    
+    # 重试配置
+    # 最大重试次数（默认: 3）
+    # 适用于临时性错误和速率限制错误
+    max-retries: 3
+    # 基础重试延迟（毫秒）（默认: 2000）
+    # 指数退避的起始延迟时间
+    retry-base-delay: 2000
+    # 最大重试延迟（毫秒）（默认: 60000）
+    # 指数退避的最大延迟时间，防止等待时间过长
+    retry-max-delay: 60000
+    
+    # 批处理配置
+    # 每批处理的消息数量（默认: 10）
+    # 较小的批次可以更快看到处理进度，较大的批次效率更高
+    batch-size: 10
+    # 批次之间的延迟时间（毫秒）（默认: 500）
+    # 用于避免系统过载，给其他任务留出处理时间
+    batch-delay: 500
+    
+    # 缓冲区配置
+    # 缓冲区 TTL（天）（默认: 7）
+    # 已处理的消息记录在缓冲区中保留的天数，超过后自动清理
+    buffer-ttl-days: 7
+
+# 插件配置
+plugin:
+  # 频道消息存储插件配置
+  channel-message-storage:
+    # 是否启用插件（默认: true）
+    # 此插件负责将监控频道的消息存储到 channel_messages 数据库集合
+    enabled: true
+  
+  # 控制台打印插件配置
+  console-printer:
+    # 是否启用插件
+    enabled: false
+  
+  # 基于标签的消息转发插件配置
+  tag-based-forwarding:
+    # 是否启用插件（默认: true）
+    enabled: true
+    # 目标频道ID（必填，必须为负数，Telegram频道ID格式）
+    # 示例: -1001234567890
+    # 请替换为实际的目标频道ID
+    target-channel-id: -1003808612339
+    # 标签前缀（默认: "#"）
+    tag-prefix: "#"
+    # 每分钟转发速率限制（默认: 20）
+    # 用于避免触发Telegram API速率限制
+    rate-limit-per-minute: 18
+    # 每批次处理的消息数量（默认: 10）
+    batch-size: 10
+    # 定时任务执行间隔（秒）（默认: 30）
+    schedule-interval-seconds: 30
+    # 最大重试次数（默认: 3）
+    max-retry-count: 3
+    # 欢迎消息模板
+    # 支持占位符：{pluginName}, {version}, {tagPrefix}, {rateLimitPerMinute}, {batchSize}, {scheduleInterval}, {maxRetryCount}
+    welcome-message: |
+      🎊 CocoMonyaB 标签转发系统已启动
+      
+      📌 系统信息:
+      • 项目名称: CocoMonyaB
+      • 系统版本: v{version}
+      • 插件名称: {pluginName}
+      • 标签前缀: {tagPrefix}
+      
+      ⚙️ 转发配置:
+      • 转发速率: {rateLimitPerMinute} 条/分钟
+      • 批次大小: {batchSize} 条消息
+      • 调度间隔: {scheduleInterval} 秒
+      • 最大重试: {maxRetryCount} 次
+      
+      ✅ 目标频道权限验证通过
+      ✅ 系统运行正常，准备接收消息

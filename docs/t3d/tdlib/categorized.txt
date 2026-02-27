@@ -1,0 +1,175 @@
+Authorization & Connection|UpdateAgeVerificationParameters|The parameters for age verification of the current user's account has changed.
+Authorization & Connection|UpdateApplicationRecaptchaVerificationRequired|A request can't be completed unless reCAPTCHA verification is performed; for official mobile applications only. The method setApplicationVerificationToken must be called once the verification is completed or failed.
+Authorization & Connection|UpdateApplicationVerificationRequired|A request can't be completed unless application verification is performed; for official mobile applications only. The method setApplicationVerificationToken must be called once the verification is completed or failed.
+Authorization & Connection|UpdateAuthorizationState|The user authorization state has changed.
+Authorization & Connection|UpdateConnectionState|The connection state has changed. This update must be used only to show a human-readable description of the connection state.
+Authorization & Connection|UpdateFreezeState|The freeze state of the current user's account has changed.
+Authorization & Connection|UpdateServiceNotification|A service notification from the server was received. Upon receiving this the application must show a popup with the content of the notification.
+Authorization & Connection|UpdateSpeechRecognitionTrial|The parameters of speech recognition without Telegram Premium subscription has changed.
+Authorization & Connection|UpdateSpeedLimitNotification|Download or upload file speed for the user was limited, but it can be restored by subscription to Telegram Premium. The notification can be postponed until a being downloaded or uploaded file is visible to the user. Use getOption(&quot;premium_download_speedup&quot;) or getOption(&quot;premium_upload_speedup&quot;) to get expected speedup after subscription to Telegram Premium.
+Authorization & Connection|UpdateSuggestedActions|The list of suggested to the user actions has changed.
+Authorization & Connection|UpdateTermsOfService|New terms of service must be accepted by the user. If the terms of service are declined, then the deleteAccount method must be called with the reason &quot;Decline ToS update&quot;.
+Business Updates|UpdateBusinessConnection|A business connection has changed; for bots only.
+Business Updates|UpdateBusinessMessageEdited|A message in a business account was edited; for bots only.
+Business Updates|UpdateBusinessMessagesDeleted|Messages in a business account were deleted; for bots only.
+Call Updates|UpdateCall|New call was created or information about a call was updated.
+Call Updates|UpdateGroupCall|Information about a group call was updated.
+Call Updates|UpdateGroupCallMessageLevels|The levels of live story group call messages have changed.
+Call Updates|UpdateGroupCallMessageSendFailed|A group call message failed to send.
+Call Updates|UpdateGroupCallMessagesDeleted|Some group call messages were deleted.
+Call Updates|UpdateGroupCallParticipant|Information about a group call participant was changed. The updates are sent only after the group call is received through getGroupCall and only if the call is joined or being joined.
+Call Updates|UpdateGroupCallParticipants|The list of group call participants that can send and receive encrypted call data has changed; for group calls not bound to a chat only.
+Call Updates|UpdateGroupCallVerificationState|The verification state of an encrypted group call has changed; for group calls not bound to a chat only.
+Chat Updates|UpdateChatAccentColors|Chat accent colors have changed.
+Chat Updates|UpdateChatAction|A message sender activity in the chat has changed.
+Chat Updates|UpdateChatActionBar|The chat action bar was changed.
+Chat Updates|UpdateChatActiveStories|The list of active stories posted by a specific chat has changed.
+Chat Updates|UpdateChatAddedToList|A chat was added to a chat list.
+Chat Updates|UpdateChatAvailableReactions|The chat available reactions were changed.
+Chat Updates|UpdateChatBackground|The chat background was changed.
+Chat Updates|UpdateChatBlockList|A chat was blocked or unblocked.
+Chat Updates|UpdateChatBoost|A chat boost has changed; for bots only.
+Chat Updates|UpdateChatBusinessBotManageBar|The bar for managing business bot was changed in a chat.
+Chat Updates|UpdateChatDefaultDisableNotification|The value of the default disableNotification parameter, used when a message is sent to the chat, was changed.
+Chat Updates|UpdateChatDraftMessage|A chat draft has changed. Be aware that the update may come in the currently opened chat but with old content of the draft. If the user has changed the content of the draft, this update mustn't be applied.
+Chat Updates|UpdateChatEmojiStatus|Chat emoji status has changed.
+Chat Updates|UpdateChatFolders|The list of chat folders or a chat folder has changed.
+Chat Updates|UpdateChatHasProtectedContent|A chat content was allowed or restricted for saving.
+Chat Updates|UpdateChatHasScheduledMessages|A chat's hasScheduledMessages field has changed.
+Chat Updates|UpdateChatIsMarkedAsUnread|A chat was marked as unread or was read.
+Chat Updates|UpdateChatIsTranslatable|Translation of chat messages was enabled or disabled.
+Chat Updates|UpdateChatLastMessage|The last message of a chat was changed.
+Chat Updates|UpdateChatMember|User rights changed in a chat; for bots only.
+Chat Updates|UpdateChatMessageAutoDeleteTime|The message auto-delete or self-destruct timer setting for a chat was changed.
+Chat Updates|UpdateChatMessageSender|The message sender that is selected to send messages in a chat has changed.
+Chat Updates|UpdateChatNotificationSettings|Notification settings for a chat were changed.
+Chat Updates|UpdateChatOnlineMemberCount|The number of online group members has changed. This update with non-zero number of online group members is sent only for currently opened chats. There is no guarantee that it is sent just after the number of online users has changed.
+Chat Updates|UpdateChatPendingJoinRequests|The chat pending join requests were changed.
+Chat Updates|UpdateChatPermissions|Chat permissions were changed.
+Chat Updates|UpdateChatPhoto|A chat photo was changed.
+Chat Updates|UpdateChatPosition|The position of a chat in a chat list has changed. An updateChatLastMessage or updateChatDraftMessage update might be sent instead of the update.
+Chat Updates|UpdateChatReadInbox|Incoming messages were read or the number of unread messages has been changed.
+Chat Updates|UpdateChatReadOutbox|Outgoing messages were read.
+Chat Updates|UpdateChatRemovedFromList|A chat was removed from a chat list.
+Chat Updates|UpdateChatReplyMarkup|The default chat reply markup was changed. Can occur because new messages with reply markup were received or because an old reply markup was hidden by the user.
+Chat Updates|UpdateChatRevenueAmount|The revenue earned from sponsored messages in a chat has changed. If chat revenue screen is opened, then getChatRevenueTransactions may be called to fetch new transactions.
+Chat Updates|UpdateChatTheme|The chat theme was changed.
+Chat Updates|UpdateChatTitle|The title of a chat was changed.
+Chat Updates|UpdateChatUnreadMentionCount|The chat unreadMentionCount has changed.
+Chat Updates|UpdateChatUnreadReactionCount|The chat unreadReactionCount has changed.
+Chat Updates|UpdateChatVideoChat|A chat video chat state has changed.
+Chat Updates|UpdateChatViewAsTopics|A chat default appearance has changed.
+File Updates|UpdateFile|Information about a file was updated.
+File Updates|UpdateFileAddedToDownloads|A file was added to the file download list. This update is sent only after file download list is loaded for the first time.
+File Updates|UpdateFileDownload|A file download was changed. This update is sent only after file download list is loaded for the first time.
+File Updates|UpdateFileDownloads|The state of the file download list has changed.
+File Updates|UpdateFileGenerationStart|The file generation process needs to be started by the application. Use setFileGenerationProgress and finishFileGeneration to generate the file.
+File Updates|UpdateFileGenerationStop|File generation is no longer needed.
+File Updates|UpdateFileRemovedFromDownloads|A file was removed from the file download list. This update is sent only after file download list is loaded for the first time.
+Group & Supergroup Updates|UpdateBasicGroup|Some data of a basic group has changed. This update is guaranteed to come before the basic group identifier is returned to the application.
+Group & Supergroup Updates|UpdateBasicGroupFullInfo|Some data in basicGroupFullInfo has been changed.
+Group & Supergroup Updates|UpdateSupergroup|Some data of a supergroup or a channel has changed. This update is guaranteed to come before the supergroup identifier is returned to the application.
+Group & Supergroup Updates|UpdateSupergroupFullInfo|Some data in supergroupFullInfo has been changed.
+Message Updates|UpdateMessageContent|The message content has changed.
+Message Updates|UpdateMessageContentOpened|The message content was opened. Updates voice note messages to &quot;listened&quot;, video note messages to &quot;viewed&quot; and starts the self-destruct timer.
+Message Updates|UpdateMessageEdited|A message was edited. Changes in the message content will come in a separate updateMessageContent.
+Message Updates|UpdateMessageFactCheck|A fact-check added to a message was changed.
+Message Updates|UpdateMessageInteractionInfo|The information about interactions with a message has changed.
+Message Updates|UpdateMessageIsPinned|The message pinned state was changed.
+Message Updates|UpdateMessageLiveLocationViewed|A message with a live location was viewed. When the update is received, the application is expected to update the live location.
+Message Updates|UpdateMessageMentionRead|A message with an unread mention was read.
+Message Updates|UpdateMessageReaction|User changed its reactions on a message with public reactions; for bots only.
+Message Updates|UpdateMessageReactions|Reactions added to a message with anonymous reactions have changed; for bots only.
+Message Updates|UpdateMessageSendAcknowledged|A request to send a message has reached the Telegram server. This doesn't mean that the message will be sent successfully. This update is sent only if the option &quot;use_quick_ack&quot; is set to true. This update may be sent multiple times for the same message.
+Message Updates|UpdateMessageSendFailed|A message failed to send. Be aware that some messages being sent can be irrecoverably deleted, in which case updateDeleteMessages will be received instead of this update.
+Message Updates|UpdateMessageSendSucceeded|A message has been successfully sent.
+Message Updates|UpdateMessageSuggestedPostInfo|Information about suggested post of a message was changed.
+Message Updates|UpdateMessageUnreadReactions|The list of unread reactions added to a message was changed.
+Message Updates|UpdateNewBusinessCallbackQuery|A new incoming callback query from a business message; for bots only.
+Message Updates|UpdateNewBusinessMessage|A new message was added to a business account; for bots only.
+Message Updates|UpdateNewCallSignalingData|New call signaling data arrived.
+Message Updates|UpdateNewCallbackQuery|A new incoming callback query; for bots only.
+Message Updates|UpdateNewChatJoinRequest|A user sent a join request to a chat; for bots only.
+Message Updates|UpdateNewChosenInlineResult|The user has chosen a result of an inline query; for bots only.
+Message Updates|UpdateNewCustomEvent|A new incoming event; for bots only.
+Message Updates|UpdateNewCustomQuery|A new incoming query; for bots only.
+Message Updates|UpdateNewGroupCallMessage|A new message was received in a group call.
+Message Updates|UpdateNewGroupCallPaidReaction|A new paid reaction was received in a live story group call.
+Message Updates|UpdateNewInlineCallbackQuery|A new incoming callback query from a message sent via a bot; for bots only.
+Message Updates|UpdateNewInlineQuery|A new incoming inline query; for bots only.
+Message Updates|UpdateNewMessage|A new message was received; can also be an outgoing message.
+Message Updates|UpdateNewPreCheckoutQuery|A new incoming pre-checkout query; for bots only. Contains full information about a checkout.
+Message Updates|UpdateNewShippingQuery|A new incoming shipping query; for bots only. Only for invoices with flexible price.
+Notification Updates|UpdateActiveNotifications|Contains active notifications that were shown on previous application launches. This update is sent only if the message database is used. In that case it comes once before any updateNotification and updateNotificationGroup update.
+Notification Updates|UpdateHavePendingNotifications|Describes whether there are some pending notification updates. Can be used to prevent application from killing, while there are some pending notifications.
+Notification Updates|UpdateNotification|A notification was changed.
+Notification Updates|UpdateNotificationGroup|A list of active notifications in a notification group has changed.
+Notification Updates|UpdateReactionNotificationSettings|Notification settings for reactions were updated.
+Notification Updates|UpdateScopeNotificationSettings|Notification settings for some type of chats were updated.
+Other|UpdateAccentColors|The list of supported accent colors has changed.
+Other|UpdateActiveGiftAuctions|The list of auctions in which participate the current user has changed.
+Other|UpdateActiveLiveLocationMessages|The list of messages with active live location that need to be updated by the application has changed. The list is persistent across application restarts only if the message database is used.
+Other|UpdateAnimationSearchParameters|The parameters of animation search through getOption(&quot;animation_search_bot_username&quot;) bot has changed.
+Other|UpdateAttachmentMenuBots|The list of bots added to attachment or side menu has changed.
+Other|UpdateAvailableMessageEffects|The list of available message effects has changed.
+Other|UpdateContactCloseBirthdays|The list of contacts that had birthdays recently or will have birthday soon has changed.
+Other|UpdateDefaultBackground|The default background has changed.
+Other|UpdateDeleteMessages|Some messages were deleted.
+Other|UpdateDirectMessagesChatTopic|Basic information about a topic in a channel direct messages chat administered by the current user has changed. This update is guaranteed to come before the topic identifier is returned to the application.
+Other|UpdateEmojiChatThemes|The list of available emoji chat themes has changed.
+Other|UpdateForumTopic|Information about a topic in a forum chat was changed.
+Other|UpdateForumTopicInfo|Basic information about a topic in a forum chat was changed.
+Other|UpdateGiftAuctionState|State of a gift auction was updated.
+Other|UpdateLanguagePackStrings|Some language pack strings have been updated.
+Other|UpdateNewChat|A new chat has been loaded/created. This update is guaranteed to come before the chat identifier is returned to the application. The chat field changes will be reported through separate updates.
+Other|UpdateOwnedStarCount|The number of Telegram Stars owned by the current user has changed.
+Other|UpdateOwnedTonCount|The number of Toncoins owned by the current user has changed.
+Other|UpdatePaidMediaPurchased|Paid media were purchased by a user; for bots only.
+Other|UpdatePendingTextMessage|A new pending text message was received in a chat with a bot. The message must be shown in the chat for at most getOption(&quot;pending_text_message_period&quot;) seconds, replace any other pending message with the same draftId, and be deleted whenever any incoming message from the bot in the message thread is received.
+Other|UpdatePoll|A poll was updated; for bots only.
+Other|UpdatePollAnswer|A user changed the answer to a poll; for bots only.
+Other|UpdateProfileAccentColors|The list of supported accent colors for user profiles has changed.
+Other|UpdateQuickReplyShortcut|Basic information about a quick reply shortcut has changed. This update is guaranteed to come before the quick shortcut name is returned to the application.
+Other|UpdateQuickReplyShortcutDeleted|A quick reply shortcut and all its messages were deleted.
+Other|UpdateQuickReplyShortcutMessages|The list of quick reply shortcut messages has changed.
+Other|UpdateQuickReplyShortcuts|The list of quick reply shortcuts has changed.
+Other|UpdateSavedMessagesTags|Tags used in Saved Messages or a Saved Messages topic have changed.
+Other|UpdateSavedMessagesTopic|Basic information about a Saved Messages topic has changed. This update is guaranteed to come before the topic identifier is returned to the application.
+Other|UpdateSavedMessagesTopicCount|Number of Saved Messages topics has changed.
+Other|UpdateSavedNotificationSounds|The list of saved notification sounds was updated. This update may not be sent until information about a notification sound was requested for the first time.
+Other|UpdateSecretChat|Some data of a secret chat has changed. This update is guaranteed to come before the secret chat identifier is returned to the application.
+Other|UpdateStakeDiceState|The stake dice state has changed.
+Other|UpdateStarRevenueStatus|The Telegram Star revenue earned by a user or a chat has changed. If Telegram Star transaction screen of the chat is opened, then getStarTransactions may be called to fetch new transactions.
+Other|UpdateTonRevenueStatus|The Toncoin revenue earned by the current user has changed. If Toncoin transaction screen of the chat is opened, then getTonTransactions may be called to fetch new transactions.
+Other|UpdateTopicMessageCount|Number of messages in a topic has changed; for Saved Messages and channel direct messages chat topics only.
+Other|UpdateTrendingStickerSets|The list of trending sticker sets was updated or some of them were viewed.
+Other|UpdateTrustedMiniAppBots|Lists of bots which Mini Apps must be allowed to read text from clipboard and must be opened without a warning.
+Other|UpdateUnconfirmedSession|The first unconfirmed session has changed.
+Other|UpdateUnreadChatCount|Number of unread chats, i.e. with unread messages or marked as unread, has changed. This update is sent only if the message database is used.
+Other|UpdateUnreadMessageCount|Number of unread messages in a chat list has changed. This update is sent only if the message database is used.
+Other|UpdateVideoPublished|An automatically scheduled message with video has been successfully sent after conversion.
+Other|UpdateWebAppMessageSent|A message was sent by an opened Web App, so the Web App needs to be closed.
+Other|Updates|Contains a list of updates.
+Settings & Options|UpdateAutosaveSettings|Autosave settings for some type of chats were updated.
+Settings & Options|UpdateOption|An option changed its value.
+Sticker & Emoji Updates|UpdateActiveEmojiReactions|The list of active emoji reactions has changed.
+Sticker & Emoji Updates|UpdateAnimatedEmojiMessageClicked|Some animated emoji message was clicked and a big animated sticker must be played if the message is visible on the screen. chatActionWatchingAnimations with the text of the message needs to be sent if the sticker is played.
+Sticker & Emoji Updates|UpdateDefaultPaidReactionType|The type of default paid reaction has changed.
+Sticker & Emoji Updates|UpdateDefaultReactionType|The type of default reaction has changed.
+Sticker & Emoji Updates|UpdateDiceEmojis|The list of supported dice emojis has changed.
+Sticker & Emoji Updates|UpdateFavoriteStickers|The list of favorite stickers was updated.
+Sticker & Emoji Updates|UpdateInstalledStickerSets|The list of installed sticker sets was updated.
+Sticker & Emoji Updates|UpdateRecentStickers|The list of recently used stickers was updated.
+Sticker & Emoji Updates|UpdateSavedAnimations|The list of saved animations was updated.
+Sticker & Emoji Updates|UpdateStickerSet|A sticker set has changed.
+Story Updates|UpdateLiveStoryTopDonors|The list of top donors in live story group call has changed.
+Story Updates|UpdateStory|A story was changed.
+Story Updates|UpdateStoryDeleted|A story became inaccessible.
+Story Updates|UpdateStoryListChatCount|Number of chats in a story list has changed.
+Story Updates|UpdateStoryPostFailed|A story failed to post. If the story posting is canceled, then updateStoryDeleted will be received instead of this update.
+Story Updates|UpdateStoryPostSucceeded|A story has been successfully posted.
+Story Updates|UpdateStoryStealthMode|Story stealth mode settings have changed.
+User Updates|UpdateUser|Some data of a user has changed. This update is guaranteed to come before the user identifier is returned to the application.
+User Updates|UpdateUserFullInfo|Some data in userFullInfo has been changed.
+User Updates|UpdateUserPrivacySettingRules|Some privacy setting rules have been changed.
+User Updates|UpdateUserStatus|The user went online or offline.

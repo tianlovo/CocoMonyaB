@@ -1,0 +1,460 @@
+<template>
+  <el-dialog
+    v-model="dialogVisible"
+    :title="isEdit ? '编辑角色' : '新建角色'"
+    width="600px"
+    :close-on-click-modal="false"
+    @close="handleClose"
+  >
+    <el-form
+      ref="formRef"
+      :model="formData"
+      :rules="rules"
+      label-width="100px"
+      label-position="left"
+    >
+      <!-- 名称 -->
+      <el-form-item label="名称" prop="name">
+        <el-input
+          v-model="formData.name"
+          placeholder="请输入角色名称"
+          maxlength="100"
+          show-word-limit
+        />
+      </el-form-item>
+
+      <!-- 别名列表 -->
+      <el-form-item label="别名" prop="aliases">
+        <div class="dynamic-list">
+          <div
+            v-for="(_alias, index) in formData.aliases"
+            :key="index"
+            class="dynamic-list-item"
+          >
+            <el-input
+              v-model="formData.aliases[index]"
+              placeholder="请输入别名"
+              maxlength="100"
+              show-word-limit
+            />
+            <el-button
+              type="danger"
+              :icon="Delete"
+              circle
+              @click="removeAlias(index)"
+            />
+          </div>
+          <el-button
+            type="primary"
+            :icon="Plus"
+            plain
+            @click="addAlias"
+          >
+            添加别名
+          </el-button>
+        </div>
+      </el-form-item>
+
+      <!-- 所属原作 -->
+      <el-form-item label="所属原作" prop="workId">
+        <el-select
+          v-model="formData.workId"
+          placeholder="请选择所属原作"
+          filterable
+          clearable
+          style="width: 100%"
+        >
+          <el-option
+            v-for="work in workStore.works"
+            :key="work.id"
+            :label="work.name"
+            :value="work.id"
+          >
+            <div class="work-option">
+              <span class="work-name">{{ work.name }}</span>
+              <span v-if="work.aliases.length > 0" class="work-aliases">
+                ({{ work.aliases.join(', ') }})
+              </span>
+            </div>
+          </el-option>
+        </el-select>
+      </el-form-item>
+
+      <!-- 种族 -->
+      <el-form-item label="种族" prop="species">
+        <el-input
+          v-model="formData.species"
+          placeholder="请输入种族"
+          maxlength="100"
+          show-word-limit
+        />
+      </el-form-item>
+
+      <!-- 头像 -->
+      <el-form-item label="头像" prop="avatarBase64">
+        <div class="avatar-upload">
+          <div v-if="formData.avatarBase64" class="avatar-preview">
+            <img :src="formData.avatarBase64" alt="头像预览" />
+            <div class="avatar-actions">
+              <el-button
+                type="danger"
+                size="small"
+                :icon="Delete"
+                @click="removeAvatar"
+              >
+                删除
+              </el-button>
+            </div>
+          </div>
+          <el-upload
+            v-else
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*"
+            :on-change="handleAvatarChange"
+          >
+            <el-button type="primary" :icon="Upload">
+              上传头像
+            </el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 JPG、PNG 格式，建议尺寸 200x200
+              </div>
+            </template>
+          </el-upload>
+        </div>
+      </el-form-item>
+
+      <!-- 备注 -->
+      <el-form-item label="备注" prop="remark">
+        <el-input
+          v-model="formData.remark"
+          type="textarea"
+          :rows="4"
+          placeholder="请输入备注"
+          maxlength="1000"
+          show-word-limit
+        />
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="handleClose">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="loading"
+          @click="handleSubmit"
+        >
+          {{ isEdit ? '保存' : '创建' }}
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, watch, computed, onMounted } from 'vue'
+import { ElMessage, type FormInstance, type UploadFile } from 'element-plus'
+import { Plus, Delete, Upload } from '@element-plus/icons-vue'
+import { characterApi } from '@/api/character'
+import { useWorkStore } from '@/stores/work'
+import type { Character, CharacterCreateDTO, CharacterUpdateDTO } from '@/types/models'
+import {
+  characterNameRules,
+  aliasListRules,
+  speciesRules,
+  remarkRules
+} from '@/utils/validators'
+import { ApiError } from '@/utils/request'
+import { handleConflictError, showSuccessMessage } from '@/utils/errorHandler'
+
+interface Props {
+  visible: boolean
+  character?: Character | null
+}
+
+interface Emits {
+  (e: 'update:visible', value: boolean): void
+  (e: 'success'): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  visible: false,
+  character: null
+})
+
+const emit = defineEmits<Emits>()
+
+const formRef = ref<FormInstance>()
+const loading = ref(false)
+const workStore = useWorkStore()
+
+// Computed property to determine if in edit mode
+const isEdit = computed(() => !!props.character)
+
+// Dialog visibility (two-way binding)
+const dialogVisible = computed({
+  get: () => props.visible,
+  set: (value) => emit('update:visible', value)
+})
+
+// Form data with explicit types
+interface FormData {
+  id?: string
+  name: string
+  aliases: string[]
+  workId: string | null
+  species: string
+  avatarBase64: string | null
+  remark: string | null
+}
+
+const formData = reactive<FormData>({
+  name: '',
+  aliases: [],
+  workId: null,
+  species: '',
+  avatarBase64: null,
+  remark: null
+})
+
+// Form validation rules
+const rules = {
+  name: characterNameRules,
+  aliases: aliasListRules,
+  species: speciesRules,
+  remark: remarkRules
+}
+
+// Load works for selector
+const loadWorks = async () => {
+  try {
+    await workStore.fetchPage({
+      current: 1,
+      size: 1000 // Load all works for selector
+    })
+  } catch (error) {
+    console.error('Failed to load works:', error)
+  }
+}
+
+// Reset form
+const resetForm = () => {
+  formData.id = undefined
+  formData.name = ''
+  formData.aliases = []
+  formData.workId = null
+  formData.species = ''
+  formData.avatarBase64 = null
+  formData.remark = null
+  formRef.value?.clearValidate()
+}
+
+// Watch for character prop changes to populate form
+watch(
+  () => props.character,
+  (character) => {
+    if (character) {
+      formData.id = character.id
+      formData.name = character.name
+      formData.aliases = [...character.aliases]
+      formData.workId = character.workId
+      formData.species = character.species
+      formData.avatarBase64 = character.avatarBase64
+      formData.remark = character.remark
+    } else {
+      resetForm()
+    }
+  },
+  { immediate: true }
+)
+
+// Watch for dialog visibility to repopulate form when opening
+watch(
+  () => props.visible,
+  (visible) => {
+    if (visible && props.character) {
+      formData.id = props.character.id
+      formData.name = props.character.name
+      formData.aliases = [...props.character.aliases]
+      formData.workId = props.character.workId
+      formData.species = props.character.species
+      formData.avatarBase64 = props.character.avatarBase64
+      formData.remark = props.character.remark
+    }
+  }
+)
+
+// Add alias
+const addAlias = () => {
+  formData.aliases.push('')
+}
+
+// Remove alias
+const removeAlias = (index: number) => {
+  formData.aliases.splice(index, 1)
+}
+
+// Handle avatar upload
+const handleAvatarChange = (file: UploadFile) => {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    formData.avatarBase64 = e.target?.result as string
+  }
+  if (file.raw) {
+    reader.readAsDataURL(file.raw)
+  }
+}
+
+// Remove avatar
+const removeAvatar = () => {
+  formData.avatarBase64 = null
+}
+
+// Handle close
+const handleClose = () => {
+  dialogVisible.value = false
+  resetForm()
+}
+
+// Handle submit
+const handleSubmit = async () => {
+  if (!formRef.value) return
+
+  try {
+    // Validate form
+    await formRef.value.validate()
+
+    loading.value = true
+
+    // Filter out empty aliases
+    const submitData: CharacterCreateDTO | CharacterUpdateDTO = {
+      name: formData.name,
+      aliases: formData.aliases.filter(alias => alias.trim() !== ''),
+      workId: formData.workId || null,
+      species: formData.species,
+      avatarBase64: formData.avatarBase64 || null,
+      remark: formData.remark || null
+    }
+
+    if (isEdit.value && formData.id) {
+      // Update existing character
+      await characterApi.update(formData.id, submitData)
+      showSuccessMessage('角色更新成功')
+    } else {
+      // Create new character
+      await characterApi.create(submitData as CharacterCreateDTO)
+      showSuccessMessage('角色创建成功')
+    }
+
+    emit('success')
+    handleClose()
+  } catch (error: any) {
+    // Handle uniqueness conflict error
+    if (error instanceof ApiError && error.code === -60003) {
+      handleConflictError(error)
+    }
+    // Handle work not found error
+    else if (error instanceof ApiError && error.code === -60002 && error.message?.includes('原作')) {
+      ElMessage.error({
+        message: '所属原作不存在，请重新选择',
+        duration: 5000
+      })
+    } else {
+      // Error message already shown by axios interceptor
+      console.error('Submit failed:', error)
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// Initialize
+onMounted(() => {
+  loadWorks()
+})
+</script>
+
+<style scoped>
+.dynamic-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.dynamic-list-item {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+}
+
+.dynamic-list-item .el-input {
+  flex: 1;
+}
+
+.work-option {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.work-name {
+  font-weight: 500;
+}
+
+.work-aliases {
+  color: var(--fluent-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.avatar-upload {
+  width: 100%;
+}
+
+.avatar-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  align-items: flex-start;
+}
+
+.avatar-preview img {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--fluent-border-color);
+}
+
+.avatar-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.el-upload__tip {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--fluent-text-secondary);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  :deep(.el-dialog) {
+    width: 90% !important;
+    margin: 5vh auto;
+  }
+  
+  .avatar-preview img {
+    width: 150px;
+    height: 150px;
+  }
+}
+</style>
