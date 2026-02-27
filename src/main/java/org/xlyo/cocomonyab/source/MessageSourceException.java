@@ -5,7 +5,7 @@ package org.xlyo.cocomonyab.source;
  * <p>
  * 当消息来源在启动、停止或处理消息时发生错误时抛出此异常
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 public class MessageSourceException extends Exception {

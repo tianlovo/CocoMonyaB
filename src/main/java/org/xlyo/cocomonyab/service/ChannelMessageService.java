@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * 频道消息服务类
  * 提供频道消息的查询、转换和业务逻辑处理
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

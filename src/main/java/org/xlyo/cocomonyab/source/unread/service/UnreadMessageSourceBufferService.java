@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  * 管理未读消息缓冲区，实现批量处理和去重。
  * 负责将获取到的未读消息保存到缓冲区，并按批次处理这些消息。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Service("unreadMessageSourceBufferService")

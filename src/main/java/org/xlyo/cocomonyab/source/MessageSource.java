@@ -11,7 +11,7 @@ package org.xlyo.cocomonyab.source;
  * - 支持多种消息来源并存
  * - 统一的消息格式便于后续处理
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 public interface MessageSource {

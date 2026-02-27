@@ -18,7 +18,7 @@ import org.xlyo.cocomonyab.telegram.TelegramClientManager;
  * <p>
  * 这是系统的默认消息来源，也是最主要的消息来源。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

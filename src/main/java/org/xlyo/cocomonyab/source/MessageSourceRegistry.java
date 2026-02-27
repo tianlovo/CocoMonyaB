@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 管理所有已注册的消息来源，提供注册、查询、启动和停止功能。
  * 使用线程安全的 ConcurrentHashMap 支持并发访问。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

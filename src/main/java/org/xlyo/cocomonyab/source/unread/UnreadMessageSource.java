@@ -23,7 +23,7 @@ import org.xlyo.cocomonyab.source.unread.service.UnreadMessageSourceService;
  *   <li>管理生命周期（启动/停止）</li>
  * </ul>
  *
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Component

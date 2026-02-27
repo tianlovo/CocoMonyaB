@@ -35,7 +35,7 @@ import static org.mockito.Mockito.*;
  * - Property 8: 指数退避重试
  * - Property 17: 重试次数限制
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 class UnreadMessageFetchServicePropertyTest {

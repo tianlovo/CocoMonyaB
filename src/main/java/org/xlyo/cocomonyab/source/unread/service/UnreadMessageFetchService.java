@@ -44,7 +44,7 @@ import java.util.concurrent.TimeoutException;
  * <p>
  * 这种设计避免了重复处理，简化了并发控制逻辑。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  * @see UnreadMessageSourceConfig
  * @see ProcessedMessageRepository

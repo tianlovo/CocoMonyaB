@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>TTL 索引：自动清理 7 天前的已处理记录</li>
  * </ul>
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

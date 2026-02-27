@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
  * 测试属性：
  * - Property 21: 生命周期往�?
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 class UnreadMessageSourcePropertyTest {

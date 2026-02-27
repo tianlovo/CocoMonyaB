@@ -27,7 +27,7 @@ import java.time.LocalDateTime;
  *   <li>PROCESSED 状态的消息会在 7 天后自动清理（TTL 索引）</li>
  * </ul>
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Data

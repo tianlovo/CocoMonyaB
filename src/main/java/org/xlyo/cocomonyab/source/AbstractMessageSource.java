@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <b>注意：</b>start()、stop()、isRunning() 方法不使用 final 修饰符，
  * 以允许 Spring AOP 进行代理。如果使用 final，会导致 CGLIB 代理警告。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

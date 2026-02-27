@@ -14,7 +14,7 @@ import java.util.Map;
  * <p>
  * 用于监控消息来源的运行状态和性能指标
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Data

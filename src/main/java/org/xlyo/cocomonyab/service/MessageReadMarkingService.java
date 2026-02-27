@@ -35,7 +35,7 @@ import java.util.concurrent.*;
  *   <li>如果不先打开聊天，最后一条消息可能无法在客户端正确显示为已读</li>
  * </ul>
  *
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Service

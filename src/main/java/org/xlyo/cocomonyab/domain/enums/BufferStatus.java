@@ -5,7 +5,7 @@ package org.xlyo.cocomonyab.domain.enums;
  * <p>
  * 用于标识缓冲区中消息的处理状态
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 public enum BufferStatus {

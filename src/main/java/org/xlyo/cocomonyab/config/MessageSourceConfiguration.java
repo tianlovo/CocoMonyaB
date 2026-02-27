@@ -15,7 +15,7 @@ import org.xlyo.cocomonyab.source.telegram.TelegramMessageSource;
  * 负责在应用启动时注册和启动所有消息来源，
  * 在应用关闭时停止所有消息来源。
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j

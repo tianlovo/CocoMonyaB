@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  *   <li>高优先级执行，确保消息及时保存</li>
  * </ul>
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0.0
  */
 @Slf4j

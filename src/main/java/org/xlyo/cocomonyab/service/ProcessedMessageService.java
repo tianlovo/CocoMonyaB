@@ -21,7 +21,7 @@ import java.util.Collections;
  * 已处理消息服务类
  * 提供已处理消息的查询、转换和业务逻辑处理
  * 
- * @author CocoMonya Team
+ * @author tianluoqaq
  * @since 1.0
  */
 @Slf4j
