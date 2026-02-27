@@ -4,9 +4,12 @@ import it.tdlight.client.SimpleTelegramClient;
 import it.tdlight.jni.TdApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.xlyo.cocomonyab.common.enums.ResponseCode;
 import org.xlyo.cocomonyab.common.exception.BusinessException;
+import org.xlyo.cocomonyab.config.CacheConfig;
 import org.xlyo.cocomonyab.domain.vo.TgChannelVO;
 import org.xlyo.cocomonyab.telegram.TelegramClientManager;
 
@@ -27,12 +30,21 @@ public class TgChannelService {
 
     /**
      * 获取已登录账号的所有频道列表（分页）
+     * 结果会被缓存5分钟，可通过forceRefresh参数强制刷新
      *
      * @param current 当前页码
      * @param size 每页大小
+     * @param forceRefresh 是否强制从TDLib刷新数据
      * @return 频道列表
      */
-    public List<TgChannelVO> getLoggedInChannels(Long current, Long size) {
+    @Cacheable(value = CacheConfig.TG_CHANNELS_CACHE, 
+               key = "#current + '_' + #size", 
+               unless = "#forceRefresh == true")
+    public List<TgChannelVO> getLoggedInChannels(Long current, Long size, Boolean forceRefresh) {
+        if (forceRefresh != null && forceRefresh) {
+            log.info("强制刷新TG频道列表缓存");
+            evictChannelsCache();
+        }
         // 验证客户端是否就绪
         if (!telegramClientManager.isReady()) {
             throw new BusinessException(ResponseCode.TELEGRAM_ERROR, "Telegram客户端未就绪");
@@ -97,9 +109,11 @@ public class TgChannelService {
 
     /**
      * 统计已登录账号的频道总数
+     * 结果会被缓存5分钟
      *
      * @return 频道总数
      */
+    @Cacheable(value = CacheConfig.TG_CHANNELS_COUNT_CACHE, key = "'total'")
     public Long countLoggedInChannels() {
         // 验证客户端是否就绪
         if (!telegramClientManager.isReady()) {
@@ -173,5 +187,14 @@ public class TgChannelService {
         }
 
         return allChannels.subList(start, end);
+    }
+
+    /**
+     * 清除频道列表缓存
+     * 用于强制刷新时清除所有相关缓存
+     */
+    @CacheEvict(value = {CacheConfig.TG_CHANNELS_CACHE, CacheConfig.TG_CHANNELS_COUNT_CACHE}, allEntries = true)
+    public void evictChannelsCache() {
+        log.info("已清除TG频道列表缓存");
     }
 }

@@ -119,13 +119,15 @@ public class ChannelController {
      *
      * @param current 当前页码（默认1）
      * @param size 每页大小（默认10）
+     * @param forceRefresh 是否强制从TDLib刷新数据（默认false）
      * @return 分页响应包含TG频道视图对象列表和分页元数据
      */
     @GetMapping("/tg/logged-in")
     public PageResponse<TgChannelVO> getLoggedInTgChannels(
             @RequestParam(defaultValue = "1") Long current,
-            @RequestParam(defaultValue = "10") Long size) {
-        List<TgChannelVO> records = tgChannelService.getLoggedInChannels(current, size);
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(defaultValue = "false") Boolean forceRefresh) {
+        List<TgChannelVO> records = tgChannelService.getLoggedInChannels(current, size, forceRefresh);
         Long total = tgChannelService.countLoggedInChannels();
         return PageResponse.success(records, current, size, total);
     }

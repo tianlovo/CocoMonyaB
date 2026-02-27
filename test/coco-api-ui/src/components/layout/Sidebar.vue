@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { User, Document, Avatar, Setting, ChatDotRound } from '@element-plus/icons-vue'
+import { User, Document, Avatar, Setting, ChatDotRound, Connection } from '@element-plus/icons-vue'
 
 interface Props {
   collapsed?: boolean
@@ -91,6 +91,10 @@ const isMobile = ref(false)
 
 const navItems = [
   { path: '/message-tracking', label: '消息跟踪', icon: ChatDotRound },
+  { path: '/channel', label: '频道管理', icon: Connection, children: [
+    { path: '/channel/management', label: '频道管理', icon: Setting },
+    { path: '/channel/telegram', label: 'Telegram 频道查询', icon: Connection }
+  ]},
   { path: '/config', label: '配置', icon: Setting, children: [
     { path: '/config/authors', label: '作者库', icon: User },
     { path: '/config/works', label: '原作库', icon: Document },

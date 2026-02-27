@@ -640,11 +640,24 @@ Telegram 频道查询 API 提供了查询当前已登录 Telegram 账号的频�
 |------|------|------|--------|------|
 | current | Long | 否 | 1 | 当前页码 |
 | size | Long | 否 | 10 | 每页大小 |
+| forceRefresh | Boolean | 否 | false | 是否强制从TDLib刷新数据（true=强制刷新，false=使用缓存） |
+
+**缓存机制：**
+
+为了提高性能，该接口实现了缓存机制：
+- 查询结果会被缓存5分钟
+- 缓存键基于分页参数（current和size）
+- 设置 `forceRefresh=true` 可以强制从TDLib获取最新数据并清除所有缓存
+- 频道总数也会被缓存5分钟
 
 **请求示例：**
 
 ```
+# 使用缓存（默认）
 GET /api/channel/tg/logged-in?current=1&size=10
+
+# 强制刷新
+GET /api/channel/tg/logged-in?current=1&size=10&forceRefresh=true
 ```
 
 **成功响应：**
@@ -729,21 +742,28 @@ Telegram客户端未就绪：
 
 ### 2.4 使用示例
 
-#### 2.4.1 查询第一页频道
+#### 2.4.1 查询第一页频道（使用缓存）
 
 ```bash
-# 查询前10个频道
+# 查询前10个频道，使用缓存（如果有）
 curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=10"
 ```
 
-#### 2.4.2 查询更多频道
+#### 2.4.2 强制刷新频道列表
+
+```bash
+# 强制从TDLib获取最新数据，清除缓存
+curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=10&forceRefresh=true"
+```
+
+#### 2.4.3 查询更多频道
 
 ```bash
 # 查询第2页，每页20条
 curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=2&size=20"
 ```
 
-#### 2.4.3 获取所有频道
+#### 2.4.4 获取所有频道
 
 ```bash
 # 设置较大的size值获取所有频道（最大100）
@@ -752,14 +772,18 @@ curl -X GET "http://localhost:8080/api/channel/tg/logged-in?current=1&size=100"
 
 ### 2.5 注意事项
 
-1. **实时数据**：该接口直接从 TDLib 获取实时数据，不依赖数据库
-2. **登录状态**：必须确保 Telegram 客户端已成功登录，否则会返回错误
-3. **性能考虑**：首次调用时会加载聊天列表，可能需要几秒钟时间
-4. **分页限制**：每页最大支持 100 条记录
-5. **频道筛选**：只返回频道（channel），不包括超级群组（supergroup）
-6. **用户名可能为空**：某些频道可能没有设置用户名，此时 username 字段为 null
-7. **描述字段**：当前版本的 description 字段始终为 null，获取描述需要额外的 API 调用
-8. **超时设置**：API 调用设置了 30 秒超时，如果网络较慢可能会超时
+1. **缓存机制**：查询结果会被缓存5分钟，提高响应速度
+2. **强制刷新**：使用 `forceRefresh=true` 参数可以强制从TDLib获取最新数据
+3. **缓存失效**：强制刷新会清除所有相关缓存（包括不同分页参数的缓存）
+4. **实时数据**：该接口直接从 TDLib 获取实时数据，不依赖数据库
+5. **登录状态**：必须确保 Telegram 客户端已成功登录，否则会返回错误
+6. **性能考虑**：首次调用或缓存过期时会加载聊天列表，可能需要几秒钟时间
+7. **分页限制**：每页最大支持 100 条记录
+8. **频道筛选**：只返回频道（channel），不包括超级群组（supergroup）
+9. **用户名可能为空**：某些频道可能没有设置用户名，此时 username 字段为 null
+10. **描述字段**：当前版本的 description 字段始终为 null，获取描述需要额外的 API 调用
+11. **超时设置**：API 调用设置了 30 秒超时，如果网络较慢可能会超时
+12. **缓存统计**：缓存启用了统计功能，可通过监控系统查看缓存命中率
 
 ### 2.6 与频道管理 API 的区别
 

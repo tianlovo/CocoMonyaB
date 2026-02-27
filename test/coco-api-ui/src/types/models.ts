@@ -89,6 +89,54 @@ export interface CharacterUpdateDTO {
   remark?: string | null
 }
 
+// Channel types
+export interface Channel {
+  id: string
+  channelId: number
+  channelUsername: string | null
+  channelTitle: string
+  monitoringStatus: boolean
+  createTime: string
+  updateTime: string
+}
+
+export interface ChannelCreateDTO {
+  channelId: number
+  channelUsername?: string | null
+  channelTitle: string
+  monitoringStatus?: boolean
+}
+
+export interface ChannelUpdateDTO {
+  channelUsername?: string | null
+  channelTitle?: string
+  monitoringStatus?: boolean
+}
+
+export interface ChannelQueryParams {
+  current: number
+  size: number
+  channelUsername?: string
+  monitoringStatus?: boolean
+}
+
+// Telegram Channel types
+export interface TgChannel {
+  chatId: number
+  title: string
+  username: string | null
+  type: string
+  isChannel: boolean
+  memberCount: number
+  description: string | null
+}
+
+export interface TgChannelQueryParams {
+  current: number
+  size: number
+  forceRefresh?: boolean
+}
+
 // Tag Filter Config types
 export interface TagFilterConfig {
   id: string

@@ -18,6 +18,26 @@ const router = createRouter({
           component: () => import('@/views/MessageTrackingView.vue')
         },
         {
+          path: 'channel',
+          component: () => import('@/views/ChannelLayout.vue'),
+          children: [
+            {
+              path: '',
+              redirect: '/channel/management'
+            },
+            {
+              path: 'management',
+              name: 'channel-management',
+              component: () => import('@/views/ChannelManagementView.vue')
+            },
+            {
+              path: 'telegram',
+              name: 'channel-telegram',
+              component: () => import('@/views/TelegramChannelView.vue')
+            }
+          ]
+        },
+        {
           path: 'config',
           component: () => import('@/views/ConfigLayout.vue'),
           children: [
