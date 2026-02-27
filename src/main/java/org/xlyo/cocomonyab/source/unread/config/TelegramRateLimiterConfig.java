@@ -8,10 +8,10 @@ import java.time.Duration;
 
 /**
  * 速率限制器配置类
- * 
+ * <p>
  * 使用 Resilience4j RateLimiter 控制 Telegram API 调用频率，
  * 避免触发 Telegram 的速率限制（429 错误）
- * 
+ * <p>
  * 配置策略：
  * - 每秒最多 1 个请求（保守策略）
  * - 刷新周期：1 秒
@@ -22,7 +22,7 @@ public class TelegramRateLimiterConfig {
     
     /**
      * 创建 Telegram API 速率限制器 Bean
-     * 
+     * <p>
      * 配置说明：
      * - limitRefreshPeriod: 限制刷新周期，每 1 秒刷新一次
      * - limitForPeriod: 每个周期内允许的最大请求数，设置为 1（保守策略）

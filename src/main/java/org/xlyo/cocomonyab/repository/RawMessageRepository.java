@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository;
 
+import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.Aggregation;
@@ -14,7 +15,7 @@ import java.util.Optional;
  * 原始消息数据访问接口
  */
 @Repository
-public interface RawMessageRepository extends MongoRepository<RawMessage, String> {
+public interface RawMessageRepository extends MongoRepository<@NonNull RawMessage, @NonNull String> {
     
     /**
      * 检查消息是否已存在（通过chatId和messageId）
@@ -54,18 +55,18 @@ public interface RawMessageRepository extends MongoRepository<RawMessage, String
     /**
      * 按频道分页查询（按日期降序）
      */
-    Page<RawMessage> findByChatIdOrderByDateDesc(Long chatId, Pageable pageable);
+    Page<@NonNull RawMessage> findByChatIdOrderByDateDesc(Long chatId, Pageable pageable);
     
     /**
      * 按频道和日期范围查询（按日期降序）
      */
-    Page<RawMessage> findByChatIdAndDateBetweenOrderByDateDesc(
+    Page<@NonNull RawMessage> findByChatIdAndDateBetweenOrderByDateDesc(
         Long chatId, Integer startDate, Integer endDate, Pageable pageable);
     
     /**
      * 按日期范围查询（按日期降序）
      */
-    Page<RawMessage> findByDateBetweenOrderByDateDesc(
+    Page<@NonNull RawMessage> findByDateBetweenOrderByDateDesc(
         Integer startDate, Integer endDate, Pageable pageable);
     
     /**

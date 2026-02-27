@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,7 +16,6 @@ import org.xlyo.cocomonyab.repository.ProcessedMessageRepository;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 /**
  * 已处理消息服务类
@@ -59,13 +59,13 @@ public class ProcessedMessageService {
      * @param query 查询条件
      * @return 已处理消息分页结果
      */
-    public Page<ProcessedMessageVO> page(Long current, Long size, ProcessedMessageQueryDTO query) {
+    public Page<@NonNull ProcessedMessageVO> page(Long current, Long size, ProcessedMessageQueryDTO query) {
         log.debug("分页查询已处理消息: current={}, size={}, query={}", current, size, query);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<ProcessedMessage> messagePage;
+        Page<@NonNull ProcessedMessage> messagePage;
         
         // 根据查询条件选择合适的查询方法
         if (query.getChatId() != null && query.getIsRead() != null) {
@@ -105,13 +105,13 @@ public class ProcessedMessageService {
      * @param chatId 频道ID（可选）
      * @return 未读消息分页结果
      */
-    public Page<ProcessedMessageVO> getUnreadMessages(Long current, Long size, Long chatId) {
+    public Page<@NonNull ProcessedMessageVO> getUnreadMessages(Long current, Long size, Long chatId) {
         log.debug("查询未读消息列表: current={}, size={}, chatId={}", current, size, chatId);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<ProcessedMessage> messagePage;
+        Page<@NonNull ProcessedMessage> messagePage;
         
         if (chatId != null) {
             // 按频道ID和未读状态查询
@@ -135,13 +135,13 @@ public class ProcessedMessageService {
      * @param chatId 频道ID（可选）
      * @return 匹配标签的消息分页结果
      */
-    public Page<ProcessedMessageVO> getMatchedMessages(Long current, Long size, Long chatId) {
+    public Page<@NonNull ProcessedMessageVO> getMatchedMessages(Long current, Long size, Long chatId) {
         log.debug("查询匹配标签的消息列表: current={}, size={}, chatId={}", current, size, chatId);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<ProcessedMessage> messagePage;
+        Page<@NonNull ProcessedMessage> messagePage;
         
         if (chatId != null) {
             // 按频道ID和匹配状态查询

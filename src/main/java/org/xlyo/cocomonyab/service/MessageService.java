@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
@@ -14,6 +15,7 @@ import org.xlyo.cocomonyab.domain.entity.RawMessage;
 import org.xlyo.cocomonyab.domain.vo.MessageVO;
 import org.xlyo.cocomonyab.repository.RawMessageRepository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -80,7 +82,7 @@ public class MessageService {
      * @return 消息列表
      * @throws BusinessException 当分页参数无效时
      */
-    public Page<MessageVO> page(Long current, Long size, MessageQueryDTO query) {
+    public Page<@NonNull MessageVO> page(Long current, Long size, MessageQueryDTO query) {
         // 验证分页参数
         if (current < 1) {
             throw new BusinessException(ResponseCode.VALIDATION_ERROR, "页码必须大于等于1");
@@ -96,7 +98,7 @@ public class MessageService {
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
         // 应用过滤条件查询
-        Page<RawMessage> messagePage = applyFilters(query, pageable);
+        Page<@NonNull RawMessage> messagePage = applyFilters(query, pageable);
         
         // 转换为VO
         return messagePage.map(this::convertToVO);
@@ -114,7 +116,7 @@ public class MessageService {
         
         // 按messageId升序排序并转换为VO
         return messages.stream()
-            .sorted((m1, m2) -> Long.compare(m1.getMessageId(), m2.getMessageId()))
+            .sorted(Comparator.comparingLong(RawMessage::getMessageId))
             .map(this::convertToVO)
             .collect(Collectors.toList());
     }
@@ -126,7 +128,7 @@ public class MessageService {
      * @param pageable 分页参数
      * @return 分页结果
      */
-    private Page<RawMessage> applyFilters(MessageQueryDTO query, Pageable pageable) {
+    private Page<@NonNull RawMessage> applyFilters(MessageQueryDTO query, Pageable pageable) {
         Long chatId = query.getChatId();
         Integer startDate = query.getStartDate();
         Integer endDate = query.getEndDate();

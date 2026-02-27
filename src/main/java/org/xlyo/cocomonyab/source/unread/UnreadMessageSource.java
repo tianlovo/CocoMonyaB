@@ -50,7 +50,7 @@ public class UnreadMessageSource extends AbstractMessageSource {
     }
     
     @Override
-    protected void doStart() throws Exception {
+    protected void doStart() {
         log.info("初始化未读消息来源生成器");
         
         // 初始化服务
@@ -66,7 +66,7 @@ public class UnreadMessageSource extends AbstractMessageSource {
     }
     
     @Override
-    protected void doStop() throws Exception {
+    protected void doStop() {
         log.info("停止未读消息来源生成器");
         
         // 关闭服务

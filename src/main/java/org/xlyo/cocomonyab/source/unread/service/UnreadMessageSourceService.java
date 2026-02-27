@@ -1,6 +1,7 @@
 package org.xlyo.cocomonyab.source.unread.service;
 
 import it.tdlight.jni.TdApi;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class UnreadMessageSourceService {
     
     private final ChannelRepository channelRepository;
     private final UnreadMessageFetchService fetchService;
-    private final UnreadMessageBufferService bufferService;
+    private final UnreadMessageSourceBufferService bufferService;
     private final UnreadMessageSourceConfig config;
     private final UnreadMessageMetrics metrics;
     
@@ -47,10 +48,8 @@ public class UnreadMessageSourceService {
      * 并发检测标志，防止多个检测任务同时运行
      */
     private final AtomicBoolean isDetecting = new AtomicBoolean(false);
-    
-    /**
-     * 统计信息实例
-     */
+
+    @Getter
     private final UnreadMessageStatistics statistics = new UnreadMessageStatistics();
     
     /**
@@ -201,16 +200,7 @@ public class UnreadMessageSourceService {
     private void updateStatistics(UnreadMessageDetectionResult result) {
         statistics.recordDetection(result);
     }
-    
-    /**
-     * 获取统计信息
-     * 
-     * @return 统计信息
-     */
-    public UnreadMessageStatistics getStatistics() {
-        return statistics;
-    }
-    
+
     /**
      * 关闭服务
      * <p>

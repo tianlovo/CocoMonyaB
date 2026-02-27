@@ -57,7 +57,7 @@ public class TelegramMessageSource extends AbstractMessageSource {
     }
     
     @Override
-    protected void doStop() throws Exception {
+    protected void doStop() {
         // Telegram 客户端由 TelegramClientManager 管理，在应用关闭时自动清理
         // 这里不需要额外操作
         log.info("Telegram 消息来源已停止");

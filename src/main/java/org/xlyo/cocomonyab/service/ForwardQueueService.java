@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -81,13 +82,13 @@ public class ForwardQueueService {
      * @param query 查询条件
      * @return 转发队列分页结果
      */
-    public Page<ForwardQueueVO> page(Long current, Long size, ForwardQueueQueryDTO query) {
+    public Page<@NonNull ForwardQueueVO> page(Long current, Long size, ForwardQueueQueryDTO query) {
         log.debug("分页查询转发队列: current={}, size={}, query={}", current, size, query);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<ForwardQueueItem> itemPage;
+        Page<@NonNull ForwardQueueItem> itemPage;
         
         // 根据查询条件选择合适的查询方法
         if (query.getSourceChatId() != null && query.getStatus() != null) {

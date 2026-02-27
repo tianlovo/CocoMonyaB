@@ -2,6 +2,7 @@ package org.xlyo.cocomonyab.config.mongo;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,7 @@ import java.util.zip.ZipInputStream;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "spring.data.mongodb.mode", havingValue = "embedded", matchIfMissing = true)
 public class EmbeddedMongoConfiguration {
     
@@ -33,12 +35,7 @@ public class EmbeddedMongoConfiguration {
     private final DataDirectoryManager dataDirectoryManager;
     private Process mongodProcess;
     private volatile boolean isShuttingDown = false;
-    
-    public EmbeddedMongoConfiguration(MongoDBProperties properties, DataDirectoryManager dataDirectoryManager) {
-        this.properties = properties;
-        this.dataDirectoryManager = dataDirectoryManager;
-    }
-    
+
     @PostConstruct
     public void startEmbeddedMongo() {
         try {
@@ -286,7 +283,7 @@ public class EmbeddedMongoConfiguration {
             bar.append(String.format(" (%d/%d)", current, total));
         }
         
-        System.out.print(bar.toString());
+        System.out.print(bar);
     }
     
     /**

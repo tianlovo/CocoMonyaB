@@ -54,9 +54,6 @@ class DuplicateMessageFilterTest {
         // Then: 应该接受
         assertEquals(FilterResult.ACCEPT, result);
         verify(rawMessageRepository).existsByChatIdAndMessageId(456L, 123L);
-        
-        // 清理缓存
-        filter.markProcessed(message);
     }
     
     @Test
@@ -92,9 +89,6 @@ class DuplicateMessageFilterTest {
         // Then: 第一个接受，第二个被内存缓存拒绝
         assertEquals(FilterResult.ACCEPT, result1);
         assertEquals(FilterResult.REJECT, result2);
-        
-        // 清理缓存
-        filter.markProcessed(message1);
     }
     
     @Test
@@ -110,9 +104,6 @@ class DuplicateMessageFilterTest {
         assertEquals(FilterResult.ACCEPT, result);
         verify(rawMessageRepository).existsByChatIdAndMediaAlbumId(456L, 789L);
         verify(rawMessageRepository, never()).existsByChatIdAndMessageId(anyLong(), anyLong());
-        
-        // 清理缓存
-        filter.markProcessed(message);
     }
     
     @Test
@@ -149,9 +140,6 @@ class DuplicateMessageFilterTest {
         // Then: 第一个接受，第二个被内存缓存拒绝
         assertEquals(FilterResult.ACCEPT, result1);
         assertEquals(FilterResult.REJECT, result2);
-        
-        // 清理缓存
-        filter.markProcessed(message1);
     }
     
     @Test
@@ -160,33 +148,6 @@ class DuplicateMessageFilterTest {
         assertEquals("DuplicateMessageFilter", filter.getName());
         assertEquals(95, filter.getPriority());
         assertTrue(filter.isEnabled());
-    }
-    
-    @Test
-    void testMarkProcessedIsDeprecated() {
-        // Given: 消息通过过滤并在处理中
-        TdApi.Message message = createSingleMessage(123L, 456L);
-        when(rawMessageRepository.existsByChatIdAndMessageId(456L, 123L)).thenReturn(false);
-        
-        filter.filter(message, new FilterContext());
-        long initialCount = filter.getProcessingCount();
-        assertThat(initialCount).isGreaterThan(0);
-        
-        // When: 标记为已处理（已废弃的方法）
-        @SuppressWarnings("deprecation")
-        boolean deprecated = true;
-        if (deprecated) {
-            filter.markProcessed(message);
-        }
-        
-        // Then: 缓存不会立即移除（使用 Caffeine 后自动过期）
-        // 缓存会在 10 秒后自动过期
-        long afterMarkCount = filter.getProcessingCount();
-        assertThat(afterMarkCount).isGreaterThan(0);
-        
-        // 相同消息再次到达应该被缓存拒绝
-        FilterResult result = filter.filter(message, new FilterContext());
-        assertEquals(FilterResult.REJECT, result);
     }
     
     @Test
@@ -249,9 +210,6 @@ class DuplicateMessageFilterTest {
         // Then: 第一个拒绝，第二个接受
         assertEquals(FilterResult.REJECT, result1);
         assertEquals(FilterResult.ACCEPT, result2);
-        
-        // 清理
-        filter.markProcessed(message2);
     }
     
     // 辅助方法

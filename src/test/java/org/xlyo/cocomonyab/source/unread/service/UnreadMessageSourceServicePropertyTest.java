@@ -21,14 +21,14 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * UnreadMessageSourceService 属性测试
+ * UnreadMessageSourceService 属性测�?
  * <p>
- * 使用属性测试验证未读消息来源服务在所有输入下的正确性
+ * 使用属性测试验证未读消息来源服务在所有输入下的正确�?
  * <p>
  * 测试属性：
- * - Property 19: 并发检测互斥
+ * - Property 19: 并发检测互�?
  * - Property 1: 监控频道过滤
- * - Property 2: 全频道覆盖
+ * - Property 2: 全频道覆�?
  * - Property 18: 错误隔离
  * 
  * @author CocoMonya Team
@@ -37,21 +37,21 @@ import static org.mockito.Mockito.*;
 class UnreadMessageSourceServicePropertyTest {
     
     /**
-     * Property 19: 并发检测互斥
+     * Property 19: 并发检测互�?
      * <p>
      * For any 时刻，最多只能有一个未读消息检测任务在运行
      * <p>
      * Validates: Requirement 9.3
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 19: 并发检测互斥")
+    @Label("Feature: unread-channel-message-source, Property 19: 并发检测互�?)
     void concurrentDetectionMutualExclusion(
             @ForAll @IntRange(min = 2, max = 10) int concurrentAttempts) throws Exception {
         
         // 创建 mock 对象
         ChannelRepository channelRepo = mock(ChannelRepository.class);
         UnreadMessageFetchService fetchService = mock(UnreadMessageFetchService.class);
-        UnreadMessageBufferService bufferService = mock(UnreadMessageBufferService.class);
+        UnreadMessageSourceBufferService bufferService = mock(UnreadMessageSourceBufferService.class);
         UnreadMessageSourceConfig config = createTestConfig();
         
         // Mock 返回空频道列表（简化测试）
@@ -71,22 +71,22 @@ class UnreadMessageSourceServicePropertyTest {
         // 记录成功和失败的次数
         List<Boolean> results = new CopyOnWriteArrayList<>();
         
-        // 创建多个线程同时尝试检测
+        // 创建多个线程同时尝试检�?
         ExecutorService executor = Executors.newFixedThreadPool(concurrentAttempts);
         
         for (int i = 0; i < concurrentAttempts; i++) {
             executor.submit(() -> {
                 try {
-                    // 等待所有线程就绪
+                    // 等待所有线程就�?
                     startLatch.await();
                     
-                    // 尝试检测
+                    // 尝试检�?
                     service.detectUnreadMessages();
                     results.add(true); // 成功
                     
                 } catch (IllegalStateException e) {
-                    // 预期的并发冲突异常
-                    results.add(false); // 失败（被阻止）
+                    // 预期的并发冲突异�?
+                    results.add(false); // 失败（被阻止�?
                 } catch (Exception e) {
                     // 其他异常
                     results.add(false);
@@ -96,16 +96,16 @@ class UnreadMessageSourceServicePropertyTest {
             });
         }
         
-        // 启动所有线程
+        // 启动所有线�?
         startLatch.countDown();
         
-        // 等待所有线程完成
+        // 等待所有线程完�?
         boolean completed = doneLatch.await(5, TimeUnit.SECONDS);
         executor.shutdown();
         
         Assertions.assertTrue(completed, "All threads should complete within timeout");
         
-        // 验证：只有一个线程成功执行
+        // 验证：只有一个线程成功执�?
         long successCount = results.stream().filter(r -> r).count();
         assertThat(successCount)
             .as("Only one thread should successfully execute detection")
@@ -121,7 +121,7 @@ class UnreadMessageSourceServicePropertyTest {
     /**
      * Property 1: 监控频道过滤
      * <p>
-     * For any 频道列表，获取监控频道时应该只返回 monitoringStatus 为 true 的频道
+     * For any 频道列表，获取监控频道时应该只返�?monitoringStatus �?true 的频�?
      * <p>
      * Validates: Requirement 1.2
      */
@@ -133,10 +133,10 @@ class UnreadMessageSourceServicePropertyTest {
         // 创建 mock 对象
         ChannelRepository channelRepo = mock(ChannelRepository.class);
         UnreadMessageFetchService fetchService = mock(UnreadMessageFetchService.class);
-        UnreadMessageBufferService bufferService = mock(UnreadMessageBufferService.class);
+        UnreadMessageSourceBufferService bufferService = mock(UnreadMessageSourceBufferService.class);
         UnreadMessageSourceConfig config = createTestConfig();
         
-        // 过滤出监控频道
+        // 过滤出监控频�?
         List<Channel> monitoringChannels = channels.stream()
             .filter(Channel::getMonitoringStatus)
             .collect(Collectors.toList());
@@ -146,7 +146,7 @@ class UnreadMessageSourceServicePropertyTest {
             .thenReturn(monitoringChannels);
         when(bufferService.countPendingMessages()).thenReturn(0L);
         
-        // Mock fetchService 返回空列表
+        // Mock fetchService 返回空列�?
         when(fetchService.fetchUnreadMessages(anyLong()))
             .thenReturn(new ArrayList<>());
         
@@ -155,7 +155,7 @@ class UnreadMessageSourceServicePropertyTest {
             channelRepo, fetchService, bufferService, config
         );
         
-        // 执行检测
+        // 执行检�?
         UnreadMessageDetectionResult result = service.detectUnreadMessages();
         
         // 验证：调用了 findByMonitoringStatus(true)
@@ -166,27 +166,27 @@ class UnreadMessageSourceServicePropertyTest {
             .as("Total channels should equal monitoring channels count")
             .isEqualTo(monitoringChannels.size());
         
-        // 验证：所有监控频道都被处理
+        // 验证：所有监控频道都被处�?
         verify(fetchService, times(monitoringChannels.size()))
             .fetchUnreadMessages(anyLong());
     }
     
     /**
-     * Property 2: 全频道覆盖
+     * Property 2: 全频道覆�?
      * <p>
      * For any 监控频道列表，检测过程应该查询每一个频道的未读消息
      * <p>
      * Validates: Requirement 1.3
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 2: 全频道覆盖")
+    @Label("Feature: unread-channel-message-source, Property 2: 全频道覆�?)
     void allChannelsCoverage(
             @ForAll @Size(min = 1, max = 20) List<@From("monitoringChannels") Channel> channels) {
         
         // 创建 mock 对象
         ChannelRepository channelRepo = mock(ChannelRepository.class);
         UnreadMessageFetchService fetchService = mock(UnreadMessageFetchService.class);
-        UnreadMessageBufferService bufferService = mock(UnreadMessageBufferService.class);
+        UnreadMessageSourceBufferService bufferService = mock(UnreadMessageSourceBufferService.class);
         UnreadMessageSourceConfig config = createTestConfig();
         
         // Mock repository 返回监控频道
@@ -194,7 +194,7 @@ class UnreadMessageSourceServicePropertyTest {
             .thenReturn(channels);
         when(bufferService.countPendingMessages()).thenReturn(0L);
         
-        // Mock fetchService 返回空列表
+        // Mock fetchService 返回空列�?
         when(fetchService.fetchUnreadMessages(anyLong()))
             .thenReturn(new ArrayList<>());
         
@@ -203,10 +203,10 @@ class UnreadMessageSourceServicePropertyTest {
             channelRepo, fetchService, bufferService, config
         );
         
-        // 执行检测
+        // 执行检�?
         UnreadMessageDetectionResult result = service.detectUnreadMessages();
         
-        // 验证：每个频道都被查询
+        // 验证：每个频道都被查�?
         for (Channel channel : channels) {
             verify(fetchService).fetchUnreadMessages(channel.getChannelId());
         }
@@ -240,7 +240,7 @@ class UnreadMessageSourceServicePropertyTest {
         // 创建 mock 对象
         ChannelRepository channelRepo = mock(ChannelRepository.class);
         UnreadMessageFetchService fetchService = mock(UnreadMessageFetchService.class);
-        UnreadMessageBufferService bufferService = mock(UnreadMessageBufferService.class);
+        UnreadMessageSourceBufferService bufferService = mock(UnreadMessageSourceBufferService.class);
         UnreadMessageSourceConfig config = createTestConfig();
         
         // Mock repository 返回监控频道
@@ -248,7 +248,7 @@ class UnreadMessageSourceServicePropertyTest {
             .thenReturn(channels);
         when(bufferService.countPendingMessages()).thenReturn(0L);
         
-        // Mock fetchService：某个频道抛出异常，其他返回空列表
+        // Mock fetchService：某个频道抛出异常，其他返回空列�?
         for (int i = 0; i < channels.size(); i++) {
             Channel channel = channels.get(i);
             if (i == actualFailingIndex) {
@@ -267,19 +267,19 @@ class UnreadMessageSourceServicePropertyTest {
             channelRepo, fetchService, bufferService, config
         );
         
-        // 执行检测
+        // 执行检�?
         UnreadMessageDetectionResult result = service.detectUnreadMessages();
         
-        // 验证：所有频道都被尝试处理
+        // 验证：所有频道都被尝试处�?
         verify(fetchService, times(channels.size()))
             .fetchUnreadMessages(anyLong());
         
-        // 验证：失败频道数为 1
+        // 验证：失败频道数�?1
         assertThat(result.getFailedChannels())
             .as("One channel should fail")
             .isEqualTo(1);
         
-        // 验证：成功频道数为 总数 - 1
+        // 验证：成功频道数�?总数 - 1
         assertThat(result.getSuccessChannels())
             .as("Other channels should succeed")
             .isEqualTo(channels.size() - 1);
@@ -329,7 +329,7 @@ class UnreadMessageSourceServicePropertyTest {
     }
     
     /**
-     * 生成随机监控频道（monitoringStatus = true）
+     * 生成随机监控频道（monitoringStatus = true�?
      */
     @Provide
     Arbitrary<Channel> monitoringChannels() {
@@ -342,7 +342,7 @@ class UnreadMessageSourceServicePropertyTest {
             channel.setChannelId(id);
             channel.setChannelUsername(username);
             channel.setChannelTitle(title);
-            channel.setMonitoringStatus(true); // 固定为 true
+            channel.setMonitoringStatus(true); // 固定�?true
             return channel;
         });
     }

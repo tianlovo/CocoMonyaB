@@ -1,11 +1,13 @@
 package org.xlyo.cocomonyab.source.unread.model;
 
+import lombok.Getter;
+
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 未读消息统计信息
- * 
+ * <p>
  * 使用 AtomicLong 实现线程安全的统计计数器，记录未读消息检测的累计统计信息。
  */
 public class UnreadMessageStatistics {
@@ -33,6 +35,7 @@ public class UnreadMessageStatistics {
     /**
      * 最后一次检测时间
      */
+    @Getter
     private volatile LocalDateTime lastDetectionTime;
     
     /**
@@ -82,23 +85,6 @@ public class UnreadMessageStatistics {
      */
     public long getTotalFailedMessages() {
         return totalFailedMessages.get();
-    }
-    
-    /**
-     * 获取最后一次检测时间
-     * 
-     * @return 最后检测时间
-     */
-    public LocalDateTime getLastDetectionTime() {
-        return lastDetectionTime;
-    }
-    
-    /**
-     * 增加失败频道计数
-     */
-    public void incrementFailedChannels() {
-        // 注意：这个方法用于在处理频道时直接增加失败计数
-        // 不影响 totalChannelsScanned，因为失败的频道也算作已扫描
     }
     
     /**

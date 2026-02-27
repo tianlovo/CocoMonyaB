@@ -96,7 +96,7 @@ public class MessageSourceRegistry {
      * @return 消息来源列表（不可修改）
      */
     public List<MessageSource> getAllSources() {
-        return Collections.unmodifiableList(new ArrayList<>(sources.values()));
+        return List.copyOf(sources.values());
     }
     
     /**

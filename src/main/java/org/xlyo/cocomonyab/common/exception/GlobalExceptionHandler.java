@@ -125,7 +125,7 @@ public class GlobalExceptionHandler {
         log.warn("缺少请求参数: {}", e.getParameterName());
         return ApiResponse.error(ResponseCode.BAD_REQUEST, "缺少必需参数: " + e.getParameterName());
     }
-    
+
     /**
      * 参数类型不匹配异常处理
      */
@@ -133,8 +133,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
         log.warn("参数类型不匹配: name={}, value={}", e.getName(), e.getValue());
-        return ApiResponse.error(ResponseCode.BAD_REQUEST, 
-                String.format("参数类型错误: %s 应为 %s 类型", e.getName(), e.getRequiredType().getSimpleName()));
+
+        Class<?> requiredType = e.getRequiredType();
+        String typeName = (requiredType != null) ? requiredType.getSimpleName() : "未知";
+
+        return ApiResponse.error(ResponseCode.BAD_REQUEST,
+                String.format("参数类型错误: %s 应为 %s 类型", e.getName(), typeName));
     }
     
     /**

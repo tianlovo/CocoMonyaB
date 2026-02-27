@@ -183,7 +183,7 @@ class ChannelMessageServiceTest {
         Long current = 1L;
         Long size = 10L;
         ChannelMessageQueryDTO query = new ChannelMessageQueryDTO();
-        query.setStatus("PENDING");
+        query.setStatus(ChannelMessage.MessageStatus.PENDING);
         
         List<ChannelMessage> messages = Arrays.asList(testMessage);
         Page<ChannelMessage> messagePage = new PageImpl<>(messages, PageRequest.of(0, 10), 1);
@@ -209,7 +209,7 @@ class ChannelMessageServiceTest {
         Long size = 10L;
         ChannelMessageQueryDTO query = new ChannelMessageQueryDTO();
         query.setChatId(-1001234567890L);
-        query.setStatus("PENDING");
+        query.setStatus(ChannelMessage.MessageStatus.PENDING);
         
         List<ChannelMessage> messages = Arrays.asList(testMessage);
         Page<ChannelMessage> messagePage = new PageImpl<>(messages, PageRequest.of(0, 10), 1);

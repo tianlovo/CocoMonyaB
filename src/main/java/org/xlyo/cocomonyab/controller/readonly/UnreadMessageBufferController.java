@@ -3,6 +3,7 @@ package org.xlyo.cocomonyab.controller.readonly;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.validation.annotation.Validated;
@@ -56,7 +57,7 @@ public class UnreadMessageBufferController {
             @RequestParam(defaultValue = "1") @Min(value = 1, message = "页码必须大于等于1") Long current,
             @RequestParam(defaultValue = "10") @Min(value = 1, message = "每页大小必须大于等于1") Long size,
             @Valid UnreadMessageBufferQueryDTO query) {
-        Page<UnreadMessageBufferVO> bufferPage = unreadMessageBufferService.page(current, size, query);
+        Page<@NonNull UnreadMessageBufferVO> bufferPage = unreadMessageBufferService.page(current, size, query);
         return PageResponse.success(
             bufferPage.getContent(),
             current,

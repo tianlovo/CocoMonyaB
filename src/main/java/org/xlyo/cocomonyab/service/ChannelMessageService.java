@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -77,20 +78,19 @@ public class ChannelMessageService {
      * @param query 查询条件
      * @return 频道消息分页结果
      */
-    public Page<ChannelMessageVO> page(Long current, Long size, ChannelMessageQueryDTO query) {
+    public Page<@NonNull ChannelMessageVO> page(Long current, Long size, ChannelMessageQueryDTO query) {
         log.debug("分页查询频道消息: current={}, size={}, query={}", current, size, query);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<ChannelMessage> messagePage;
+        Page<@NonNull ChannelMessage> messagePage;
         
         // 根据查询条件选择合适的查询方法
         if (query.getChatId() != null && query.getStatus() != null) {
             // 按频道ID和状态查询
-            ChannelMessage.MessageStatus status = ChannelMessage.MessageStatus.valueOf(query.getStatus());
             messagePage = channelMessageRepository.findByChatIdAndStatusOrderByDateDesc(
-                    query.getChatId(), status, pageable);
+                    query.getChatId(), query.getStatus(), pageable);
         } else if (query.getChatId() != null && query.getStartDate() != null && query.getEndDate() != null) {
             // 按频道ID和日期范围查询
             messagePage = channelMessageRepository.findByChatIdAndDateBetweenOrderByDateDesc(
@@ -100,8 +100,7 @@ public class ChannelMessageService {
             messagePage = channelMessageRepository.findByChatIdOrderByDateDesc(query.getChatId(), pageable);
         } else if (query.getStatus() != null) {
             // 仅按状态查询
-            ChannelMessage.MessageStatus status = ChannelMessage.MessageStatus.valueOf(query.getStatus());
-            messagePage = channelMessageRepository.findByStatusOrderByCreateTimeDesc(status, pageable);
+            messagePage = channelMessageRepository.findByStatusOrderByCreateTimeDesc(query.getStatus(), pageable);
         } else {
             // 查询所有消息
             messagePage = channelMessageRepository.findAll(pageable);

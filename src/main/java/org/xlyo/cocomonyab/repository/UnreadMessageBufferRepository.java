@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository;
 
+import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -17,7 +18,7 @@ import java.util.Optional;
  * @since 1.0
  */
 @Repository
-public interface UnreadMessageBufferRepository extends MongoRepository<UnreadMessageBuffer, String> {
+public interface UnreadMessageBufferRepository extends MongoRepository<@NonNull UnreadMessageBuffer, @NonNull String> {
     
     /**
      * 检查消息是否已在缓冲区中
@@ -69,7 +70,7 @@ public interface UnreadMessageBufferRepository extends MongoRepository<UnreadMes
      * @param pageable 分页参数
      * @return 缓冲记录分页结果
      */
-    Page<UnreadMessageBuffer> findByChatIdOrderByFetchTimeAsc(Long chatId, Pageable pageable);
+    Page<@NonNull UnreadMessageBuffer> findByChatIdOrderByFetchTimeAsc(Long chatId, Pageable pageable);
     
     /**
      * 根据状态分页查询缓冲记录，按获取时间升序排列
@@ -78,7 +79,7 @@ public interface UnreadMessageBufferRepository extends MongoRepository<UnreadMes
      * @param pageable 分页参数
      * @return 缓冲记录分页结果
      */
-    Page<UnreadMessageBuffer> findByStatusOrderByFetchTimeAsc(BufferStatus status, Pageable pageable);
+    Page<@NonNull UnreadMessageBuffer> findByStatusOrderByFetchTimeAsc(BufferStatus status, Pageable pageable);
     
     /**
      * 根据频道ID和状态分页查询缓冲记录，按获取时间升序排列
@@ -88,7 +89,7 @@ public interface UnreadMessageBufferRepository extends MongoRepository<UnreadMes
      * @param pageable 分页参数
      * @return 缓冲记录分页结果
      */
-    Page<UnreadMessageBuffer> findByChatIdAndStatusOrderByFetchTimeAsc(Long chatId, BufferStatus status, Pageable pageable);
+    Page<@NonNull UnreadMessageBuffer> findByChatIdAndStatusOrderByFetchTimeAsc(Long chatId, BufferStatus status, Pageable pageable);
     
     /**
      * 统计指定频道和状态的消息数量

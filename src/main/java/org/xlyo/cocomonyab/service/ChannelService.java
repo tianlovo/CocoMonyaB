@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 /**
  * Channel 业务逻辑服务
  * 处理 channel 的 CRUD 操作和业务验证
- * 
+ * <p>
  * 当频道监控配置发生变化时，会发布 ChannelMonitoringEvent 事件，
  * 通知 ChannelMonitoringFilter 更新缓存
  */
@@ -38,7 +39,7 @@ public class ChannelService {
     /**
      * 创建新 channel
      * 验证 channelId 不存在，转换 DTO 为 Entity，保存并返回 VO
-     * 
+     * <p>
      * 如果监控状态为 true，会发布 CHANNEL_ADDED 事件
      *
      * @param dto channel 创建数据传输对象
@@ -77,7 +78,7 @@ public class ChannelService {
     /**
      * 更新现有 channel
      * 查找 entity，更新非 null 字段，保存并返回 VO
-     * 
+     * <p>
      * 如果 monitoringStatus 发生变化，会发布 CHANNEL_UPDATED 事件
      *
      * @param id channel 的 MongoDB 文档 ID
@@ -125,7 +126,7 @@ public class ChannelService {
     /**
      * 根据 ID 删除 channel
      * 验证 entity 存在后删除
-     * 
+     * <p>
      * 会发布 CHANNEL_REMOVED 事件
      *
      * @param id channel 的 MongoDB 文档 ID
@@ -208,7 +209,7 @@ public class ChannelService {
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
 
         // 应用过滤器并查询
-        Page<Channel> page = applyFilters(query, pageable);
+        Page<@NonNull Channel> page = applyFilters(query, pageable);
 
         // 转换为 VO 列表并返回
         return page.getContent().stream()
@@ -226,7 +227,7 @@ public class ChannelService {
     public Long count(ChannelQueryDTO query) {
         // 应用过滤器并返回总数
         Pageable pageable = PageRequest.of(0, 1);
-        Page<Channel> page = applyFilters(query, pageable);
+        Page<@NonNull Channel> page = applyFilters(query, pageable);
         return page.getTotalElements();
     }
 
@@ -238,7 +239,7 @@ public class ChannelService {
      * @param pageable 分页信息
      * @return 分页查询结果
      */
-    private Page<Channel> applyFilters(ChannelQueryDTO query, Pageable pageable) {
+    private Page<@NonNull Channel> applyFilters(ChannelQueryDTO query, Pageable pageable) {
         if (query == null) {
             return channelRepository.findAll(pageable);
         }

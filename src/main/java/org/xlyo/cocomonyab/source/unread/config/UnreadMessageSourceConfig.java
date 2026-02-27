@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotNull;
 
 /**
  * 未读消息来源生成器配置类
- * 
+ * <p>
  * 使用 @ConfigurationProperties 绑定配置，支持配置启动行为、API 调用参数、
  * 重试策略和批处理参数
  */

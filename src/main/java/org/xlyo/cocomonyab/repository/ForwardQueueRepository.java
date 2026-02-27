@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository;
 
+import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -17,7 +18,7 @@ import java.util.Optional;
  * @since 1.0
  */
 @Repository
-public interface ForwardQueueRepository extends MongoRepository<ForwardQueueItem, String> {
+public interface ForwardQueueRepository extends MongoRepository<@NonNull ForwardQueueItem, @NonNull String> {
     
     /**
      * 根据源频道ID和源消息ID查找队列记录
@@ -35,7 +36,7 @@ public interface ForwardQueueRepository extends MongoRepository<ForwardQueueItem
      * @param pageable 分页参数
      * @return 队列记录分页结果
      */
-    Page<ForwardQueueItem> findBySourceChatIdOrderByCreateTimeAsc(Long sourceChatId, Pageable pageable);
+    Page<@NonNull ForwardQueueItem> findBySourceChatIdOrderByCreateTimeAsc(Long sourceChatId, Pageable pageable);
     
     /**
      * 根据状态分页查询队列记录，按创建时间升序排列
@@ -44,7 +45,7 @@ public interface ForwardQueueRepository extends MongoRepository<ForwardQueueItem
      * @param pageable 分页参数
      * @return 队列记录分页结果
      */
-    Page<ForwardQueueItem> findByStatusOrderByCreateTimeAsc(ForwardStatus status, Pageable pageable);
+    Page<@NonNull ForwardQueueItem> findByStatusOrderByCreateTimeAsc(ForwardStatus status, Pageable pageable);
     
     /**
      * 根据源频道ID和状态分页查询队列记录，按创建时间升序排列
@@ -54,7 +55,7 @@ public interface ForwardQueueRepository extends MongoRepository<ForwardQueueItem
      * @param pageable 分页参数
      * @return 队列记录分页结果
      */
-    Page<ForwardQueueItem> findBySourceChatIdAndStatusOrderByCreateTimeAsc(Long sourceChatId, ForwardStatus status, Pageable pageable);
+    Page<@NonNull ForwardQueueItem> findBySourceChatIdAndStatusOrderByCreateTimeAsc(Long sourceChatId, ForwardStatus status, Pageable pageable);
     
     /**
      * 统计指定状态的队列记录数量

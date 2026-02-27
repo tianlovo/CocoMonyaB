@@ -65,9 +65,32 @@ request.interceptors.response.use(
       return Promise.reject(new Error('网络连接失败'))
     }
 
-    // HTTP error
-    ElMessage.error('服务器错误，请稍后重试')
-    return Promise.reject(error)
+    // HTTP status code error handling
+    const status = error.response.status
+    const apiResponse = error.response.data as ApiResponse | undefined
+    
+    let errorMessage: string
+    
+    switch (status) {
+      case 401:
+        errorMessage = '未授权，请重新登录'
+        break
+      case 403:
+        errorMessage = '无权限访问此资源'
+        break
+      case 404:
+        errorMessage = '请求的资源不存在'
+        break
+      case 500:
+        errorMessage = '服务器错误，请稍后重试'
+        break
+      default:
+        // Use msg field from response for other errors
+        errorMessage = apiResponse?.msg || '请求失败'
+    }
+    
+    ElMessage.error(errorMessage)
+    return Promise.reject(new Error(errorMessage))
   }
 )
 

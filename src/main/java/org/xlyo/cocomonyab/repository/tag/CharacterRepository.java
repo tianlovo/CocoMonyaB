@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository.tag;
 
+import lombok.NonNull;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.xlyo.cocomonyab.domain.entity.tag.Character;
@@ -11,7 +12,7 @@ import java.util.Optional;
  * 角色数据访问接口
  */
 @Repository
-public interface CharacterRepository extends MongoRepository<Character, String> {
+public interface CharacterRepository extends MongoRepository<@NonNull Character, @NonNull String> {
     /**
      * 根据名称查询角色
      */

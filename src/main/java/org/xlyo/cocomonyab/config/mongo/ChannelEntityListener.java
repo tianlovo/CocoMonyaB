@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.config.mongo;
 
+import lombok.NonNull;
 import org.springframework.data.mongodb.core.mapping.event.AbstractMongoEventListener;
 import org.springframework.data.mongodb.core.mapping.event.BeforeConvertEvent;
 import org.springframework.stereotype.Component;
@@ -12,10 +13,10 @@ import java.time.LocalDateTime;
  * 自动管理 createTime 和 updateTime 时间戳。
  */
 @Component
-public class ChannelEntityListener extends AbstractMongoEventListener<Channel> {
+public class ChannelEntityListener extends AbstractMongoEventListener<@NonNull Channel> {
     
     @Override
-    public void onBeforeConvert(BeforeConvertEvent<Channel> event) {
+    public void onBeforeConvert(BeforeConvertEvent<@NonNull Channel> event) {
         Channel channel = event.getSource();
         LocalDateTime now = LocalDateTime.now();
         

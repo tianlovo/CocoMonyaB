@@ -19,17 +19,47 @@
     </div>
     
     <nav class="sidebar-nav">
-      <router-link
-        v-for="item in navItems"
-        :key="item.path"
-        :to="item.path"
-        class="nav-item fluent-transition"
-        :class="{ 'nav-item-active': isActive(item.path) }"
-        @click="handleNavClick"
-      >
-        <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
-        <span class="nav-text" v-if="!collapsed">{{ item.label }}</span>
-      </router-link>
+      <template v-for="item in navItems" :key="item.path">
+        <!-- Parent item with children -->
+        <div v-if="item.children" class="nav-group">
+          <router-link
+            :to="item.path"
+            class="nav-item fluent-transition"
+            :class="{ 'nav-item-active': isActive(item.path) }"
+            @click="handleNavClick"
+          >
+            <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+            <span class="nav-text" v-if="!collapsed">{{ item.label }}</span>
+          </router-link>
+          
+          <!-- Sub items (only show when not collapsed and parent is active) -->
+          <div v-if="!collapsed && isActive(item.path)" class="nav-sub-items">
+            <router-link
+              v-for="child in item.children"
+              :key="child.path"
+              :to="child.path"
+              class="nav-sub-item fluent-transition"
+              :class="{ 'nav-sub-item-active': route.path === child.path }"
+              @click="handleNavClick"
+            >
+              <el-icon class="nav-icon"><component :is="child.icon" /></el-icon>
+              <span class="nav-text">{{ child.label }}</span>
+            </router-link>
+          </div>
+        </div>
+        
+        <!-- Simple item without children -->
+        <router-link
+          v-else
+          :to="item.path"
+          class="nav-item fluent-transition"
+          :class="{ 'nav-item-active': isActive(item.path) }"
+          @click="handleNavClick"
+        >
+          <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
+          <span class="nav-text" v-if="!collapsed">{{ item.label }}</span>
+        </router-link>
+      </template>
     </nav>
   </aside>
   
@@ -44,7 +74,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { User, Document, Avatar, Setting } from '@element-plus/icons-vue'
+import { User, Document, Avatar, Setting, ChatDotRound } from '@element-plus/icons-vue'
 
 interface Props {
   collapsed?: boolean
@@ -60,13 +90,20 @@ const route = useRoute()
 const isMobile = ref(false)
 
 const navItems = [
-  { path: '/authors', label: '作者库', icon: User },
-  { path: '/works', label: '原作库', icon: Document },
-  { path: '/characters', label: '角色库', icon: Avatar },
-  { path: '/config', label: '标签过滤配置', icon: Setting }
+  { path: '/message-tracking', label: '消息跟踪', icon: ChatDotRound },
+  { path: '/config', label: '配置', icon: Setting, children: [
+    { path: '/config/authors', label: '作者库', icon: User },
+    { path: '/config/works', label: '原作库', icon: Document },
+    { path: '/config/characters', label: '角色库', icon: Avatar },
+    { path: '/config/filter', label: '标签过滤配置', icon: Setting }
+  ]}
 ]
 
 const isActive = (path: string) => {
+  // Check if current route starts with the path (for parent items)
+  if (route.path.startsWith(path)) {
+    return true
+  }
   return route.path === path
 }
 
@@ -205,6 +242,58 @@ onUnmounted(() => {
 
 .sidebar-collapsed .nav-text {
   display: none;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-sub-items {
+  display: flex;
+  flex-direction: column;
+  padding-left: var(--spacing-lg);
+  margin-top: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.nav-sub-item {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  border-radius: var(--radius-md);
+  color: var(--fluent-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+}
+
+.nav-sub-item:hover {
+  background-color: var(--fluent-bg-alt);
+  color: var(--fluent-text-primary);
+  transform: translateX(4px);
+}
+
+.nav-sub-item-active {
+  background-color: var(--fluent-primary-light);
+  color: var(--fluent-primary);
+  font-weight: 600;
+}
+
+.nav-sub-item-active:hover {
+  background-color: var(--fluent-primary-light);
+  transform: translateX(4px);
+}
+
+.nav-sub-item .nav-icon {
+  font-size: 16px;
+  min-width: 16px;
+}
+
+.nav-sub-item .nav-text {
+  margin-left: var(--spacing-sm);
 }
 
 /* Mobile responsive */

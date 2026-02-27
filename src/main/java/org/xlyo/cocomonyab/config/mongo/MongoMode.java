@@ -1,9 +1,14 @@
 package org.xlyo.cocomonyab.config.mongo;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 /**
  * MongoDB 运行模式枚举
  * 提供配置文件智能提示
  */
+@Getter
+@RequiredArgsConstructor
 public enum MongoMode {
     
     /**
@@ -17,15 +22,7 @@ public enum MongoMode {
     REMOTE("remote");
     
     private final String value;
-    
-    MongoMode(String value) {
-        this.value = value;
-    }
-    
-    public String getValue() {
-        return value;
-    }
-    
+
     /**
      * 从字符串值转换为枚举
      * 

@@ -1,6 +1,7 @@
 package org.xlyo.cocomonyab.controller.readonly;
 
 import jakarta.validation.Valid;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
@@ -66,7 +67,7 @@ public class MessageController {
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
             @Valid MessageQueryDTO query) {
-        Page<MessageVO> messagePage = messageService.page(current, size, query);
+        Page<@NonNull MessageVO> messagePage = messageService.page(current, size, query);
         return PageResponse.success(
             messagePage.getContent(),
             current,

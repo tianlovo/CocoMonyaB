@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository;
 
+import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -16,7 +17,7 @@ import java.util.Optional;
  * @since 1.0
  */
 @Repository
-public interface ProcessedMessageRepository extends MongoRepository<ProcessedMessage, String> {
+public interface ProcessedMessageRepository extends MongoRepository<@NonNull ProcessedMessage, @NonNull String> {
     
     /**
      * 通过 chatId 和 messageId 查询消息
@@ -67,7 +68,7 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @param pageable 分页参数
      * @return 处理记录分页结果
      */
-    Page<ProcessedMessage> findByChatIdOrderByProcessTimeDesc(Long chatId, Pageable pageable);
+    Page<@NonNull ProcessedMessage> findByChatIdOrderByProcessTimeDesc(Long chatId, Pageable pageable);
     
     /**
      * 根据已读状态分页查询处理记录，按处理时间降序排列
@@ -76,7 +77,7 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @param pageable 分页参数
      * @return 处理记录分页结果
      */
-    Page<ProcessedMessage> findByIsReadOrderByProcessTimeDesc(Boolean isRead, Pageable pageable);
+    Page<@NonNull ProcessedMessage> findByIsReadOrderByProcessTimeDesc(Boolean isRead, Pageable pageable);
     
     /**
      * 根据匹配状态分页查询处理记录，按处理时间降序排列
@@ -85,7 +86,7 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @param pageable 分页参数
      * @return 处理记录分页结果
      */
-    Page<ProcessedMessage> findByIsMatchedOrderByProcessTimeDesc(Boolean isMatched, Pageable pageable);
+    Page<@NonNull ProcessedMessage> findByIsMatchedOrderByProcessTimeDesc(Boolean isMatched, Pageable pageable);
     
     /**
      * 根据频道ID和已读状态分页查询处理记录，按处理时间降序排列
@@ -95,7 +96,7 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @param pageable 分页参数
      * @return 处理记录分页结果
      */
-    Page<ProcessedMessage> findByChatIdAndIsReadOrderByProcessTimeDesc(Long chatId, Boolean isRead, Pageable pageable);
+    Page<@NonNull ProcessedMessage> findByChatIdAndIsReadOrderByProcessTimeDesc(Long chatId, Boolean isRead, Pageable pageable);
     
     /**
      * 根据频道ID和匹配状态分页查询处理记录，按处理时间降序排列
@@ -105,5 +106,5 @@ public interface ProcessedMessageRepository extends MongoRepository<ProcessedMes
      * @param pageable 分页参数
      * @return 处理记录分页结果
      */
-    Page<ProcessedMessage> findByChatIdAndIsMatchedOrderByProcessTimeDesc(Long chatId, Boolean isMatched, Pageable pageable);
+    Page<@NonNull ProcessedMessage> findByChatIdAndIsMatchedOrderByProcessTimeDesc(Long chatId, Boolean isMatched, Pageable pageable);
 }

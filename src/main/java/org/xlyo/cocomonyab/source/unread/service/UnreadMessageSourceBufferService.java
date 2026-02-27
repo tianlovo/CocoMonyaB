@@ -27,10 +27,10 @@ import java.util.stream.Collectors;
  * @author CocoMonya Team
  * @since 1.0
  */
-@Service
+@Service("unreadMessageSourceBufferService")
 @RequiredArgsConstructor
 @Slf4j
-public class UnreadMessageBufferService {
+public class UnreadMessageSourceBufferService {
     
     private final UnreadMessageBufferRepository bufferRepository;
     private final ChannelMonitorService channelMonitorService;

@@ -61,7 +61,7 @@ public interface ChannelMessageRepository extends MongoRepository<@NonNull Chann
      * @param pageable 分页参数
      * @return 消息分页结果
      */
-    Page<ChannelMessage> findByChatIdOrderByDateDesc(Long chatId, Pageable pageable);
+    Page<@NonNull ChannelMessage> findByChatIdOrderByDateDesc(Long chatId, Pageable pageable);
     
     /**
      * 根据状态分页查询消息，按创建时间降序排列
@@ -70,7 +70,7 @@ public interface ChannelMessageRepository extends MongoRepository<@NonNull Chann
      * @param pageable 分页参数
      * @return 消息分页结果
      */
-    Page<ChannelMessage> findByStatusOrderByCreateTimeDesc(MessageStatus status, Pageable pageable);
+    Page<@NonNull ChannelMessage> findByStatusOrderByCreateTimeDesc(MessageStatus status, Pageable pageable);
     
     /**
      * 根据频道ID和状态分页查询消息，按日期降序排列
@@ -80,7 +80,7 @@ public interface ChannelMessageRepository extends MongoRepository<@NonNull Chann
      * @param pageable 分页参数
      * @return 消息分页结果
      */
-    Page<ChannelMessage> findByChatIdAndStatusOrderByDateDesc(Long chatId, MessageStatus status, Pageable pageable);
+    Page<@NonNull ChannelMessage> findByChatIdAndStatusOrderByDateDesc(Long chatId, MessageStatus status, Pageable pageable);
     
     /**
      * 根据频道ID和日期范围分页查询消息，按日期降序排列
@@ -91,7 +91,7 @@ public interface ChannelMessageRepository extends MongoRepository<@NonNull Chann
      * @param pageable 分页参数
      * @return 消息分页结果
      */
-    Page<ChannelMessage> findByChatIdAndDateBetweenOrderByDateDesc(Long chatId, Integer startDate, Integer endDate, Pageable pageable);
+    Page<@NonNull ChannelMessage> findByChatIdAndDateBetweenOrderByDateDesc(Long chatId, Integer startDate, Integer endDate, Pageable pageable);
     
     /**
      * 根据频道ID和媒体组ID查找所有消息（用于媒体组查询）

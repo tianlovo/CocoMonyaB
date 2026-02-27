@@ -35,18 +35,5 @@ public class FilterContext {
     public Object getAttribute(String key) {
         return attributes.get(key);
     }
-    
-    /**
-     * 设置拒绝原因
-     */
-    public void setRejectReason(String reason) {
-        this.rejectReason = reason;
-    }
-    
-    /**
-     * 获取拒绝原因
-     */
-    public String getRejectReason() {
-        return rejectReason;
-    }
+
 }

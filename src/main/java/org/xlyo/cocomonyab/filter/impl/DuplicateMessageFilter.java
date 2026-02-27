@@ -154,7 +154,7 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
     /**
      * 过滤媒体组消息
      * 媒体组的每条消息都需要通过，但要防止整个媒体组被重复处理
-     * 
+     * <p>
      * 注意：媒体组的收集状态由 ChannelMonitorService 的状态机管理
      * DuplicateMessageFilter 只负责检查数据库中是否已存在该媒体组
      */
@@ -211,20 +211,7 @@ public class DuplicateMessageFilter extends AbstractMessageFilter {
         // 单条消息：chatId:messageId
         return message.chatId + ":" + message.id;
     }
-    
-    /**
-     * 消息处理完成后的回调
-     * 注意：使用 Caffeine 缓存后，不需要手动移除，缓存会自动过期
-     * 此方法保留用于向后兼容
-     */
-    @Deprecated
-    public void markProcessed(TdApi.Message message) {
-        // 使用 Caffeine 缓存后，缓存会自动过期，不需要手动移除
-        // 保留此方法用于向后兼容
-        log.trace("消息处理完成（缓存将自动过期）: chatId={}, messageId={}", 
-            message.chatId, message.id);
-    }
-    
+
     /**
      * 标记媒体组为已处理
      * 在媒体组成功保存到数据库后调用，防止重复处理

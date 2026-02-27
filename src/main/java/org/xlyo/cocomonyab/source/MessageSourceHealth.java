@@ -109,7 +109,6 @@ public class MessageSourceHealth {
     /**
      * 创建一个健康状态
      * 
-     * @param status 状态
      * @return 健康状态对象
      */
     public static MessageSourceHealth healthy() {

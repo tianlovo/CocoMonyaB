@@ -21,31 +21,31 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * UnreadMessageBufferService 属性测试
+ * UnreadMessageSourceBufferService 属性测�?
  * <p>
- * 使用属性测试验证未读消息缓冲服务在所有输入下的正确性
+ * 使用属性测试验证未读消息缓冲服务在所有输入下的正确�?
  * <p>
  * 测试属性：
- * - Property 9: 缓冲消息往返
- * - Property 15: 批处理分组
- * - Property 16: 批次间延迟
- * - Property 11: 处理后清理往返
- * - Property 22: 集成调用正确性
+ * - Property 9: 缓冲消息往�?
+ * - Property 15: 批处理分�?
+ * - Property 16: 批次间延�?
+ * - Property 11: 处理后清理往�?
+ * - Property 22: 集成调用正确�?
  * 
  * @author CocoMonya Team
  * @since 1.0
  */
-class UnreadMessageBufferServicePropertyTest {
+class UnreadMessageSourceBufferServicePropertyTest {
     
     /**
-     * Property 9: 缓冲消息往返
+     * Property 9: 缓冲消息往�?
      * <p>
      * For any 获取到的未读消息，保存到缓冲区后应该能够查询到该消息
      * <p>
      * Validates: Requirements 4.1
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 9: 缓冲消息往返")
+    @Label("Feature: unread-channel-message-source, Property 9: 缓冲消息往�?)
     void bufferMessageRoundTrip(
             @ForAll @LongRange(min = -1000000000000L, max = -1L) long chatId,
             @ForAll @IntRange(min = 1, max = 20) int messageCount) {
@@ -60,11 +60,11 @@ class UnreadMessageBufferServicePropertyTest {
         // 创建测试消息
         List<TdApi.Message> messages = createTestMessages(chatId, messageCount);
         
-        // Mock 缓冲区检查（都不存在）
+        // Mock 缓冲区检查（都不存在�?
         when(bufferRepo.existsByChatIdAndMessageId(anyLong(), anyLong()))
             .thenReturn(false);
         
-        // 捕获保存的缓冲消息
+        // 捕获保存的缓冲消�?
         List<UnreadMessageBuffer> savedBuffers = new ArrayList<>();
         when(bufferRepo.save(any(UnreadMessageBuffer.class)))
             .thenAnswer(invocation -> {
@@ -74,17 +74,17 @@ class UnreadMessageBufferServicePropertyTest {
             });
         
         // 创建服务实例
-        UnreadMessageBufferService service = new UnreadMessageBufferService(
+        UnreadMessageSourceBufferService service = new UnreadMessageSourceBufferService(
             bufferRepo, channelMonitorService, processedRepo, config, objectMapper
         );
         
-        // 执行缓冲和处理
+        // 执行缓冲和处�?
         service.bufferAndProcessMessages(chatId, messages, "test_channel", "Test Channel");
         
-        // 验证：保存了所有消息到缓冲区
+        // 验证：保存了所有消息到缓冲�?
         verify(bufferRepo, times(messageCount)).save(any(UnreadMessageBuffer.class));
         
-        // 验证：所有保存的缓冲消息都包含正确的 chatId 和 messageId
+        // 验证：所有保存的缓冲消息都包含正确的 chatId �?messageId
         assertThat(savedBuffers).hasSize(messageCount);
         for (int i = 0; i < messageCount; i++) {
             UnreadMessageBuffer buffer = savedBuffers.get(i);
@@ -100,15 +100,15 @@ class UnreadMessageBufferServicePropertyTest {
     }
     
     /**
-     * Property 15: 批处理分组
+     * Property 15: 批处理分�?
      * <p>
-     * For any 数量 N 的消息和批次大小 B，消息应该被分成 ⌈N/B⌉ 个批次，
-     * 每批最多 B 条消息（最后一批可能少于 B）
+     * For any 数量 N 的消息和批次大小 B，消息应该被分成 ⌈N/B�?个批次，
+     * 每批最�?B 条消息（最后一批可能少�?B�?
      * <p>
      * Validates: Requirements 7.1, 7.2, 11.3
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 15: 批处理分组")
+    @Label("Feature: unread-channel-message-source, Property 15: 批处理分�?)
     void batchProcessingGrouping(
             @ForAll @LongRange(min = -1000000000000L, max = -1L) long chatId,
             @ForAll @IntRange(min = 1, max = 50) int messageCount,
@@ -126,7 +126,7 @@ class UnreadMessageBufferServicePropertyTest {
         // 创建测试消息
         List<TdApi.Message> messages = createTestMessages(chatId, messageCount);
         
-        // Mock 缓冲区检查（都不存在）
+        // Mock 缓冲区检查（都不存在�?
         when(bufferRepo.existsByChatIdAndMessageId(anyLong(), anyLong()))
             .thenReturn(false);
         
@@ -135,39 +135,39 @@ class UnreadMessageBufferServicePropertyTest {
             .thenAnswer(invocation -> invocation.getArgument(0));
         
         // 创建服务实例
-        UnreadMessageBufferService service = new UnreadMessageBufferService(
+        UnreadMessageSourceBufferService service = new UnreadMessageSourceBufferService(
             bufferRepo, channelMonitorService, processedRepo, config, objectMapper
         );
         
-        // 执行缓冲和处理
+        // 执行缓冲和处�?
         service.bufferAndProcessMessages(chatId, messages, "test_channel", "Test Channel");
         
-        // 计算预期批次数
+        // 计算预期批次�?
         int expectedBatches = (int) Math.ceil((double) messageCount / batchSize);
         
-        // 验证：调用了正确次数的 handleNewMessage（每条消息一次）
+        // 验证：调用了正确次数�?handleNewMessage（每条消息一次）
         verify(channelMonitorService, times(messageCount)).handleNewMessage(any(TdApi.Message.class));
         
-        // 验证：保存操作次数正确（每条消息保存两次：初始保存 + 状态更新）
+        // 验证：保存操作次数正确（每条消息保存两次：初始保�?+ 状态更新）
         verify(bufferRepo, times(messageCount * 2)).save(any(UnreadMessageBuffer.class));
     }
     
     /**
-     * Property 16: 批次间延迟
+     * Property 16: 批次间延�?
      * <p>
-     * For any 两个连续的批次处理，它们之间的时间间隔应该大于或等于配置的批次延迟
+     * For any 两个连续的批次处理，它们之间的时间间隔应该大于或等于配置的批次延�?
      * <p>
      * Validates: Requirements 7.3
      */
     @Property(tries = 50)
-    @Label("Feature: unread-channel-message-source, Property 16: 批次间延迟")
+    @Label("Feature: unread-channel-message-source, Property 16: 批次间延�?)
     void batchDelayBetweenBatches(
             @ForAll @LongRange(min = -1000000000000L, max = -1L) long chatId,
-            @ForAll @IntRange(min = 11, max = 30) int messageCount, // 至少需要 2 个批次
+            @ForAll @IntRange(min = 11, max = 30) int messageCount, // 至少需�?2 个批�?
             @ForAll @IntRange(min = 1, max = 5) int batchSize,
             @ForAll @IntRange(min = 50, max = 200) long batchDelay) {
         
-        // 确保至少有 2 个批次
+        // 确保至少�?2 个批�?
         Assume.that(messageCount > batchSize);
         
         // 创建 mock 对象
@@ -182,7 +182,7 @@ class UnreadMessageBufferServicePropertyTest {
         // 创建测试消息
         List<TdApi.Message> messages = createTestMessages(chatId, messageCount);
         
-        // Mock 缓冲区检查（都不存在）
+        // Mock 缓冲区检查（都不存在�?
         when(bufferRepo.existsByChatIdAndMessageId(anyLong(), anyLong()))
             .thenReturn(false);
         
@@ -193,7 +193,7 @@ class UnreadMessageBufferServicePropertyTest {
         // 记录批次处理时间
         List<Long> batchProcessingTimes = new ArrayList<>();
         doAnswer(invocation -> {
-            // 每个批次的第一条消息记录时间
+            // 每个批次的第一条消息记录时�?
             if (batchProcessingTimes.isEmpty() || 
                 batchProcessingTimes.size() * batchSize < messageCount) {
                 batchProcessingTimes.add(System.currentTimeMillis());
@@ -202,37 +202,37 @@ class UnreadMessageBufferServicePropertyTest {
         }).when(channelMonitorService).handleNewMessage(any(TdApi.Message.class));
         
         // 创建服务实例
-        UnreadMessageBufferService service = new UnreadMessageBufferService(
+        UnreadMessageSourceBufferService service = new UnreadMessageSourceBufferService(
             bufferRepo, channelMonitorService, processedRepo, config, objectMapper
         );
         
-        // 记录开始时间
+        // 记录开始时�?
         long startTime = System.currentTimeMillis();
         
-        // 执行缓冲和处理
+        // 执行缓冲和处�?
         service.bufferAndProcessMessages(chatId, messages, "test_channel", "Test Channel");
         
         // 记录结束时间
         long endTime = System.currentTimeMillis();
         long totalDuration = endTime - startTime;
         
-        // 计算预期批次数
+        // 计算预期批次�?
         int expectedBatches = (int) Math.ceil((double) messageCount / batchSize);
         
-        // 验证：总耗时应该至少包含 (批次数 - 1) * 批次延迟
+        // 验证：总耗时应该至少包含 (批次�?- 1) * 批次延迟
         long expectedMinDuration = (expectedBatches - 1) * batchDelay;
         assertThat(totalDuration).isGreaterThanOrEqualTo(expectedMinDuration - 50); // 允许 50ms 误差
     }
     
     /**
-     * Property 11: 处理后清理往返
+     * Property 11: 处理后清理往�?
      * <p>
-     * For any 成功处理的消息，应该从缓冲区删除并添加到已处理集合
+     * For any 成功处理的消息，应该从缓冲区删除并添加到已处理集�?
      * <p>
      * Validates: Requirements 4.5, 6.4
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 11: 处理后清理往返")
+    @Label("Feature: unread-channel-message-source, Property 11: 处理后清理往�?)
     void processedMessageCleanupRoundTrip(
             @ForAll @LongRange(min = -1000000000000L, max = -1L) long chatId,
             @ForAll @IntRange(min = 1, max = 10) int messageCount) {
@@ -248,11 +248,11 @@ class UnreadMessageBufferServicePropertyTest {
         // 创建测试消息
         List<TdApi.Message> messages = createTestMessages(chatId, messageCount);
         
-        // Mock 缓冲区检查（都不存在）
+        // Mock 缓冲区检查（都不存在�?
         when(bufferRepo.existsByChatIdAndMessageId(anyLong(), anyLong()))
             .thenReturn(false);
         
-        // 捕获保存的缓冲消息
+        // 捕获保存的缓冲消�?
         List<UnreadMessageBuffer> savedBuffers = new ArrayList<>();
         when(bufferRepo.save(any(UnreadMessageBuffer.class)))
             .thenAnswer(invocation -> {
@@ -262,14 +262,14 @@ class UnreadMessageBufferServicePropertyTest {
             });
         
         // 创建服务实例
-        UnreadMessageBufferService service = new UnreadMessageBufferService(
+        UnreadMessageSourceBufferService service = new UnreadMessageSourceBufferService(
             bufferRepo, channelMonitorService, processedRepo, config, objectMapper
         );
         
-        // 执行缓冲和处理
+        // 执行缓冲和处�?
         service.bufferAndProcessMessages(chatId, messages, "test_channel", "Test Channel");
         
-        // 验证：所有消息都被处理
+        // 验证：所有消息都被处�?
         verify(channelMonitorService, times(messageCount)).handleNewMessage(any(TdApi.Message.class));
         
         // 验证：所有缓冲消息的状态都被更新为 PROCESSED
@@ -281,15 +281,15 @@ class UnreadMessageBufferServicePropertyTest {
     }
     
     /**
-     * Property 22: 集成调用正确性
+     * Property 22: 集成调用正确�?
      * <p>
-     * For any 未读消息，处理时应该调用 ChannelMonitorService.handleNewMessage() 方法，
-     * 且传递的参数是 TdApi.Message 对象
+     * For any 未读消息，处理时应该调用 ChannelMonitorService.handleNewMessage() 方法�?
+     * 且传递的参数�?TdApi.Message 对象
      * <p>
      * Validates: Requirements 14.1, 14.2
      */
     @Property(tries = 100)
-    @Label("Feature: unread-channel-message-source, Property 22: 集成调用正确性")
+    @Label("Feature: unread-channel-message-source, Property 22: 集成调用正确�?)
     void integrationCallCorrectness(
             @ForAll @LongRange(min = -1000000000000L, max = -1L) long chatId,
             @ForAll @IntRange(min = 1, max = 10) int messageCount) {
@@ -305,7 +305,7 @@ class UnreadMessageBufferServicePropertyTest {
         // 创建测试消息
         List<TdApi.Message> messages = createTestMessages(chatId, messageCount);
         
-        // Mock 缓冲区检查（都不存在）
+        // Mock 缓冲区检查（都不存在�?
         when(bufferRepo.existsByChatIdAndMessageId(anyLong(), anyLong()))
             .thenReturn(false);
         
@@ -314,17 +314,17 @@ class UnreadMessageBufferServicePropertyTest {
             .thenAnswer(invocation -> invocation.getArgument(0));
         
         // 创建服务实例
-        UnreadMessageBufferService service = new UnreadMessageBufferService(
+        UnreadMessageSourceBufferService service = new UnreadMessageSourceBufferService(
             bufferRepo, channelMonitorService, processedRepo, config, objectMapper
         );
         
-        // 执行缓冲和处理
+        // 执行缓冲和处�?
         service.bufferAndProcessMessages(chatId, messages, "test_channel", "Test Channel");
         
         // 验证：调用了 handleNewMessage 方法
         verify(channelMonitorService, times(messageCount)).handleNewMessage(any(TdApi.Message.class));
         
-        // 验证：传递的参数是 TdApi.Message 对象，且 chatId 和 messageId 正确
+        // 验证：传递的参数�?TdApi.Message 对象，且 chatId �?messageId 正确
         for (TdApi.Message originalMessage : messages) {
             verify(channelMonitorService).handleNewMessage(argThat(message -> 
                 message != null && 

@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.service;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -57,13 +58,13 @@ public class UnreadMessageBufferService {
      * @param query 查询条件
      * @return 未读消息缓冲区分页结果
      */
-    public Page<UnreadMessageBufferVO> page(Long current, Long size, UnreadMessageBufferQueryDTO query) {
+    public Page<@NonNull UnreadMessageBufferVO> page(Long current, Long size, UnreadMessageBufferQueryDTO query) {
         log.debug("分页查询未读消息缓冲区: current={}, size={}, query={}", current, size, query);
         
         // 创建分页参数（Spring Data页码从0开始）
         Pageable pageable = PageRequest.of(current.intValue() - 1, size.intValue());
         
-        Page<UnreadMessageBuffer> bufferPage;
+        Page<@NonNull UnreadMessageBuffer> bufferPage;
         
         // 根据查询条件选择合适的查询方法
         if (query.getChatId() != null && query.getStatus() != null) {

@@ -2,6 +2,7 @@ package org.xlyo.cocomonyab.domain.dto;
 
 import jakarta.validation.constraints.Min;
 import lombok.Data;
+import org.xlyo.cocomonyab.domain.entity.ChannelMessage;
 
 /**
  * 频道消息查询DTO
@@ -29,9 +30,6 @@ public class ChannelMessageQueryDTO {
     
     /**
      * 消息状态（可选）
-     * PENDING: 待审核
-     * APPROVED: 已通过
-     * REJECTED: 已拒绝
      */
-    private String status;
+    private ChannelMessage.MessageStatus status;
 }

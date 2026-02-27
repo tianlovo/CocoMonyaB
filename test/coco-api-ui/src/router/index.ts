@@ -10,27 +10,42 @@ const router = createRouter({
       children: [
         {
           path: '',
-          redirect: '/authors'
+          redirect: '/config/authors'
         },
         {
-          path: 'authors',
-          name: 'authors',
-          component: () => import('@/views/AuthorView.vue')
-        },
-        {
-          path: 'works',
-          name: 'works',
-          component: () => import('@/views/WorkView.vue')
-        },
-        {
-          path: 'characters',
-          name: 'characters',
-          component: () => import('@/views/CharacterView.vue')
+          path: 'message-tracking',
+          name: 'message-tracking',
+          component: () => import('@/views/MessageTrackingView.vue')
         },
         {
           path: 'config',
-          name: 'config',
-          component: () => import('@/views/ConfigView.vue')
+          component: () => import('@/views/ConfigLayout.vue'),
+          children: [
+            {
+              path: '',
+              redirect: '/config/authors'
+            },
+            {
+              path: 'authors',
+              name: 'config-authors',
+              component: () => import('@/views/AuthorView.vue')
+            },
+            {
+              path: 'works',
+              name: 'config-works',
+              component: () => import('@/views/WorkView.vue')
+            },
+            {
+              path: 'characters',
+              name: 'config-characters',
+              component: () => import('@/views/CharacterView.vue')
+            },
+            {
+              path: 'filter',
+              name: 'config-filter',
+              component: () => import('@/views/ConfigView.vue')
+            }
+          ]
         }
       ]
     }

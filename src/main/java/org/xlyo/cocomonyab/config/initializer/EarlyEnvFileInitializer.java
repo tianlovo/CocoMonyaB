@@ -36,6 +36,7 @@ public class EarlyEnvFileInitializer {
      * 
      * @return true 如果可以继续启动应用，false 如果需要退出应用
      */
+    @SuppressWarnings("CallToPrintStackTrace")
     public static boolean initialize() {
         try {
             Path workingDir = Paths.get(System.getProperty("user.dir"));

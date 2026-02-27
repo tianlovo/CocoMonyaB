@@ -106,7 +106,7 @@ public class ChannelMessage {
     }
     
     /**
-     * 消息状态枚举
+     * 频道消息状态枚举
      */
     public enum MessageStatus {
         PENDING,    // 待审核

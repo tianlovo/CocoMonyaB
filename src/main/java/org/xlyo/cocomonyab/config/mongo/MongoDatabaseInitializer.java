@@ -1,8 +1,9 @@
 package org.xlyo.cocomonyab.config.mongo;
 
 import com.mongodb.client.MongoDatabase;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.data.domain.Sort;
@@ -16,16 +17,16 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class MongoDatabaseInitializer implements ApplicationRunner {
     
     private static final String DATABASE_NAME = "cocomonya";
     private static final String COLLECTION_NAME = "telegram_channels";
     
-    @Autowired
-    private MongoTemplate mongoTemplate;
+    private final MongoTemplate mongoTemplate;
     
     @Override
-    public void run(ApplicationArguments args) {
+    public void run(@NonNull ApplicationArguments args) {
         log.info("开始初始化 MongoDB 数据库和集合...");
         
         try {

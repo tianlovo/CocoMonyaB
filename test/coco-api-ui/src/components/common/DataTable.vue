@@ -214,6 +214,12 @@ const getColumnClass = (column: TableColumn) => {
 
 /* Responsive adjustments */
 @media (max-width: 767px) {
+  /* Hide columns marked as mobile-hidden */
+  :deep(.mobile-hidden) {
+    display: none !important;
+  }
+  
+  /* Compact pagination layout */
   .pagination {
     justify-content: center;
   }
@@ -221,6 +227,23 @@ const getColumnClass = (column: TableColumn) => {
   :deep(.el-pagination) {
     flex-wrap: wrap;
     gap: var(--spacing-sm);
+    justify-content: center;
+  }
+  
+  /* Make pagination buttons more compact */
+  :deep(.el-pagination .btn-prev),
+  :deep(.el-pagination .btn-next),
+  :deep(.el-pagination .el-pager li) {
+    min-width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 12px;
+  }
+  
+  /* Stack pagination controls vertically if needed */
+  :deep(.el-pagination__total),
+  :deep(.el-pagination__sizes) {
+    margin-bottom: var(--spacing-xs);
   }
 }
 </style>

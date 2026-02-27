@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository.tag;
 
+import lombok.NonNull;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 import org.xlyo.cocomonyab.domain.entity.tag.TagFilterConfig;
@@ -10,7 +11,7 @@ import java.util.List;
  * 标签过滤配置数据访问接口
  */
 @Repository
-public interface TagFilterConfigRepository extends MongoRepository<TagFilterConfig, String> {
+public interface TagFilterConfigRepository extends MongoRepository<@NonNull TagFilterConfig, @NonNull String> {
     /**
      * 检查作者ID是否被引用
      */

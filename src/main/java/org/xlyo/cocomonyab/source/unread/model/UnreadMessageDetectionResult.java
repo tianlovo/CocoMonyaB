@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 /**
  * 未读消息检测结果
- * 
+ * <p>
  * 记录每次未读消息检测的统计信息，包括检测时间、频道数量、消息数量等。
  */
 @Data

@@ -1,5 +1,6 @@
 package org.xlyo.cocomonyab.repository;
 
+import lombok.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -14,7 +15,7 @@ import java.util.Optional;
  * 提供CRUD操作和用于频道管理的自定义查询方法
  */
 @Repository
-public interface ChannelRepository extends MongoRepository<Channel, String> {
+public interface ChannelRepository extends MongoRepository<@NonNull Channel, @NonNull String> {
 
     /**
      * 根据channelId检查频道是否存在
