@@ -76,7 +76,7 @@ public class ChannelMonitorService implements MediaGroupProcessor {
         });
         
         // 注册活跃媒体组数量指标
-        mediaGroupMetrics.registerActiveMediaGroupCountGauge(() -> mediaGroupStates.size());
+        mediaGroupMetrics.registerActiveMediaGroupCountGauge(mediaGroupStates::size);
         
         log.info("媒体组监控指标已初始化");
     }
@@ -341,7 +341,7 @@ public class ChannelMonitorService implements MediaGroupProcessor {
                 
                 // 标记媒体组为已处理（防止重复处理）
                 if (!messages.isEmpty()) {
-                    TdApi.Message firstMessage = messages.get(0);
+                    TdApi.Message firstMessage = messages.getFirst();
                     if (firstMessage.mediaAlbumId != 0) {
                         duplicateMessageFilter.markMediaGroupProcessed(
                             firstMessage.chatId, 
@@ -429,7 +429,7 @@ public class ChannelMonitorService implements MediaGroupProcessor {
         MediaGroupMessageEntity mediaGroupEntity = new MediaGroupMessageEntity();
         
         // 从第一条消息复制基础字段
-        BaseMessageEntity first = parsedMessages.get(0);
+        BaseMessageEntity first = parsedMessages.getFirst();
         mediaGroupEntity.setMessageId(first.getMessageId());
         mediaGroupEntity.setChatId(first.getChatId());
         mediaGroupEntity.setChannelUsername(first.getChannelUsername());

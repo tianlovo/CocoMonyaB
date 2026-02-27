@@ -48,12 +48,12 @@ class PluginConfigurationValidationTest {
     @Test
     void testValidConfigurationAccepted() {
         PluginProperties.PluginConfig config = new PluginProperties.PluginConfig();
-        config.setClassName("org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin");
+        config.setClassName("org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterPlugin");
         config.setPriority(5);
         config.setEnabled(true);
         
         assertNotNull(config);
-        assertEquals("org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin", 
+        assertEquals("org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterPlugin",
             config.getClassName());
         assertEquals(5, config.getPriority());
         assertTrue(config.isEnabled());

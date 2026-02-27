@@ -10,6 +10,7 @@ import org.xlyo.cocomonyab.domain.entity.message.*;
 import org.xlyo.cocomonyab.domain.enums.MessageType;
 import org.xlyo.cocomonyab.plugin.PluginContext;
 import org.xlyo.cocomonyab.plugin.PluginResult;
+import org.xlyo.cocomonyab.plugin.console.ConsolePrinterPlugin;
 
 import java.util.ArrayList;
 import java.util.List;

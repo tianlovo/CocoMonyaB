@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.xlyo.cocomonyab.domain.entity.message.*;
 import org.xlyo.cocomonyab.plugin.PluginContext;
 import org.xlyo.cocomonyab.plugin.PluginResult;
+import org.xlyo.cocomonyab.plugin.console.ConsolePrinterPlugin;
 
 import java.util.List;
 import java.util.stream.Collectors;

@@ -1,11 +1,10 @@
-package org.xlyo.cocomonyab.plugin.impl;
+package org.xlyo.cocomonyab.plugin.console;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xlyo.cocomonyab.domain.entity.message.*;
 import org.xlyo.cocomonyab.plugin.*;
-import org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterProperties;
 
 import java.time.Instant;
 import java.time.LocalDateTime;

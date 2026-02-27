@@ -1,4 +1,4 @@
-package org.xlyo.cocomonyab.plugin.impl.console;
+package org.xlyo.cocomonyab.plugin.console;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

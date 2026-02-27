@@ -1,6 +1,5 @@
 package org.xlyo.cocomonyab.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -10,7 +9,7 @@ import org.xlyo.cocomonyab.config.autoconfigure.PluginAutoConfiguration;
 import org.xlyo.cocomonyab.config.properties.PluginProperties;
 import org.xlyo.cocomonyab.plugin.MessagePlugin;
 import org.xlyo.cocomonyab.plugin.PluginManager;
-import org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin;
+import org.xlyo.cocomonyab.plugin.console.ConsolePrinterPlugin;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -103,7 +102,7 @@ class PluginAutoConfigurationTest {
     void testConfiguredPluginsRegistered() {
         // 添加配置
         PluginProperties.PluginConfig config = new PluginProperties.PluginConfig();
-        config.setClassName("org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin");
+        config.setClassName("org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterPlugin");
         config.setPriority(5);
         config.setEnabled(true);
         pluginProperties.getPlugins().add(config);
@@ -125,7 +124,7 @@ class PluginAutoConfigurationTest {
     void testDisabledPluginNotRegistered() {
         // 添加禁用的配置
         PluginProperties.PluginConfig config = new PluginProperties.PluginConfig();
-        config.setClassName("org.xlyo.cocomonyab.plugin.impl.ConsolePrinterPlugin");
+        config.setClassName("org.xlyo.cocomonyab.plugin.impl.console.ConsolePrinterPlugin");
         config.setPriority(5);
         config.setEnabled(false);
         pluginProperties.getPlugins().add(config);
