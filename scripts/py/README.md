@@ -23,9 +23,10 @@ scripts/py/
 **功能特性：**
 - 📊 自动分析 git 状态和 diff 信息
 - 🤖 调用大模型 API 生成规范的提交信息（中文）
-- 🔧 支持 Conventional Commits 规范 (https://www.conventionalcommits.org/zh-hans/v1.0.0/)
-- 🌐 自动推送到所有配置的远程仓库
-- 🔍 检测所有远程仓库的未推送状态
+- 🔧 支持 Conventional Commits 规范
+- 👥 支持多 Git 用户配置及选择
+- 🔐 使用 GitHub Token 进行认证推送
+- 🌐 自动推送到 GitHub 远程仓库
 - 🔄 智能重试机制（API 调用和 Git 推送）
 - 📝 结构化列表输出（body 使用数组格式）
 - ⚙️ 配置文件驱动，易于定制
@@ -38,67 +39,91 @@ scripts/py/
    ```bash
    cp .env.example .env
    ```
-   编辑 `.env` 文件，设置以下变量：
-   ```env
-   # 大模型 API 配置
-   API_BASE_URL=https://api.openai.com/v1
-   API_KEY=your_api_key_here
-   MODEL_ID=gpt-4o-mini
+   编辑 `.env` 文件，设置必要的变量（参见 `.env.example`）
 
-   # API 重试配置
-   MAX_RETRIES=3
-   MAX_COMPLETION_TOKENS=2000
-
-   # Git 推送重试配置
-   PUSH_RETRIES=3
-   RETRY_DELAY=2
-
-   # 远程仓库配置（可选）
-   REMOTE_ORIGIN=https://github.com/tianlovo/CocoMonyaB.git
-   REMOTE_CODEBERG=https://codeberg.org/tianluo/CocoMonyaB.git
-
-   # Git 用户配置（可选）
-   GIT_USER_NAME=your_name
-   GIT_USER_EMAIL=your_email@example.com
-   ```
-
-2. **安装依赖**
+2. **运行工具**
    ```bash
-   uv sync
-   ```
-
-3. **运行工具**
-   ```bash
-   # 使用 uv 运行（推荐）
-   uv run commit-tool
+   # Windows
+   commit_tool.bat
 
    # 或直接运行 Python 脚本
-   python scripts/py/commit_tool.py
+   python commit_tool.py
    ```
 
 **工作流程：**
-1. 检查当前 git 仓库状态
-2. 分析所有暂存和非暂存的更改
-3. 如果没有更改，检查所有远程仓库的未推送状态
-4. 调用大模型 API 生成提交信息（列表格式）
-5. 确认并提交更改
-6. 推送到所有远程仓库（带重试机制）
+1. 选择 Git 用户（如果配置了多个用户）
+2. 检查当前 git 仓库状态
+3. 分析所有暂存和非暂存的更改
+4. 如果没有更改，检查是否有未推送的提交
+5. 调用大模型 API 生成提交信息
+6. 确认并提交更改
+7. 推送到 GitHub 远程仓库
 
-**支持的 API 服务：**
-- OpenAI（包括 o1、o3-mini 等思维链模型）
-- Azure OpenAI
-- DeepSeek
-- 其他兼容 OpenAI API 的服务
+---
 
-**技术亮点：**
-- 使用官方 `openai` Python 库，支持最新特性
-- **实时流式输出**，可视化模型生成过程
-- 彩色区分思考过程（黄色）和生成结果（绿色）
-- 显示 Token 使用统计，便于成本控制
-- 强制 JSON 输出模式（`response_format={"type": "json_object"}`）
-- 自动验证生成的提交信息格式
-- 失败自动重试，最多重试 3 次（可配置）
-- 支持思维链模型的推理过程
+### 2. 版本发布工具 (`release_tool.py`)
+
+将 development 分支使用 Squash and merge 模式合并到 main 分支，自动构建 JAR 包，并创建 GitHub Release 上传版本包。
+
+**功能特性：**
+- 🏗️ 自动构建 JAR 包（使用 Gradle bootJar）
+- 🔍 自动检查工作区状态（确保干净）
+- 🔄 验证 development 分支是否为最新
+- 🔀 使用 Squash and merge 模式合并分支
+- 📦 从 build.gradle.kts 自动读取版本号
+- 🏷️ 自动创建和推送版本标签
+- 🚀 自动创建 GitHub Release 并上传 JAR 包
+- 👥 支持多 Git 用户配置及选择
+- 🔐 使用 GitHub Token 进行认证推送
+- ✅ 完整的操作前确认流程
+- 🛡️ 操作失败时自动回滚
+- ⚠️ 构建失败时立即退出程序
+
+**快速开始：**
+
+1. **配置环境变量**
+   
+   确保 `.env` 文件已配置（与 commit_tool 共享配置）
+
+2. **运行工具**
+   ```bash
+   # Windows
+   release_tool.bat
+
+   # 或直接运行 Python 脚本
+   python release_tool.py
+   ```
+
+**工作流程：**
+1. 检查 Git 仓库状态
+2. 构建 JAR 包（失败则退出）
+3. 选择 Git 用户（如果配置了多个用户）
+4. 获取远程仓库最新信息
+5. 检查工作区是否干净
+6. 验证 development 分支是否存在且为最新
+7. 从 build.gradle.kts 读取版本号
+8. 确认发布操作
+9. 切换到 main 分支
+10. 使用 Squash and merge 模式合并 development 分支
+11. 推送 main 分支到远程仓库
+12. 创建版本标签（格式：v{version}）
+13. 推送标签到远程仓库
+14. 创建 GitHub Release 并上传 JAR 包
+15. 切换回 development 分支
+
+**使用前提：**
+- 本地所有分支工作区必须干净（无未提交的更改）
+- development 分支必须存在且与远程同步
+- build.gradle.kts 文件中必须包含有效的版本号定义
+- 项目能够成功构建（./gradlew clean bootJar）
+- GitHub Token 必须具有创建 Release 和上传文件的权限
+
+**注意事项：**
+- development 分支会被保留，不会被删除
+- 如果标签已存在，会提示是否删除并重新创建
+- 操作失败时会自动切换回 development 分支
+- 构建失败会在程序开头立即退出，不会执行后续操作
+- JAR 包会自动上传到 GitHub Release 的 Assets 中
 
 ## 添加新工具
 

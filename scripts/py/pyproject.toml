@@ -8,11 +8,16 @@ dependencies = [
     "openai>=1.0.0",
     "gitpython>=3.1.40",
     "rich>=13.0.0",
+    "requests>=2.31.0",
 ]
 
 [project.scripts]
 commit-tool = "commit_tool:main"
+release-tool = "release_tool:main"
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["commit_tool", "release_tool"]

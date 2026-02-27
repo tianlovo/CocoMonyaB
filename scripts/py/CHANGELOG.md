@@ -1,5 +1,25 @@
 # 更新日志
 
+## [未发布] - 2026-02-27
+
+### 新增
+- **版本发布工具 (`release_tool.py`)**
+  - 自动构建 JAR 包（使用 Gradle bootJar）
+  - 自动将 development 分支合并到 main 分支（Squash and merge 模式）
+  - 从 build.gradle.kts 自动读取版本号
+  - 自动创建和推送版本标签
+  - 自动创建 GitHub Release 并上传 JAR 包
+  - 支持多 Git 用户配置及选择
+  - 完整的操作前检查和确认流程
+  - 操作失败时自动回滚
+  - 构建失败时立即退出程序
+- 新增 `release_tool.bat` Windows 批处理启动脚本
+- 新增 `RELEASE_GUIDE.md` 版本发布指南文档
+
+### 改进
+- 更新 README.md，添加版本发布工具的详细说明
+- 更新 pyproject.toml，添加 release-tool 入口点和 requests 依赖
+
 ## [未发布] - 2026-02-20
 
 ### 新增
