@@ -248,7 +248,10 @@ def build_jar() -> Optional[Path]:
     console.print()
     
     # 使用 gradlew 构建
-    gradlew_cmd = "./gradlew" if sys.platform != "win32" else "gradlew.bat"
+    if sys.platform == "win32":
+        gradlew_cmd = [str(Path(git_root) / "gradlew.bat"), "clean", "bootJar"]
+    else:
+        gradlew_cmd = ["./gradlew", "clean", "bootJar"]
     
     with Progress(
         SpinnerColumn(),
@@ -262,12 +265,13 @@ def build_jar() -> Optional[Path]:
         
         try:
             result = subprocess.run(
-                [gradlew_cmd, "clean", "bootJar"],
+                gradlew_cmd,
                 capture_output=True,
                 text=True,
                 encoding=encoding,
                 errors="replace",
                 cwd=git_root,
+                shell=(sys.platform == "win32"),
             )
             
             progress.update(task, completed=True)
