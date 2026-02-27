@@ -684,10 +684,30 @@ def main():
     stdout, stderr, code = run_command(["git", "merge", "--squash", "--allow-unrelated-histories", "development"])
     
     if code != 0:
-        console.print(f"[bold red]合并失败:[/bold red] {stderr}")
-        console.print("[yellow]正在恢复到 development 分支...[/yellow]")
-        run_command(["git", "checkout", "development"])
-        sys.exit(1)
+        error_msg = stderr or stdout or "未知错误"
+        console.print(f"[bold red]合并失败:[/bold red] {error_msg}")
+        if stdout:
+            console.print(f"[dim]输出:[/dim] {stdout}")
+        
+        # 检查是否有冲突
+        status_stdout, _, status_code = run_command(["git", "status", "--porcelain"])
+        if status_code == 0 and "both added" in status_stdout:
+            console.print("[yellow]检测到合并冲突，尝试自动解决...[/yellow]")
+            
+            # 对于 both added 的文件，使用 development 分支的版本
+            for line in status_stdout.split("\n"):
+                if "both added" in line or "AA" in line[:2]:
+                    file_path = line.split()[-1]
+                    console.print(f"[cyan]解决冲突: {file_path} (使用 development 版本)[/cyan]")
+                    run_command(["git", "checkout", "--theirs", file_path])
+                    run_command(["git", "add", file_path])
+            
+            console.print("[green]✓ 冲突已自动解决[/green]")
+        else:
+            console.print("[yellow]正在恢复到 development 分支...[/yellow]")
+            run_command(["git", "reset", "--hard"])
+            run_command(["git", "checkout", "development"])
+            sys.exit(1)
     
     console.print("[green]✓ 合并完成（暂存区）[/green]")
     
