@@ -58,6 +58,10 @@ export const useChannelStore = defineStore('channel', () => {
     }
   }
 
+  const refreshTgChannels = async (params: Omit<TgChannelQueryParams, 'forceRefresh'>): Promise<PageResponse<TgChannel>> => {
+    return fetchTgChannels({ ...params, forceRefresh: true })
+  }
+
   return {
     channels,
     tgChannels,
@@ -68,6 +72,7 @@ export const useChannelStore = defineStore('channel', () => {
     createChannel,
     updateChannel,
     deleteChannel,
-    fetchTgChannels
+    fetchTgChannels,
+    refreshTgChannels
   }
 })

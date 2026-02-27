@@ -19,7 +19,6 @@
             style="width: 150px"
             @change="handleSearch"
           >
-            <el-option label="全部" :value="undefined" />
             <el-option label="监控中" :value="true" />
             <el-option label="已停止" :value="false" />
           </el-select>
@@ -94,7 +93,7 @@ import type { Channel } from '@/types/models'
 import { showSuccessMessage } from '@/utils/errorHandler'
 
 const channelStore = useChannelStore()
-const { pagination, handlePageChange, handleSizeChange } = usePagination(10)
+const { pagination } = usePagination(10)
 
 const searchKeyword = ref('')
 const monitoringFilter = ref<boolean | undefined>(undefined)
@@ -176,6 +175,19 @@ const handleSearch = () => {
     pagination.current = 1
     loadChannels()
   }, 300)
+}
+
+// Handle page change
+const handlePageChange = (page: number) => {
+  pagination.current = page
+  loadChannels()
+}
+
+// Handle page size change
+const handleSizeChange = (size: number) => {
+  pagination.size = size
+  pagination.current = 1 // Reset to first page
+  loadChannels()
 }
 
 // Handle table actions
