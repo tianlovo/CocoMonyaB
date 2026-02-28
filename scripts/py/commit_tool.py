@@ -441,16 +441,17 @@ def git_push_to_github(user_info: Dict[str, str]) -> bool:
 
     # 检查远程配置
     stdout, stderr, code = run_command(["git", "remote", "get-url", "origin"])
-    current_remote_url = stdout.strip()
+    current_remote_url = stdout.strip().rstrip('/')
 
     # 如果 origin 不存在或 URL 不匹配配置，则更新
     if code != 0 or not current_remote_url:
-        console.print(f"[cyan]设置远程仓库 origin 为: {REMOTE_ORIGIN}[/cyan]")
+        clean_remote_origin = REMOTE_ORIGIN.rstrip('/')
+        console.print(f"[cyan]设置远程仓库 origin 为: {clean_remote_origin}[/cyan]")
         if code != 0:
-            run_command(["git", "remote", "add", "origin", REMOTE_ORIGIN], cwd=git_root)
+            run_command(["git", "remote", "add", "origin", clean_remote_origin], cwd=git_root)
         else:
-            run_command(["git", "remote", "set-url", "origin", REMOTE_ORIGIN], cwd=git_root)
-        current_remote_url = REMOTE_ORIGIN
+            run_command(["git", "remote", "set-url", "origin", clean_remote_origin], cwd=git_root)
+        current_remote_url = clean_remote_origin
 
     # 构造带 Token 的 URL
     auth_url = inject_token_to_url(current_remote_url, token) if token else current_remote_url
