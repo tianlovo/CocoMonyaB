@@ -8,7 +8,7 @@ plugins {
 
 group = "org.xlyo"
 // 主版本号.次版本号.修订号[-预发布标识]
-version = "1.0.0"
+version = "1.0.1"
 description = "【后端】基于 TG Userbot 监控与多级审核，实现媒体资源自动化筛选、编辑及本地结构化存储的存档系统。"
 
 val protobufVersion by extra("4.33.5")
