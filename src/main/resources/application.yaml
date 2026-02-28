@@ -35,9 +35,6 @@ management:
       show-details: always
       # 显示组件信息
       show-components: always
-    startup:
-      # 启用启动信息端点
-      enabled: true
   health:
     # 启用数据库健康检查
     mongodb:

@@ -30,14 +30,16 @@ export interface ImportResult {
 
 export interface SystemStatus {
   ready: boolean
+  status: string
   reason: string | null
   timestamp: number
+  progress: number
+  currentPhase: string
 }
 
 export interface SystemInfo {
   projectName: string
   version: string
-  artifact: string
   group: string
   description: string
   buildTime: string

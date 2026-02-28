@@ -33,6 +33,13 @@ request.interceptors.request.use(
 // Response interceptor
 request.interceptors.response.use(
   (response) => {
+    const url = response.config.url || ''
+
+    // System status endpoint returns data directly without wrapper
+    if (url.includes('/system/status')) {
+      return response.data
+    }
+
     const apiResponse = response.data as ApiResponse
     const { code, msg, data } = apiResponse
 

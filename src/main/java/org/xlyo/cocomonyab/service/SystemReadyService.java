@@ -151,7 +151,9 @@ public class SystemReadyService {
             
             // 标记系统为就绪状态
             systemReady.set(true);
+            currentStatus = StartupStatus.READY;
             notReadyReason = null;
+            currentPhase = "应用就绪";
             
             // 发布系统就绪事件
             eventPublisher.publishEvent(new SystemReadyEvent(this, startupTime));

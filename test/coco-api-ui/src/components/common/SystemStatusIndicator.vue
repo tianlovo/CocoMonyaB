@@ -22,6 +22,9 @@ const props = defineProps<{
 const isReady = ref(false)
 const isChecking = ref(true)
 const reason = ref<string | null>(null)
+const status = ref<string>('NOT_STARTED')
+const progress = ref(0)
+const currentPhase = ref<string>('')
 let intervalId: number | null = null
 
 const statusType = computed(() => {
@@ -48,12 +51,18 @@ const tooltipContent = computed(() => {
 const checkStatus = async () => {
   try {
     isChecking.value = true
-    const status = await systemApi.getStatus()
-    isReady.value = status.ready
-    reason.value = status.reason
+    const res = await systemApi.getStatus()
+    isReady.value = res.ready
+    reason.value = res.reason
+    status.value = res.status
+    progress.value = res.progress
+    currentPhase.value = res.currentPhase
   } catch (error) {
     isReady.value = false
     reason.value = '无法连接到服务器'
+    status.value = 'NOT_STARTED'
+    progress.value = 0
+    currentPhase.value = ''
   } finally {
     isChecking.value = false
   }

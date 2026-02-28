@@ -268,6 +268,284 @@ Content-Type: application/json
 
 ---
 
+## Spring Boot Actuator 端点
+
+### Actuator-概述
+
+Spring Boot Actuator 提供了生产就绪的监控和管理端点。系统暴露了以下端点用于健康检查和启动信息查询。
+
+所有 Actuator 端点的基础路径为 `/actuator`。
+
+### Actuator-端点列表
+
+#### 健康检查端点
+
+**接口地址：** `GET /actuator/health`
+
+**查询参数：** 无
+
+**系统未就绪时的响应：**
+
+HTTP 状态码：`503 Service Unavailable`
+
+```json
+{
+  "status": "OUT_OF_SERVICE",
+  "components": {
+    "startup": {
+      "status": "OUT_OF_SERVICE",
+      "details": {
+        "phase": "数据库初始化",
+        "ready": false,
+        "currentPhase": "数据库初始化"
+      }
+    }
+  }
+}
+```
+
+**系统就绪后的响应：**
+
+HTTP 状态码：`200 OK`
+
+```json
+{
+  "status": "UP",
+  "components": {
+    "startup": {
+      "status": "UP",
+      "details": {
+        "phase": "应用就绪",
+        "ready": true,
+        "totalTime": 15234,
+        "currentPhase": "应用就绪"
+      }
+    },
+    "mongo": {
+      "status": "UP",
+      "details": {
+        "version": "7.0.12"
+      }
+    },
+    "ping": {
+      "status": "UP"
+    }
+  }
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| status | String | 整体健康状态（UP/OUT_OF_SERVICE/DOWN） |
+| components | Object | 各组件的健康状态 |
+| components.startup | Object | 启动流程健康检查 |
+| components.mongo | Object | MongoDB 健康检查 |
+| components.ping | Object | 基础存活检查 |
+
+#### 启动信息端点
+
+**接口地址：** `GET /actuator/startup`
+
+**查询参数：** 无
+
+**响应示例：**
+
+```json
+{
+  "phases": [
+    {
+      "name": "配置初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588800000,
+      "endTime": 1708588801000,
+      "duration": 1000,
+      "errorMessage": null
+    },
+    {
+      "name": "数据库初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588801000,
+      "endTime": 1708588803000,
+      "duration": 2000,
+      "errorMessage": null
+    },
+    {
+      "name": "集合初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588803000,
+      "endTime": 1708588808000,
+      "duration": 5000,
+      "errorMessage": null
+    },
+    {
+      "name": "插件初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588808000,
+      "endTime": 1708588810000,
+      "duration": 2000,
+      "errorMessage": null
+    },
+    {
+      "name": "消息源初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588810000,
+      "endTime": 1708588815000,
+      "duration": 5000,
+      "errorMessage": null
+    },
+    {
+      "name": "API初始化",
+      "status": "COMPLETED",
+      "startTime": 1708588815000,
+      "endTime": 1708588816000,
+      "duration": 1000,
+      "errorMessage": null
+    }
+  ],
+  "totalDuration": 16000,
+  "status": "READY",
+  "ready": true
+}
+```
+
+**字段说明：**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| phases | Array | 启动阶段列表 |
+| phases[].name | String | 阶段名称 |
+| phases[].status | String | 阶段状态（IN_PROGRESS/COMPLETED/FAILED） |
+| phases[].startTime | Long | 开始时间（Unix 时间戳，毫秒） |
+| phases[].endTime | Long | 结束时间（Unix 时间戳，毫秒） |
+| phases[].duration | Long | 耗时（毫秒） |
+| phases[].errorMessage | String | 错误信息（失败时） |
+| totalDuration | Long | 总启动时间（毫秒） |
+| status | String | 启动状态（READY/FAILED/IN_PROGRESS） |
+| ready | Boolean | 是否就绪 |
+
+#### 应用信息端点
+
+**接口地址：** `GET /actuator/info`
+
+**查询参数：** 无
+
+**响应示例：**
+
+```json
+{
+  "app": {
+    "name": "CocoMonyaB",
+    "version": "1.0.0",
+    "description": "【后端】基于 TG Userbot 监控与多级审核，实现媒体资源自动化筛选、编辑及本地结构化存储的存档系统。"
+  }
+}
+```
+
+### Actuator-使用示例
+
+#### 健康检查
+
+```bash
+# 查询系统健康状态
+curl http://localhost:10721/actuator/health
+
+# 格式化输出
+curl -s http://localhost:10721/actuator/health | jq .
+
+# 只查看整体状态
+curl -s http://localhost:10721/actuator/health | jq -r '.status'
+
+# 查看启动组件状态
+curl -s http://localhost:10721/actuator/health | jq '.components.startup'
+```
+
+#### 启动信息查询
+
+```bash
+# 查询启动阶段信息
+curl http://localhost:10721/actuator/startup
+
+# 格式化输出
+curl -s http://localhost:10721/actuator/startup | jq .
+
+# 查看总启动时间
+curl -s http://localhost:10721/actuator/startup | jq -r '.totalDuration'
+
+# 查看各阶段耗时
+curl -s http://localhost:10721/actuator/startup | jq '.phases[] | "\(.name): \(.duration)ms"'
+
+# 查看失败的阶段
+curl -s http://localhost:10721/actuator/startup | jq '.phases[] | select(.status == "FAILED")'
+```
+
+#### 应用信息查询
+
+```bash
+# 查询应用信息
+curl http://localhost:10721/actuator/info
+
+# 格式化输出
+curl -s http://localhost:10721/actuator/info | jq .
+```
+
+#### 持续监控启动过程
+
+```bash
+# 持续监控启动状态（每秒刷新）
+watch -n 1 'curl -s http://localhost:10721/actuator/health | jq -r .status'
+
+# 持续监控当前启动阶段
+watch -n 1 'curl -s http://localhost:10721/actuator/health | jq -r .components.startup.details.currentPhase'
+
+# 持续监控启动进度
+watch -n 1 'curl -s http://localhost:10721/actuator/startup | jq "{status: .status, totalDuration: .totalDuration, currentPhase: .phases[-1].name}"'
+```
+
+### Actuator-注意事项
+
+1. **端口配置**：Actuator 端点与应用 API 使用相同端口（默认 10721）
+2. **HTTP 状态码**：
+   - `/actuator/health` 在系统未就绪时返回 `503 Service Unavailable`
+   - `/actuator/health` 在系统就绪后返回 `200 OK`
+   - `/actuator/startup` 和 `/actuator/info` 始终返回 `200 OK`
+3. **访问控制**：当前版本未启用安全认证，生产环境建议配置访问控制
+4. **详细信息**：健康检查端点配置为显示详细信息（`show-details: always`）
+5. **组件健康检查**：
+   - `startup`：启动流程健康检查（自定义实现）
+   - `mongo`：MongoDB 连接健康检查（Spring Boot 自动配置）
+   - `ping`：基础存活检查（Spring Boot 自动配置）
+6. **启动阶段顺序**：
+   1. 配置初始化
+   2. 数据库初始化
+   3. 集合初始化
+   4. 插件初始化
+   5. 消息源初始化
+   6. API初始化
+7. **监控集成**：这些端点可以集成到监控系统（如 Prometheus、Grafana）中
+8. **Kubernetes 就绪探针**：`/actuator/health` 可用作 Kubernetes 的 readiness probe
+9. **启动超时**：如果启动时间过长，可以通过 `/actuator/startup` 查看各阶段耗时，定位性能瓶颈
+
+### Actuator-与系统状态 API 的区别
+
+| 特性 | 系统状态 API | Actuator 健康检查 |
+|------|-------------|------------------|
+| 路径 | `/api/system/status` | `/actuator/health` |
+| 响应格式 | 统一响应格式（code/msg/data） | Actuator 标准格式 |
+| HTTP 状态码 | 始终 200 | 未就绪时 503 |
+| 详细程度 | 简单状态信息 | 包含各组件健康状态 |
+| 用途 | 前端状态查询 | 监控系统集成、K8s 探针 |
+| 启动信息 | 不包含 | 通过 `/actuator/startup` 提供 |
+
+**建议使用场景：**
+- **前端应用**：使用 `/api/system/status`（统一响应格式，易于处理）
+- **监控系统**：使用 `/actuator/health`（标准格式，易于集成）
+- **Kubernetes**：使用 `/actuator/health`（支持 HTTP 状态码判断）
+- **启动诊断**：使用 `/actuator/startup`（详细的阶段耗时信息）
+
+---
+
 ## 目录
 
 - [系统状态 API](#系统状态-api)
@@ -275,6 +553,11 @@ Content-Type: application/json
   - [API 端点](#系统状态-api-端点)
   - [使用示例](#系统状态-使用示例)
   - [注意事项](#系统状态-注意事项)
+- [Spring Boot Actuator 端点](#spring-boot-actuator-端点)
+  - [概述](#actuator-概述)
+  - [端点列表](#actuator-端点列表)
+  - [使用示例](#actuator-使用示例)
+  - [注意事项](#actuator-注意事项)
 - [1. 频道管理 API](#1-频道管理-api)
   - [1.1 数据结构](#11-数据结构)
   - [1.2 API 端点](#12-api-端点)
