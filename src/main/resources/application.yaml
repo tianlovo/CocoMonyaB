@@ -21,12 +21,38 @@ spring:
 server:
   port: 10721
 
+# Spring Boot Actuator 配置
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点：health（健康检查）、startup（启动信息）
+        include: health,startup,info
+      base-path: /actuator
+  endpoint:
+    health:
+      # 显示详细的健康信息
+      show-details: always
+      # 显示组件信息
+      show-components: always
+    startup:
+      # 启用启动信息端点
+      enabled: true
+  health:
+    # 启用数据库健康检查
+    mongodb:
+      enabled: true
+
 # 日志配置
 logging:
   config: classpath:logback-spring.xml
   level:
     root: INFO
     "[it.tdlight.TDLight]": WARN
+    # 启动流程相关日志
+    "[com.cocomonya.startup]": INFO
+    # Spring Boot Actuator 日志
+    "[org.springframework.boot.actuate]": INFO
 
 # Spring Dotenv 配置
 springdotenv:
