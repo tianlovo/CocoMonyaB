@@ -37,6 +37,15 @@ springdotenv:
 
 # 应用配置
 app:
+  # 启动配置
+  startup:
+    # 数据库连接重试配置
+    database:
+      # 最大重试次数
+      max-retries: 3
+      # 重试延迟（毫秒）
+      retry-delay-ms: 2000
+  
   # Data目录配置
   # 注意：data 根目录和 config 目录路径固定，不可配置
   # - data 根目录：固定为应用同级的 "data" 目录
