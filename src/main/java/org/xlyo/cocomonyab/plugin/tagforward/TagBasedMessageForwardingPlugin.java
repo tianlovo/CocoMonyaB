@@ -380,10 +380,11 @@ public class TagBasedMessageForwardingPlugin extends AbstractMessagePlugin {
             
             if (entity instanceof MediaGroupMessageEntity mediaGroup) {
                 if (mediaGroup.getItems() != null && !mediaGroup.getItems().isEmpty()) {
-                    // 收集媒体组中所有消息的ID
+                    // 收集媒体组中所有消息的ID（去重并排序）
                     mediaGroupMessageIds = mediaGroup.getItems().stream()
                             .map(BaseMessageEntity::getMessageId)
-                            .sorted()
+                            .distinct()  // 去除重复的messageId
+                            .sorted()    // 确保递增顺序
                             .toList();
                     
                     forwardMessageId = mediaGroupMessageIds.getFirst();

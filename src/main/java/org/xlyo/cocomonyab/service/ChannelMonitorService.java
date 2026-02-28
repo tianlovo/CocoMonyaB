@@ -188,8 +188,16 @@ public class ChannelMonitorService implements MediaGroupProcessor {
                 mediaGroupMetrics.recordStateTransition("NONE", "COLLECTING");
             }
             
-            // 添加消息到缓冲区
-            mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(message);
+            // 添加消息到缓冲区（检查是否已存在，避免重复）
+            List<TdApi.Message> buffer = mediaGroupBuffer.computeIfAbsent(groupKey, k -> new ArrayList<>());
+            boolean alreadyExists = buffer.stream().anyMatch(m -> m.id == message.id);
+            
+            if (alreadyExists) {
+                log.debug("消息已在缓冲区中，跳过: groupKey={}, messageId={}", groupKey, message.id);
+                return true;  // 返回true表示消息被接受（虽然是重复的）
+            }
+            
+            buffer.add(message);
             
             // 更新时间戳
             mediaGroupTimestamps.put(groupKey, System.currentTimeMillis());
@@ -442,9 +450,11 @@ public class ChannelMonitorService implements MediaGroupProcessor {
         mediaGroupEntity.setIsMediaGroup(true);
         mediaGroupEntity.setMediaGroupItemCount(parsedMessages.size());
         
-        // 收集所有消息ID
+        // 收集所有消息ID（去重并排序）
         List<Long> messageIds = parsedMessages.stream()
             .map(BaseMessageEntity::getMessageId)
+            .distinct()  // 去除重复的messageId
+            .sorted()    // 确保递增顺序
             .toList();
         mediaGroupEntity.setMediaGroupMessageIds(messageIds);
         

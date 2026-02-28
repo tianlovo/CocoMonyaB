@@ -120,10 +120,18 @@ public class ChannelMessageStoragePlugin extends AbstractMessagePlugin {
             return;
         }
         
-        // 批量转换并保存媒体组中的所有消息
+        // 批量转换并保存媒体组中的所有消息（过滤掉已存在的消息）
         List<ChannelMessage> messages = items.stream()
             .map(this::convertToChannelMessage)
+            .filter(msg -> !channelMessageRepository.existsByChatIdAndMessageId(
+                msg.getChatId(), msg.getMessageId()))
             .collect(Collectors.toList());
+        
+        if (messages.isEmpty()) {
+            log.debug("媒体组中所有消息都已存在，跳过存储: chatId={}, mediaAlbumId={}", 
+                mediaGroup.getChatId(), mediaGroup.getMediaAlbumId());
+            return;
+        }
         
         channelMessageRepository.saveAll(messages);
         
