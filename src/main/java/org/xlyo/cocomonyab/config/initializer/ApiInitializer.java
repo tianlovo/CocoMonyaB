@@ -81,6 +81,5 @@ public class ApiInitializer {
      */
     private void logServerInfo() {
         log.info("API 服务器监听地址: http://localhost:{}", serverPort);
-        log.info("API 文档地址: http://localhost:{}/swagger-ui.html", serverPort);
     }
 }
