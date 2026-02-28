@@ -416,8 +416,15 @@ def inject_token_to_url(url: str, token: str) -> str:
     # https://github.com/user/repo.git -> https://token@github.com/user/repo.git
     # 解析 URL
     parsed = urlparse(url)
+    
+    # 如果 netloc 中已经包含认证信息（user@host），先移除
+    netloc = parsed.netloc
+    if '@' in netloc:
+        # 移除已有的认证信息，只保留 hostname
+        netloc = netloc.split('@')[-1]
+    
     # 构造新的 netloc: token@github.com
-    new_netloc = f"{token}@{parsed.netloc}"
+    new_netloc = f"{token}@{netloc}"
     # 重新构造 URL
     new_url = urlunparse(parsed._replace(netloc=new_netloc))
     return new_url
