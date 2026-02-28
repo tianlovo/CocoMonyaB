@@ -39,12 +39,31 @@ springdotenv:
 app:
   # 启动配置
   startup:
+    # 启动超时时间（分钟）
+    timeout-minutes: 5
+    
     # 数据库连接重试配置
     database:
       # 最大重试次数
       max-retries: 3
       # 重试延迟（毫秒）
       retry-delay-ms: 2000
+    
+    # 组件启用配置
+    components:
+      # 是否启用嵌入式 MongoDB
+      embedded-mongodb: true
+      # 是否启用未读消息检测
+      unread-message-detection: true
+      # 是否启用 Telegram 客户端
+      telegram-client: true
+    
+    # 启动进度监控配置
+    progress:
+      # 是否启用日志输出
+      log-enabled: true
+      # 是否启用 JMX 监控
+      jmx-enabled: false
   
   # Data目录配置
   # 注意：data 根目录和 config 目录路径固定，不可配置
