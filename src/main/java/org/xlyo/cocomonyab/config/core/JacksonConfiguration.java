@@ -5,8 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.text.SimpleDateFormat;
 
 /**
  * Jackson配置
@@ -37,6 +40,32 @@ public class JacksonConfiguration {
             .build();
         
         mapper.activateDefaultTyping(validator, ObjectMapper.DefaultTyping.NON_FINAL);
+        
+        return mapper;
+    }
+    
+    /**
+     * 配置导出专用的ObjectMapper
+     * 不启用多态类型处理，生成标准JSON格式
+     */
+    @Bean
+    @Qualifier("exportObjectMapper")
+    public ObjectMapper exportObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        
+        // 注册 Java 8 日期时间模块
+        mapper.registerModule(new JavaTimeModule());
+        
+        // 设置日期格式
+        mapper.setDateFormat(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"));
+        
+        // 禁用将日期写为时间戳
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        
+        // 忽略未知属性（提高兼容性）
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        
+        // 不启用多态类型处理，保持标准JSON格式
         
         return mapper;
     }

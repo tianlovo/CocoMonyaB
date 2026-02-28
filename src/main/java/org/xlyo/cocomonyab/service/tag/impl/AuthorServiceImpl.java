@@ -3,8 +3,8 @@ package org.xlyo.cocomonyab.service.tag.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +47,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AuthorServiceImpl implements AuthorService {
     
     private final AuthorRepository authorRepository;
@@ -57,6 +56,23 @@ public class AuthorServiceImpl implements AuthorService {
     private final MongoTemplate mongoTemplate;
     private final ObjectMapper objectMapper;
     private final ApplicationEventPublisher eventPublisher;
+    
+    public AuthorServiceImpl(
+            AuthorRepository authorRepository,
+            CharacterRepository characterRepository,
+            TagFilterConfigRepository tagFilterConfigRepository,
+            UniquenessValidationService uniquenessValidationService,
+            MongoTemplate mongoTemplate,
+            @Qualifier("exportObjectMapper") ObjectMapper objectMapper,
+            ApplicationEventPublisher eventPublisher) {
+        this.authorRepository = authorRepository;
+        this.characterRepository = characterRepository;
+        this.tagFilterConfigRepository = tagFilterConfigRepository;
+        this.uniquenessValidationService = uniquenessValidationService;
+        this.mongoTemplate = mongoTemplate;
+        this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
+    }
     
     @Override
     @Transactional
