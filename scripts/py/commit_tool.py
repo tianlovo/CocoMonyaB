@@ -410,6 +410,9 @@ def inject_token_to_url(url: str, token: str) -> str:
         # 如果不是 HTTPS，暂时不处理或报错
         return url
 
+    # 移除末尾的斜杠（如果有）
+    url = url.rstrip('/')
+    
     # https://github.com/user/repo.git -> https://token@github.com/user/repo.git
     # 解析 URL
     parsed = urlparse(url)
