@@ -22,7 +22,11 @@ public class PluginManager {
     private final Map<String, Long> executionTimes = new ConcurrentHashMap<>();
     
     /**
-     * 注册插件
+     * 注册插件（不初始化）
+     * <p>
+     * 将插件添加到管理器中，但不调用初始化方法。
+     * 初始化将在启动流程的插件初始化阶段统一进行。
+     * </p>
      */
     public void registerPlugin(MessagePlugin plugin) {
         if (pluginMap.containsKey(plugin.getName())) {
@@ -31,7 +35,6 @@ public class PluginManager {
         }
         
         try {
-            plugin.initialize();
             plugins.add(plugin);
             pluginMap.put(plugin.getName(), plugin);
             
@@ -174,4 +177,59 @@ public class PluginManager {
         plugins.clear();
         pluginMap.clear();
     }
+
+
+    /**
+     * 扫描所有 MessagePlugin Bean
+     * <p>
+     * 从 Spring 容器中获取所有实现 MessagePlugin 接口的 Bean，
+     * 并按优先级降序排序（优先级数字越大越早执行）
+     * </p>
+     *
+     * @return 排序后的插件列表
+     */
+    public List<MessagePlugin> scanPlugins() {
+        log.info("开始扫描 MessagePlugin Bean...");
+
+        // 获取所有 MessagePlugin Bean
+        List<MessagePlugin> scannedPlugins = new ArrayList<>(plugins);
+
+        // 按优先级降序排序
+        scannedPlugins.sort(Comparator.comparingInt(MessagePlugin::getPriority).reversed());
+
+        log.info("扫描完成，发现 {} 个插件", scannedPlugins.size());
+        return scannedPlugins;
+    }
+
+    /**
+     * 初始化插件列表
+     * <p>
+     * 调用每个插件的初始化方法。如果某个插件初始化失败，
+     * 会记录错误但继续初始化其他插件（非致命错误）
+     * </p>
+     *
+     * @param pluginsToInitialize 要初始化的插件列表
+     */
+    public void initializePlugins(List<MessagePlugin> pluginsToInitialize) {
+        log.info("开始初始化 {} 个插件...", pluginsToInitialize.size());
+
+        int successCount = 0;
+        int failureCount = 0;
+
+        for (MessagePlugin plugin : pluginsToInitialize) {
+            try {
+                log.info("初始化插件: {} (优先级: {})", plugin.getName(), plugin.getPriority());
+                plugin.initialize();
+                successCount++;
+                log.info("✅ 插件初始化成功: {}", plugin.getName());
+            } catch (Exception e) {
+                failureCount++;
+                log.error("❌ 插件初始化失败: {} - {}", plugin.getName(), e.getMessage(), e);
+                // 继续初始化其他插件
+            }
+        }
+
+        log.info("插件初始化完成: 成功 {} 个，失败 {} 个", successCount, failureCount);
+    }
+
 }
