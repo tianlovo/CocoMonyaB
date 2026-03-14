@@ -7,6 +7,7 @@ services:
     container_name: coco-api-ui
     ports:
       - "80:80"       # Vue前端
+      - "15088:15088" # Node后端（固定端口）
     environment:
       - NODE_ENV=production
     volumes:
