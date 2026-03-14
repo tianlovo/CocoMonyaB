@@ -17,6 +17,9 @@ jobs:
           fetch-depth: 0  # 获取所有历史记录
           fetch-tags: true  # 获取所有标签
 
+      - name: Disable symlinks
+        run: git config --global core.symlinks false
+
       - name: Configure Git
         run: |
           git config --global user.name "${{ vars.CODEBERG_USERNAME }}"
