@@ -1,0 +1,16 @@
+server:
+  port: 10722
+  javaBackendUrl: http://127.0.0.1:10721
+  frontendToken: coco-api-ui-token
+bark:
+  enabled: true
+  key: SwDLkNVT2apmsYMcVJ9kFn
+  server: https://notify.columbina.xyz
+monitor:
+  javaOfflineCheck:
+    enabled: true
+    intervalMinutes: 30
+  tgLoginCheck:
+    enabled: true
+    intervalMinutes: 60
+    maxFailures: 3
