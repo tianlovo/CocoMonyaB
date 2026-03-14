@@ -1,8 +1,8 @@
 Write-Host "Creating document symbolic links..." -ForegroundColor Green
 
-Write-Host "`n1. Creating symbolic link for 'API Response Specification Document.md'" -ForegroundColor Cyan
+Write-Host "`n1. Creating symbolic link for 'api-response-spec.md'" -ForegroundColor Cyan
 try {
-    New-Item -ItemType SymbolicLink -Path "API Response Specification Document.md" -Target "E:\Develop\ToolDev\Application\CocoMonya\project\CocoMonyaB\docs\api\API 响应规范文档.md"
+    New-Item -ItemType SymbolicLink -Path "api-response-spec.md" -Target "E:\Develop\ToolDev\Application\CocoMonya\project\CocoMonyaB\docs\api\api-response-spec.md"
     Write-Host "  Successfully created" -ForegroundColor Green
 } catch {
     Write-Host "  Failed: $_" -ForegroundColor Red
