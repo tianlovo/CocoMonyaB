@@ -24,6 +24,19 @@
             <el-icon><Refresh /></el-icon>
           </button>
         </el-tooltip>
+        <el-dropdown @command="handleCommand">
+          <button class="header-action">
+            <el-icon><User /></el-icon>
+          </button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="logout">
+                <el-icon><SwitchButton /></el-icon>
+                退出登录
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
   </header>
@@ -31,9 +44,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Refresh, Menu } from '@element-plus/icons-vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Refresh, Menu, User, SwitchButton } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import SystemStatusIndicator from '@/components/common/SystemStatusIndicator.vue'
+import { useAuthStore } from '@/stores/auth'
 
 interface Props {
   showMenuButton?: boolean
@@ -45,6 +60,8 @@ withDefaults(defineProps<Props>(), {
 })
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const emit = defineEmits<{
   refresh: []
@@ -68,6 +85,27 @@ const handleRefresh = () => {
 
 const handleToggleSidebar = () => {
   emit('toggleSidebar')
+}
+
+const handleCommand = async (command: string) => {
+  if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm(
+        '确定要退出登录吗？',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+      authStore.logout()
+      ElMessage.success('已退出登录')
+      router.push('/login')
+    } catch {
+      // 用户取消
+    }
+  }
 }
 </script>
 
