@@ -1,8 +1,7 @@
 // 配置类型定义
 export interface ServerConfig {
-  // 服务器配置
+  // 服务器配置（端口固定为15088，不可修改）
   server: {
-    port: number;
     javaBackendUrl: string;
     frontendToken: string;
   };

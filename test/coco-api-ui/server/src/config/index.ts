@@ -5,10 +5,12 @@ import type { ServerConfig } from '../types';
 
 const CONFIG_FILE = path.join(process.cwd(), 'config.yaml');
 
+// 固定端口，不可修改
+export const FIXED_PORT = 15088;
+
 // 默认配置
 const defaultConfig: ServerConfig = {
   server: {
-    port: 10722,
     javaBackendUrl: 'http://127.0.0.1:10721',
     frontendToken: 'coco-api-ui-token'
   },
@@ -73,8 +75,9 @@ export function getConfig(): ServerConfig {
   return config;
 }
 
-// 更新配置
+// 更新配置（端口固定不可修改）
 export function updateConfig(newConfig: Partial<ServerConfig>): ServerConfig {
+  // 强制使用固定端口，忽略传入的端口配置
   config = mergeConfig(config, newConfig);
   saveConfig(config);
   return config;

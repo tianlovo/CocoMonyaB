@@ -1,10 +1,11 @@
 import { Router } from 'express';
+import axios from 'axios';
 import { getConfig, updateConfig } from '../config';
 import { barkService } from '../services/bark';
 import { monitorService } from '../services/monitor';
 import type { ApiResponse, ServerConfig } from '../types';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * 配置管理路由
@@ -17,7 +18,6 @@ router.get('/', (req, res) => {
   // 返回配置时隐藏敏感信息
   const safeConfig = {
     server: {
-      port: config.server.port,
       javaBackendUrl: config.server.javaBackendUrl,
       // 不返回 frontendToken
     },
@@ -117,6 +117,88 @@ router.post('/bark/test', async (req, res) => {
     const response: ApiResponse = {
       code: -50000,
       msg: '测试通知发送失败',
+      data: null
+    };
+    res.status(500).json(response);
+  }
+});
+
+// 测试Java后端连接
+router.post('/test-java-connection', async (req, res) => {
+  try {
+    const { javaBackendUrl } = req.body;
+    
+    if (!javaBackendUrl) {
+      const response: ApiResponse = {
+        code: -40000,
+        msg: 'Java后端地址不能为空',
+        data: null
+      };
+      return res.status(400).json(response);
+    }
+
+    // 测试连接Java后端的system/status接口
+    const testUrl = `${javaBackendUrl}/api/system/status`;
+    
+    try {
+      const startTime = Date.now();
+      const axiosResponse = await axios.get(testUrl, {
+        timeout: 10000,
+        validateStatus: () => true // 允许任何状态码
+      });
+      const responseTime = Date.now() - startTime;
+
+      // 如果返回200或503（系统未就绪），都认为是连接成功
+      if (axiosResponse.status === 200 || axiosResponse.status === 503) {
+        const response: ApiResponse = {
+          code: 200,
+          msg: '连接成功',
+          data: {
+            connected: true,
+            status: axiosResponse.status,
+            responseTime: `${responseTime}ms`,
+            message: axiosResponse.status === 200 ? 'Java后端服务正常' : 'Java后端正在启动中'
+          }
+        };
+        return res.json(response);
+      } else {
+        const response: ApiResponse = {
+          code: -50001,
+          msg: `连接失败，HTTP状态码: ${axiosResponse.status}`,
+          data: {
+            connected: false,
+            status: axiosResponse.status,
+            responseTime: `${responseTime}ms`
+          }
+        };
+        return res.status(500).json(response);
+      }
+    } catch (axiosError: any) {
+      // 连接失败
+      let errorMsg = '无法连接到Java后端';
+      if (axiosError.code === 'ECONNREFUSED') {
+        errorMsg = '连接被拒绝，请检查Java后端是否已启动';
+      } else if (axiosError.code === 'ETIMEDOUT' || axiosError.code === 'ECONNABORTED') {
+        errorMsg = '连接超时，请检查网络或Java后端状态';
+      } else if (axiosError.code === 'ENOTFOUND') {
+        errorMsg = '无法解析主机地址，请检查URL是否正确';
+      }
+
+      const response: ApiResponse = {
+        code: -50002,
+        msg: errorMsg,
+        data: {
+          connected: false,
+          error: axiosError.message
+        }
+      };
+      return res.status(500).json(response);
+    }
+  } catch (error) {
+    console.error('[Config] 测试Java后端连接失败:', error);
+    const response: ApiResponse = {
+      code: -50000,
+      msg: '测试连接失败',
       data: null
     };
     res.status(500).json(response);

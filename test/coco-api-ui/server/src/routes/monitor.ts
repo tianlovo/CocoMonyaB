@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { monitorService } from '../services/monitor';
 import type { ApiResponse } from '../types';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * 监控状态路由

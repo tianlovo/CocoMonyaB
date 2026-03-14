@@ -65,13 +65,28 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="服务端口">
-              <el-input-number v-model="form.server.port" :min="1" :max="65535" style="width: 100%" />
-              <div class="form-hint">Node.js后端服务端口</div>
+              <el-input :model-value="FIXED_PORT" disabled style="width: 100%" />
+              <div class="form-hint">Node.js后端服务端口（固定为15088，不可修改）</div>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="Java后端地址">
-              <el-input v-model="form.server.javaBackendUrl" placeholder="http://127.0.0.1:10721" />
+              <div class="java-backend-input">
+                <el-input 
+                  v-model="form.server.javaBackendUrl" 
+                  placeholder="http://127.0.0.1:10721"
+                  style="flex: 1"
+                />
+                <el-button 
+                  type="primary" 
+                  @click="testJavaConnection"
+                  :loading="testingJavaConnection"
+                  :disabled="!form.server.javaBackendUrl"
+                >
+                  <el-icon><Connection /></el-icon>
+                  测试连接
+                </el-button>
+              </div>
               <div class="form-hint">Java后端服务的URL地址</div>
             </el-form-item>
           </el-col>
@@ -212,9 +227,10 @@ import {
   RefreshRight,
   Bell,
   Check,
-  RefreshLeft
+  RefreshLeft,
+  Connection
 } from '@element-plus/icons-vue'
-import { serverConfigApi, type ServerConfig, type MonitorStatus } from '@/api/server-config'
+import { serverConfigApi, FIXED_PORT, type ServerConfig, type MonitorStatus, type JavaConnectionTestResult } from '@/api/server-config'
 
 // 状态
 const loading = ref(false)
@@ -222,12 +238,12 @@ const saving = ref(false)
 const statusLoading = ref(false)
 const restarting = ref(false)
 const testingBark = ref(false)
+const testingJavaConnection = ref(false)
 const monitorStatus = ref<MonitorStatus | null>(null)
 
 // 表单数据
 const defaultForm: ServerConfig = {
   server: {
-    port: 10722,
     javaBackendUrl: 'http://127.0.0.1:10721'
   },
   bark: {
@@ -315,6 +331,30 @@ async function testBark() {
     ElMessage.error('测试通知发送失败')
   } finally {
     testingBark.value = false
+  }
+}
+
+// 测试Java后端连接
+async function testJavaConnection() {
+  if (!form.server.javaBackendUrl) {
+    ElMessage.warning('请先输入Java后端地址')
+    return
+  }
+
+  testingJavaConnection.value = true
+  try {
+    const result = await serverConfigApi.testJavaConnection(form.server.javaBackendUrl)
+    if (result.connected) {
+      ElMessage.success(`${result.message} (响应时间: ${result.responseTime})`)
+    } else {
+      ElMessage.error('连接失败，请检查地址是否正确')
+    }
+  } catch (error: any) {
+    console.error('测试Java后端连接失败:', error)
+    const errorMsg = error.response?.data?.msg || '连接失败，请检查Java后端是否已启动'
+    ElMessage.error(errorMsg)
+  } finally {
+    testingJavaConnection.value = false
   }
 }
 
@@ -451,6 +491,12 @@ onUnmounted(() => {
   font-size: 12px;
   color: var(--fluent-text-secondary);
   margin-top: 4px;
+}
+
+.java-backend-input {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .actions-bar {

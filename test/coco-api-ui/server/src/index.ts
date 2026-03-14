@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { loadConfig, getConfig } from './config';
+import { loadConfig, getConfig, FIXED_PORT } from './config';
 import { monitorService } from './services/monitor';
 import { authMiddleware } from './middleware/auth';
 
@@ -50,11 +50,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// 启动服务器
-const config = getConfig();
-const PORT = config.server.port;
+// 启动服务器（使用固定端口15088）
+const PORT = FIXED_PORT;
 
 app.listen(PORT, () => {
+  // 获取配置用于显示
+  const config = getConfig();
+  
   console.log(`
 ╔════════════════════════════════════════════════════════╗
 ║           Coco API UI Server                           ║

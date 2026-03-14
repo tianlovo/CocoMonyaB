@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { getConfig } from '../config';
 import type { ApiResponse } from '../types';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * API转发路由

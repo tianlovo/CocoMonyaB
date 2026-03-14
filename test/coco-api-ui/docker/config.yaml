@@ -1,0 +1,41 @@
+# Coco API UI Server 配置示例
+# 首次启动时会自动生成config.yaml，或复制此文件为config.yaml后修改
+
+server:
+  # Java后端地址（必填）
+  # 如果Java后端在Docker中运行，使用容器名或宿主机IP
+  # 例如：http://host.docker.internal:10721（Windows/Mac）
+  # 例如：http://172.17.0.1:10721（Linux）
+  javaBackendUrl: "http://127.0.0.1:10721"
+  
+  # 前端访问令牌（必填）
+  # 用于前端登录认证，建议修改为强密码
+  frontendToken: "coco-api-ui-token"
+
+bark:
+  # 是否启用Bark通知
+  enabled: false
+  
+  # Bark推送Key（从Bark App获取）
+  key: ""
+  
+  # Bark服务器地址（可选，留空使用默认）
+  server: "https://api.day.app"
+
+monitor:
+  javaOfflineCheck:
+    # 启用Java后端掉线检测
+    enabled: true
+    
+    # 检测间隔（分钟）
+    intervalMinutes: 30
+    
+  tgLoginCheck:
+    # 启用TG登录态检测
+    enabled: true
+    
+    # 检测间隔（分钟）
+    intervalMinutes: 60
+    
+    # 最大连续失败次数（达到此次数后判定为登录态失效）
+    maxFailures: 3

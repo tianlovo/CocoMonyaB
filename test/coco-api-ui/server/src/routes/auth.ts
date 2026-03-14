@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getConfig } from '../config';
 import type { ApiResponse } from '../types';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * 认证相关路由

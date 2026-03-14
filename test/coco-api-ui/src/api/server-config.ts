@@ -2,7 +2,6 @@ import request from '@/utils/request'
 
 export interface ServerConfig {
   server: {
-    port: number
     javaBackendUrl: string
   }
   bark: {
@@ -38,6 +37,17 @@ export interface MonitorStatus {
   }
 }
 
+export interface JavaConnectionTestResult {
+  connected: boolean
+  status: number
+  responseTime: string
+  message?: string
+  error?: string
+}
+
+// 固定端口常量（与后端保持一致）
+export const FIXED_PORT = 15088
+
 export const serverConfigApi = {
   // 获取服务器配置
   getConfig() {
@@ -52,6 +62,13 @@ export const serverConfigApi = {
   // 测试Bark通知
   testBark() {
     return request.post<any, void>('/config/bark/test')
+  },
+
+  // 测试Java后端连接
+  testJavaConnection(javaBackendUrl: string) {
+    return request.post<any, JavaConnectionTestResult>('/config/test-java-connection', {
+      javaBackendUrl
+    })
   },
 
   // 获取监控状态
