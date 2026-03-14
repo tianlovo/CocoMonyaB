@@ -16,13 +16,18 @@ export class ApiError extends Error {
 }
 
 const request = axios.create({
-  baseURL: 'http://127.0.0.1:10721/api',
-  timeout: 10000
+  baseURL: 'http://127.0.0.1:10722/api',
+  timeout: 60000
 })
 
 // Request interceptor
 request.interceptors.request.use(
   (config) => {
+    // 添加认证token
+    const token = localStorage.getItem('coco_api_ui_token')
+    if (token) {
+      config.headers['X-Access-Token'] = token
+    }
     return config
   },
   (error) => {
@@ -38,6 +43,15 @@ request.interceptors.response.use(
     // System status endpoint returns data directly without wrapper
     if (url.includes('/system/status')) {
       return response.data
+    }
+
+    // 处理认证相关响应
+    if (url.includes('/auth/')) {
+      const apiResponse = response.data as ApiResponse
+      if (apiResponse.code === 200) {
+        return apiResponse.data
+      }
+      return Promise.reject(new ApiError(apiResponse.code, apiResponse.msg || '请求失败'))
     }
 
     const apiResponse = response.data as ApiResponse
@@ -81,6 +95,9 @@ request.interceptors.response.use(
     switch (status) {
       case 401:
         errorMessage = '未授权，请重新登录'
+        // 清除token并跳转到登录页
+        localStorage.removeItem('coco_api_ui_token')
+        window.location.href = '/login'
         break
       case 403:
         errorMessage = '无权限访问此资源'
